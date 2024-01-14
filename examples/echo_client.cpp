@@ -5,8 +5,8 @@
 #include <string>
 #include <thread>
 
-#include <icon6/Host.hpp>
-#include <icon6/Peer.hpp>
+#include <icon7/Host.hpp>
+#include <icon7/Peer.hpp>
 
 int main(int argc, char **argv)
 {
@@ -17,19 +17,19 @@ int main(int argc, char **argv)
 		port = atoi(argv[2]);
 	}
 
-	icon6::Initialize();
+	icon7::Initialize();
 
-	icon6::Host *host = icon6::Host::MakeGameNetworkingSocketsHost();
+	icon7::Host *host = icon7::Host::MakeGameNetworkingSocketsHost();
 
 	host->SetReceive(
-		[](icon6::Peer *peer, icon6::ByteReader &reader, icon6::Flags flags) {
+		[](icon7::Peer *peer, icon7::ByteReader &reader, icon7::Flags flags) {
 			printf("String returned: `");
 			fwrite(reader.data(), reader.get_remaining_bytes(), 1, stdout);
 			printf("`\n");
 		});
 	host->RunAsync();
 
-	icon6::Peer *peer = host->ConnectPromise(argv[1], port).get();
+	icon7::Peer *peer = host->ConnectPromise(argv[1], port).get();
 
 	printf("To exit write: quit\n");
 
@@ -45,12 +45,12 @@ int main(int argc, char **argv)
 		} else {
 			std::vector<uint8_t> data((char *)str.c_str(),
 									  (char *)str.c_str() + str.size());
-			peer->Send(std::move(data), icon6::FLAG_RELIABLE);
+			peer->Send(std::move(data), icon7::FLAG_RELIABLE);
 		}
 	}
 
 	delete host;
 
-	icon6::Deinitialize();
+	icon7::Deinitialize();
 	return 0;
 }

@@ -4,8 +4,8 @@
 #include <unistd.h>
 #include <signal.h>
 
-#include <icon6/Host.hpp>
-#include <icon6/Peer.hpp>
+#include <icon7/Host.hpp>
+#include <icon7/Peer.hpp>
 
 std::vector<uint8_t> MakeVector(const char *str)
 {
@@ -18,16 +18,16 @@ int main()
 
 	pid_t c_pid = fork();
 
-	icon6::Initialize();
+	icon7::Initialize();
 
 	if (c_pid == -1) {
 		perror("fork");
 		exit(EXIT_FAILURE);
 	} else if (c_pid <= 0) {
-		icon6::Host *host1 = icon6::Host::MakeGameNetworkingSocketsHost(port1);
+		icon7::Host *host1 = icon7::Host::MakeGameNetworkingSocketsHost(port1);
 
-		host1->SetReceive([](icon6::Peer *p, icon6::ByteReader &reader,
-							 icon6::Flags flags) {
+		host1->SetReceive([](icon7::Peer *p, icon7::ByteReader &reader,
+							 icon7::Flags flags) {
 			printf(" message received by client: %s\n", (char *)reader.data());
 			fflush(stdout);
 		});
@@ -52,10 +52,10 @@ int main()
 		host1->WaitStop();
 		delete host1;
 	} else {
-		icon6::Host *host2 = icon6::Host::MakeGameNetworkingSocketsHost(port2);
+		icon7::Host *host2 = icon7::Host::MakeGameNetworkingSocketsHost(port2);
 
-		host2->SetReceive([](icon6::Peer *p, icon6::ByteReader &reader,
-							 icon6::Flags flags) {
+		host2->SetReceive([](icon7::Peer *p, icon7::ByteReader &reader,
+							 icon7::Flags flags) {
 			printf(" message received by server: %s\n", (char *)reader.data());
 			fflush(stdout);
 			fflush(stdout);
@@ -75,6 +75,6 @@ int main()
 		kill(c_pid, SIGKILL);
 	}
 
-	icon6::Deinitialize();
+	icon7::Deinitialize();
 	return 0;
 }

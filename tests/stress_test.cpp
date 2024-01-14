@@ -8,14 +8,14 @@
 #include <signal.h>
 #include <sys/mman.h>
 
-#include <icon6/Host.hpp>
-#include <icon6/MessagePassingEnvironment.hpp>
-#include <icon6/Flags.hpp>
-#include <icon6/PeerGNS.hpp>
+#include <icon7/Host.hpp>
+#include <icon7/MessagePassingEnvironment.hpp>
+#include <icon7/Flags.hpp>
+#include <icon7/PeerGNS.hpp>
 
-icon6::MessagePassingEnvironment mpe;
+icon7::MessagePassingEnvironment mpe;
 
-icon6::Host *host = nullptr;
+icon7::Host *host = nullptr;
 const uint32_t CLIENTS_NUM = 10;
 const uint16_t serverPort = 4000;
 
@@ -140,7 +140,7 @@ template <typename... Args> void Print(const char *fmt, Args... args)
 	fflush(stdout);
 }
 
-void Runner(icon6::Peer *peer)
+void Runner(icon7::Peer *peer)
 {
 	while (peer->IsReadyToUse() == false) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -156,9 +156,9 @@ void Runner(icon6::Peer *peer)
 			data.resize(s / 21);
 			auto now = std::chrono::steady_clock::now();
 			double dt = std::chrono::duration<double>(now - originTime).count();
-			icon6::Flags flag = ((processId >= 0) || ((msgSent % 16) == 0))
-									? icon6::FLAG_RELIABLE_NO_NAGLE
-									: icon6::FLAG_UNRELIABLE_NO_NAGLE;
+			icon7::Flags flag = ((processId >= 0) || ((msgSent % 16) == 0))
+									? icon7::FLAG_RELIABLE_NO_NAGLE
+									: icon7::FLAG_UNRELIABLE_NO_NAGLE;
 			++msgSent;
 			uint64_t bytes = data.size() * 21 + 8 + 4 + 7;
 			if (processId >= 0) {
@@ -175,9 +175,9 @@ void Runner(icon6::Peer *peer)
 	ipc->connectionsDoneSending++;
 }
 
-void Run(icon6::Peer *peer) { std::thread(Runner, peer).detach(); }
+void Run(icon7::Peer *peer) { std::thread(Runner, peer).detach(); }
 
-void FunctionReceive(icon6::Peer *peer, std::vector<TestStruct> &data, double t)
+void FunctionReceive(icon7::Peer *peer, std::vector<TestStruct> &data, double t)
 {
 	const uint64_t bytes = data.size() * 21 + 8 + 4 + 7;
 	if (processId >= 0) {
@@ -222,7 +222,7 @@ void ReportPrint(const uint32_t messages, const uint32_t clientsNum)
 			(double)(ipc->counterSentByServer + ipc->counterSentByClients);
 	Print("    Packet loss = %f %%\n", packetLoss * 100.0);
 
-	// host->ForEachPeer([](icon6::Peer *peer) {
+	// host->ForEachPeer([](icon7::Peer *peer) {
 	// 	auto stats = peer->GetRealTimeStats();
 	// 	Print("          pending reliable = %i\n",
 	// 		  stats.m_cbPendingReliable);
@@ -283,8 +283,8 @@ void runTestMaster(uint32_t messages, const uint32_t clientsNum)
 
 	Print(" all_in(%fs)", t);
 
-	icon6::Command com(icon6::commands::ExecuteFunctionPointer{
-		[]() { host->ForEachPeer(+[](icon6::Peer *p) { p->Disconnect(); }); }});
+	icon7::Command com(icon7::commands::ExecuteFunctionPointer{
+		[]() { host->ForEachPeer(+[](icon7::Peer *p) { p->Disconnect(); }); }});
 	host->EnqueueCommand(std::move(com));
 
 	double clientMiBpsRecv =
@@ -309,9 +309,9 @@ void runTestSlave()
 {
 	host->Connect("127.0.0.1", serverPort);
 	while (ipc->runTestFlag != 0) {
-		icon6::Command com(icon6::commands::ExecuteFunctionPointer{[]() {
-			host->ForEachPeer(+[](icon6::Peer *p) {
-				auto stats = ((icon6::gns::Peer *)p)->GetRealTimeStats();
+		icon7::Command com(icon7::commands::ExecuteFunctionPointer{[]() {
+			host->ForEachPeer(+[](icon7::Peer *p) {
+				auto stats = ((icon7::gns::Peer *)p)->GetRealTimeStats();
 				ipc->pendingReliable[processId] = stats.m_cbPendingReliable;
 				ipc->unackedReliable[processId] = stats.m_cbSentUnackedReliable;
 			});
@@ -319,8 +319,8 @@ void runTestSlave()
 		host->EnqueueCommand(std::move(com));
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
-	icon6::Command com(icon6::commands::ExecuteFunctionPointer{
-		[]() { host->ForEachPeer(+[](icon6::Peer *p) { p->Disconnect(); }); }});
+	icon7::Command com(icon7::commands::ExecuteFunctionPointer{
+		[]() { host->ForEachPeer(+[](icon7::Peer *p) { p->Disconnect(); }); }});
 	std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
@@ -359,12 +359,12 @@ int main()
 
 	originTime = std::chrono::steady_clock::now();
 
-	icon6::Initialize();
+	icon7::Initialize();
 
 	if (processId < 0) {
-		host = icon6::Host::MakeGameNetworkingSocketsHost(serverPort);
+		host = icon7::Host::MakeGameNetworkingSocketsHost(serverPort);
 	} else {
-		host = icon6::Host::MakeGameNetworkingSocketsHost();
+		host = icon7::Host::MakeGameNetworkingSocketsHost();
 	}
 
 	host->SetMessagePassingEnvironment(&mpe);
@@ -399,7 +399,7 @@ int main()
 	host->WaitStop();
 	delete host;
 
-	icon6::Deinitialize();
+	icon7::Deinitialize();
 
 	if (processId < 0) {
 		ipc->mutex.~Mutex();

@@ -1,13 +1,13 @@
 /*
- *  This file is part of ICon6.
+ *  This file is part of ICon7.
  *  Copyright (C) 2023 Marek Zalewski aka Drwalin
  *
- *  ICon6 is free software: you can redistribute it and/or modify
+ *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  ICon6 is distributed in the hope that it will be useful,
+ *  ICon7 is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
@@ -23,13 +23,13 @@
 #include <mutex>
 #include <vector>
 
-#include "../include/icon6/Peer.hpp"
-#include "../include/icon6/MessagePassingEnvironment.hpp"
-#include "../include/icon6/HostGNS.hpp"
+#include "../include/icon7/Peer.hpp"
+#include "../include/icon7/MessagePassingEnvironment.hpp"
+#include "../include/icon7/HostGNS.hpp"
 
-#include "../include/icon6/Host.hpp"
+#include "../include/icon7/Host.hpp"
 
-namespace icon6
+namespace icon7
 {
 
 void Debug(const char *file, int line, const char *fmt, ...)
@@ -208,4 +208,4 @@ void Host::FlushPeersQueuedSends(int amount)
 uint32_t Initialize() { return gns::Initialize(); }
 
 void Deinitialize() { gns::Deinitialize(); }
-} // namespace icon6
+} // namespace icon7

@@ -1,13 +1,13 @@
 /*
- *  This file is part of ICon6.
+ *  This file is part of ICon7.
  *  Copyright (C) 2023 Marek Zalewski aka Drwalin
  *
- *  ICon6 is free software: you can redistribute it and/or modify
+ *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  ICon6 is distributed in the hope that it will be useful,
+ *  ICon7 is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
@@ -18,15 +18,14 @@
 
 #include <steam/steamnetworkingsockets.h>
 
-#include "../include/icon6/MessagePassingEnvironment.hpp"
-#include "../include/icon6/MethodInvocationEnvironment.hpp"
-#include "../include/icon6/CommandExecutionQueue.hpp"
-#include "../include/icon6/PeerGNS.hpp"
-#include "../include/icon6/HostGNS.hpp"
+#include "../include/icon7/MessagePassingEnvironment.hpp"
+#include "../include/icon7/CommandExecutionQueue.hpp"
+#include "../include/icon7/PeerGNS.hpp"
+#include "../include/icon7/HostGNS.hpp"
 
-#include "../include/icon6/Command.hpp"
+#include "../include/icon7/Command.hpp"
 
-namespace icon6
+namespace icon7
 {
 namespace commands
 {
@@ -35,11 +34,6 @@ void ExecuteOnPeer::Execute() { function(peer, data, userPointer); }
 void ExecuteOnPeerNoArgs::Execute() { function(peer); }
 
 void ExecuteRPC::Execute() { messageConverter->Call(peer, reader, flags); }
-
-void ExecuteRMI::Execute()
-{
-	methodInvoker->Call(objectPtr, peer, reader, flags);
-}
 
 void ExecuteReturnRC::Execute() { function(peer, flags, reader, funcPtr); }
 
@@ -74,4 +68,4 @@ void Command::Execute()
 		std::move(cmd));
 	cmd = 0;
 }
-} // namespace icon6
+} // namespace icon7

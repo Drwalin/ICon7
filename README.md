@@ -1,5 +1,24 @@
 
-# ICon6
+# ICon7
+
+Provides async interface for Remote Procedure Call (RPC), agnostic towards
+networking library. The
+library itself does not provide encryption or reliability mechanisms but require
+the underlying library to provide those themselfs if needed.
+
+## Remote method invocation
+
+Remote method invocation is not implemented any more. It can be simply
+reimplemented as wrapper around RPC.
+
+## Limits
+
+Unreliable message size is limited to MTU, which usually is around 1500 bytes,
+but for safety reasons it shouldn't be more than around 768 or 1024 bytes.
+
+Reliable messages (with headers) should be smaller than 64KiB (65536 bytes), but
+size is limited by 2^60 (1 EiB).
+
 
 Provides secure communication between two endpoints with UPD socket. Any client
 can connect to any other client (calling them servers is purely semantical).
@@ -9,9 +28,15 @@ can use RPC or RMI semantics (set per Host).
 
 Each message is limited by GameNetworkingSockets to 512KiB.
 
+## Vulnerabilities
+
+The same as underlying networking library.
+
 ## Requirements
 
 - cmake
+- OpenSSL
+- C++ 17 compliant compiler
 
 ## How to compile
 
@@ -29,51 +54,72 @@ Examples are provided in `examples/` directory. Examples called `example1.cpp`
 and `example6.cpp` work only on linux. It is recommended to learn on
 chat\_server/chat\_client or echo\_server/echo\_client.
 
-### Basic functionality
+## Protocol description
 
-Befor starting using ay of the functions user needs to call:
-```c++
-icon6::Initialize();
+Protocol is fully asynchronous and duplex, but requires the underlying network
+library to be received as continous data in case of stream protocols.
+
+For sake of simplicity call, return calls, messages, control messages (if
+implemented in future) will be named as messages.
+
+Each message have header that describes it's size and some aditional information.
+Within one packet (definition depends on underlying library) can be as many
+message as can fit inside.
+
+In case of streaming protocols, such as TCP, messages are distinguished by their
+headers.
+
+### Structure of message header
+
+Header has variadic size of from 1 byte up to 8 bytes. The following figure
+represents header structure:
+
+```
+         Header
+  ___________________
+ /                   \
++----------+----------+------------------+
+| zzzzyyxx | zz....zz | ... message body |
++----------+----------+------------------+
 ```
 
-And to exit gracefully user needs needs to call:
-```c++
-icon6::Deinitialize();
+xx - (2 least significant bits of first byte) - determine size of header:
+    - 00 - header 1 byte, body size of from 1 to 16 bytes
+    - 01 - header 2 bytes, body size of from 1 to 4096 bytes
+    - 10 - header 4 bytes, body size of from 1 byte to 256 MiB
+    - 11 - header 8 bytes, body size of from 1 byte to 1 EiB 
+yy - determines type of RPC message:
+    - 00 - procedure call, without any form of feedback
+    - 01 - procedure call, callee awaits for feedback
+    - 10 - function call, without feedback
+    - 11 - function call, callee awaits returned value
+
+zzzz...zz - size of body of message, stored in little endian. Effectively to
+    extract size of message body one needs to get little endian integer from
+    whole header and then bit shift it by 4, then add 1 to result:
+``` C
+    uint8_t header[8] = ...;
+    uint8_t sizeOfSize = header[0] & 0b11;
+    uint64_t bodySize = 0;
+    if (sizeOfSize == 10) {
+        uint32_t tmp = get_little_endian_uint32(header);
+        bodySize = (tmp>>4) + 1;
+    } else if ...
 ```
 
-There are 2 basic classes:
-    - icon6::Host
-    - icon6::Peer
+### structure of message body
 
-Host represents socket or listening socket while Peer represents connection.
+If message is a function/procedure then first four bytes are taken by call id
+of size of 4 bytes, stored in little endian order.
 
-Data receiving is implemented using callbacks which can be set per Host (all new
-Peers will use this new callback) or per Peer basis.
+Then there is a function name string NULL terminated.
 
-## Vulnerability
+Finally there are function arguments, endcoded in little endian (integers),
+and floats are stored in little endian with IEEE 754 standard single or double
+precision.
 
-At least the same as ValveSoftware/GameNetworkingSockets.
+Arrays, sets and maps are stored with number of elements as first element
+uint32\_t. Maps elements are stored as pairs of (key, value).
 
-## ICon6 RPC/RMI protocol description
-
-### RPC description message
-```
-+----------+-----------+
-| function | arguments |
-+----------+-----------+
-```
-- function - NULL-terminated function name string
-- arguments - arguemnts packed with bitscpp ByteWriter
-
-### RMI description message
-```
-+---------+-------------+--------+-----------+
-+ flag 1B | objectID 8B | method | arguments |
-+---------+-------------+--------+-----------+
-```
-- flag - for now must have value 0
-- objectID - uint64\_t object identificator
-- method - NULL-terminated method name string to be called on object with id
-objectID
-- arguments - arguemnts packed with bitscpp ByteWriter
+String are stored as NULL-terminated utf-8 strings.
 

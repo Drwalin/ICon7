@@ -1,13 +1,13 @@
 /*
- *  This file is part of ICon6.
+ *  This file is part of ICon7.
  *  Copyright (C) 2023 Marek Zalewski aka Drwalin
  *
- *  ICon6 is free software: you can redistribute it and/or modify
+ *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  ICon6 is distributed in the hope that it will be useful,
+ *  ICon7 is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
@@ -16,8 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef ICON6_HOST_HPP
-#define ICON6_HOST_HPP
+#ifndef ICON7_HOST_HPP
+#define ICON7_HOST_HPP
 
 #include <string>
 #include <future>
@@ -28,9 +28,9 @@
 #include "Flags.hpp"
 #include "CommandExecutionQueue.hpp"
 
-#define DEBUG(...) icon6::Debug(__FILE__, __LINE__, __VA_ARGS__)
+#define DEBUG(...) icon7::Debug(__FILE__, __LINE__, __VA_ARGS__)
 
-namespace icon6
+namespace icon7
 {
 void Debug(const char *file, int line, const char *fmt, ...);
 
@@ -70,9 +70,9 @@ public:
 	void WaitStop();
 
 	// Thread unsafe.
-	virtual void ForEachPeer(void(func)(icon6::Peer *)) = 0;
+	virtual void ForEachPeer(void(func)(icon7::Peer *)) = 0;
 	// Thread unsafe.
-	virtual void ForEachPeer(std::function<void(icon6::Peer *)> func) = 0;
+	virtual void ForEachPeer(std::function<void(icon7::Peer *)> func) = 0;
 
 public:
 	std::future<Peer *> ConnectPromise(std::string address, uint16_t port);
@@ -127,6 +127,6 @@ protected:
 
 uint32_t Initialize();
 void Deinitialize();
-} // namespace icon6
+} // namespace icon7
 
 #endif

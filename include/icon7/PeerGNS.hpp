@@ -1,13 +1,13 @@
 /*
- *  This file is part of ICon6.
+ *  This file is part of ICon7.
  *  Copyright (C) 2023 Marek Zalewski aka Drwalin
  *
- *  ICon6 is free software: you can redistribute it and/or modify
+ *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  ICon6 is distributed in the hope that it will be useful,
+ *  ICon7 is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
@@ -16,8 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef ICON6_PEER_GAME_NETWORKING_SOCKETS_HPP
-#define ICON6_PEER_GAME_NETWORKING_SOCKETS_HPP
+#ifndef ICON7_PEER_GAME_NETWORKING_SOCKETS_HPP
+#define ICON7_PEER_GAME_NETWORKING_SOCKETS_HPP
 
 #include <cinttypes>
 
@@ -32,13 +32,13 @@
 
 #include "Peer.hpp"
 
-namespace icon6
+namespace icon7
 {
 namespace gns
 {
 class Host;
 
-class Peer final : public icon6::Peer
+class Peer final : public icon7::Peer
 {
 public:
 	virtual ~Peer() override;
@@ -54,7 +54,7 @@ public:
 	// thread unsafe
 	virtual void _InternalDisconnect() override;
 
-	friend class icon6::gns::Host;
+	friend class icon7::gns::Host;
 
 private:
 	void CallCallbackReceive(ISteamNetworkingMessage *msg);
@@ -67,6 +67,6 @@ private:
 	HSteamNetConnection peer;
 };
 } // namespace gns
-} // namespace icon6
+} // namespace icon7
 
 #endif

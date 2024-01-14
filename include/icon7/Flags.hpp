@@ -1,13 +1,13 @@
 /*
- *  This file is part of ICon6.
+ *  This file is part of ICon7.
  *  Copyright (C) 2023 Marek Zalewski aka Drwalin
  *
- *  ICon6 is free software: you can redistribute it and/or modify
+ *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  ICon6 is distributed in the hope that it will be useful,
+ *  ICon7 is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
@@ -16,12 +16,12 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef ICON6_FLAGS_HPP
-#define ICON6_FLAGS_HPP
+#ifndef ICON7_FLAGS_HPP
+#define ICON7_FLAGS_HPP
 
 #include <cinttypes>
 
-namespace icon6
+namespace icon7
 {
 struct Flags {
 	uint32_t field;
@@ -66,10 +66,8 @@ namespace MethodProtocolSendFlags
 {
 inline const uint8_t FUNCTION_SEND_PREFIX = 0;
 inline const uint8_t FUNCTION_CALL_PREFIX = 1;
-inline const uint8_t METHOD_SEND_PREFIX = 2;
-inline const uint8_t METHOD_CALL_PREFIX = 3;
 inline const uint8_t RETURN_CALLBACK = 4;
 } // namespace MethodProtocolSendFlags
-} // namespace icon6
+} // namespace icon7
 
 #endif
