@@ -4,8 +4,8 @@
 #include <chrono>
 #include <thread>
 
-#include <icon6/Host.hpp>
-#include <icon6/Peer.hpp>
+#include <icon7/Host.hpp>
+#include <icon7/Peer.hpp>
 
 int main(int argc, char **argv)
 {
@@ -18,12 +18,12 @@ int main(int argc, char **argv)
 
 	printf("Running on port %u\n", port);
 
-	icon6::Initialize();
+	icon7::Initialize();
 
-	icon6::Host *host = icon6::Host::MakeGameNetworkingSocketsHost(port);
+	icon7::Host *host = icon7::Host::MakeGameNetworkingSocketsHost(port);
 
-	host->SetReceive([](icon6::Peer *peer, icon6::ByteReader &reader,
-					   icon6::Flags flags) {
+	host->SetReceive([](icon7::Peer *peer, icon7::ByteReader &reader,
+					   icon7::Flags flags) {
 		peer->_InternalSend(reader.data(), reader.get_remaining_bytes(), flags);
 		printf("Received: `");
 		fwrite(reader.data(), reader.get_remaining_bytes(), 1, stdout);
@@ -45,6 +45,6 @@ int main(int argc, char **argv)
 
 	delete host;
 
-	icon6::Deinitialize();
+	icon7::Deinitialize();
 	return 0;
 }

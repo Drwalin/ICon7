@@ -1,13 +1,13 @@
 /*
- *  This file is part of ICon6.
+ *  This file is part of ICon7.
  *  Copyright (C) 2023 Marek Zalewski aka Drwalin
  *
- *  ICon6 is free software: you can redistribute it and/or modify
+ *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  ICon6 is distributed in the hope that it will be useful,
+ *  ICon7 is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
@@ -26,12 +26,12 @@
 #include <steam/steamnetworkingsockets.h>
 #include <steam/isteamnetworkingutils.h>
 
-#include "../include/icon6/PeerGNS.hpp"
-#include "../include/icon6/MessagePassingEnvironment.hpp"
+#include "../include/icon7/PeerGNS.hpp"
+#include "../include/icon7/MessagePassingEnvironment.hpp"
 
-#include "../include/icon6/HostGNS.hpp"
+#include "../include/icon7/HostGNS.hpp"
 
-namespace icon6
+namespace icon7
 {
 namespace gns
 {
@@ -83,7 +83,7 @@ void Host::Init(const SteamNetworkingIPAddr *address)
 
 void Host::Destroy()
 {
-	icon6::Host::Destroy();
+	icon7::Host::Destroy();
 	if (host) {
 		for (auto it : peers) {
 			it.second->_InternalDisconnect();
@@ -149,14 +149,14 @@ void Host::RunSingleLoop(uint32_t maxWaitTimeMilliseconds)
 	}
 }
 
-void Host::ForEachPeer(std::function<void(icon6::Peer *)> func)
+void Host::ForEachPeer(std::function<void(icon7::Peer *)> func)
 {
 	for (auto it : peers) {
 		func(it.second);
 	}
 }
 
-void Host::ForEachPeer(void(func)(icon6::Peer *))
+void Host::ForEachPeer(void(func)(icon7::Peer *))
 {
 	for (auto it : peers) {
 		func(it.second);
@@ -195,7 +195,7 @@ void Host::SteamNetConnectionStatusChangedCallback(
 	case k_ESteamNetworkingConnectionState_Connecting: {
 		if (peers.find(pInfo->m_hConn) != peers.end()) { // this is outgoing
 														 // connection, thus
-														 // icon6::Peer* object
+														 // icon7::Peer* object
 														 // already exists.
 			break;
 		}
@@ -311,4 +311,4 @@ uint32_t Initialize()
 void Deinitialize() { GameNetworkingSockets_Kill(); }
 
 } // namespace gns
-} // namespace icon6
+} // namespace icon7

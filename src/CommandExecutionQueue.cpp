@@ -1,13 +1,13 @@
 /*
- *  This file is part of ICon6.
+ *  This file is part of ICon7.
  *  Copyright (C) 2023 Marek Zalewski aka Drwalin
  *
- *  ICon6 is free software: you can redistribute it and/or modify
+ *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  ICon6 is distributed in the hope that it will be useful,
+ *  ICon7 is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
@@ -20,13 +20,12 @@
 
 #include "../concurrentqueue/concurrentqueue.h"
 
-#include "../include/icon6/Peer.hpp"
-#include "../include/icon6/MessagePassingEnvironment.hpp"
-#include "../include/icon6/MethodInvocationEnvironment.hpp"
+#include "../include/icon7/Peer.hpp"
+#include "../include/icon7/MessagePassingEnvironment.hpp"
 
-#include "../include/icon6/CommandExecutionQueue.hpp"
+#include "../include/icon7/CommandExecutionQueue.hpp"
 
-namespace icon6
+namespace icon7
 {
 using QueueType = moodycamel::ConcurrentQueue<Command>;
 
@@ -107,4 +106,4 @@ void CommandExecutionQueue::_InternalExecuteLoop(
 	}
 	queue->asyncExecutionFlags = STOPPED;
 }
-} // namespace icon6
+} // namespace icon7

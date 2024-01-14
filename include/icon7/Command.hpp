@@ -1,13 +1,13 @@
 /*
- *  This file is part of ICon6.
+ *  This file is part of ICon7.
  *  Copyright (C) 2023 Marek Zalewski aka Drwalin
  *
- *  ICon6 is free software: you can redistribute it and/or modify
+ *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  ICon6 is distributed in the hope that it will be useful,
+ *  ICon7 is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
@@ -16,8 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef ICON6_COMMAND_HPP
-#define ICON6_COMMAND_HPP
+#ifndef ICON7_COMMAND_HPP
+#define ICON7_COMMAND_HPP
 
 #include <cinttypes>
 
@@ -27,7 +27,7 @@
 #include "Flags.hpp"
 #include "ByteReader.hpp"
 
-namespace icon6
+namespace icon7
 {
 
 class Host;
@@ -40,10 +40,6 @@ class Peer;
 class Host;
 } // namespace gns
 
-namespace rmi
-{
-class MethodInvocationConverter;
-}
 class Command;
 class CommandExecutionQueue;
 
@@ -92,27 +88,6 @@ public:
 	Peer *peer;
 	ByteReader reader;
 	MessageConverter *messageConverter;
-	Flags flags;
-
-	void Execute();
-};
-
-class ExecuteRMI final
-{
-public:
-	ExecuteRMI &operator=(ExecuteRMI &&) = default;
-
-	ExecuteRMI(ByteReader &&reader) : reader(std::move(reader)) {}
-	ExecuteRMI(ExecuteRMI &&o)
-		: peer(std::move(o.peer)), reader(std::move(o.reader)),
-		  methodInvoker(std::move(o.methodInvoker)), flags(o.flags)
-	{
-	}
-
-	Peer *peer;
-	ByteReader reader;
-	void *objectPtr;
-	rmi::MethodInvocationConverter *methodInvoker;
 	Flags flags;
 
 	void Execute();
@@ -225,7 +200,7 @@ public:
 	Command &operator=(const Command &other) = delete;
 
 	std::variant<int, commands::ExecuteOnPeer, commands::ExecuteOnPeerNoArgs,
-				 commands::ExecuteRPC, commands::ExecuteRMI,
+				 commands::ExecuteRPC,
 				 commands::ExecuteReturnRC, commands::ExecuteConnectGNS,
 				 commands::ExecuteSend, commands::ExecuteDisconnect,
 				 commands::ExecuteFunctionPointer>
@@ -243,7 +218,6 @@ public:
 	{
 	}
 	Command(commands::ExecuteRPC &&executeRPC) : cmd(std::move(executeRPC)) {}
-	Command(commands::ExecuteRMI &&executeRMI) : cmd(std::move(executeRMI)) {}
 	Command(commands::ExecuteReturnRC &&executeReturnRC)
 		: cmd(std::move(executeReturnRC))
 	{
@@ -264,6 +238,6 @@ public:
 	{
 	}
 };
-} // namespace icon6
+} // namespace icon7
 
 #endif

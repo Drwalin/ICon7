@@ -1,13 +1,13 @@
 /*
- *  This file is part of ICon6.
+ *  This file is part of ICon7.
  *  Copyright (C) 2023 Marek Zalewski aka Drwalin
  *
- *  ICon6 is free software: you can redistribute it and/or modify
+ *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  ICon6 is distributed in the hope that it will be useful,
+ *  ICon7 is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
@@ -16,8 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef ICON6_HOST_GAME_NETWORKING_SOCKETS_HPP
-#define ICON6_HOST_GAME_NETWORKING_SOCKETS_HPP
+#ifndef ICON7_HOST_GAME_NETWORKING_SOCKETS_HPP
+#define ICON7_HOST_GAME_NETWORKING_SOCKETS_HPP
 
 #include <string>
 #include <future>
@@ -33,7 +33,7 @@
 
 #include "Host.hpp"
 
-namespace icon6
+namespace icon7
 {
 void Debug(const char *file, int line, const char *fmt, ...);
 
@@ -44,7 +44,7 @@ namespace gns
 {
 class Peer;
 
-class Host final : public icon6::Host
+class Host final : public icon7::Host
 {
 public:
 	// create host on given port
@@ -60,14 +60,14 @@ public:
 	virtual void DisconnectAllGracefully() override;
 
 	// Thread unsafe.
-	virtual void ForEachPeer(void(func)(icon6::Peer *)) override;
+	virtual void ForEachPeer(void(func)(icon7::Peer *)) override;
 	// Thread unsafe.
-	virtual void ForEachPeer(std::function<void(icon6::Peer *)> func) override;
+	virtual void ForEachPeer(std::function<void(icon7::Peer *)> func) override;
 
 public:
 	inline void Connect(std::string address, uint16_t port)
 	{
-		icon6::Host::Connect(address, port);
+		icon7::Host::Connect(address, port);
 	}
 	virtual void Connect(std::string address, uint16_t port,
 						 commands::ExecuteOnPeer &&onConnected,
@@ -114,6 +114,6 @@ uint32_t Initialize();
 void Deinitialize();
 
 } // namespace gns
-} // namespace icon6
+} // namespace icon7
 
 #endif

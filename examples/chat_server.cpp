@@ -4,14 +4,13 @@
 #include <chrono>
 #include <thread>
 
-#include <icon6/Host.hpp>
-#include <icon6/Peer.hpp>
-#include <icon6/MethodInvocationEnvironment.hpp>
-#include <icon6/Flags.hpp>
-#include <icon6/MessagePassingEnvironment.hpp>
+#include <icon7/Host.hpp>
+#include <icon7/Peer.hpp>
+#include <icon7/Flags.hpp>
+#include <icon7/MessagePassingEnvironment.hpp>
 
-std::unordered_map<std::string, icon6::Peer *> peers;
-icon6::MessagePassingEnvironment mpi;
+std::unordered_map<std::string, icon7::Peer *> peers;
+icon7::MessagePassingEnvironment mpi;
 
 int main(int argc, char **argv)
 {
@@ -24,11 +23,11 @@ int main(int argc, char **argv)
 
 	printf("Running on port %u\n", port);
 
-	icon6::Initialize();
+	icon7::Initialize();
 
 	mpi.RegisterMessage(
 		"SetNickname",
-		[](icon6::Peer *peer, const std::string &nickname) -> bool {
+		[](icon7::Peer *peer, const std::string &nickname) -> bool {
 			if (peer->userPointer != nullptr) {
 				std::string *oldName = (std::string *)(peer->userPointer);
 				peers.erase(*oldName);
@@ -45,21 +44,21 @@ int main(int argc, char **argv)
 			return true;
 		});
 	mpi.RegisterMessage("Broadcast",
-						[](icon6::Peer *peer, std::string message) {
+						[](icon7::Peer *peer, std::string message) {
 							std::string nickname = "";
 							if (peer->userPointer != nullptr) {
 								nickname = *(std::string *)(peer->userPointer);
 							}
 
-							peer->GetHost()->ForEachPeer([&](icon6::Peer *p2) {
+							peer->GetHost()->ForEachPeer([&](icon7::Peer *p2) {
 								if (p2 != peer) {
-									mpi.Send(p2, icon6::FLAG_RELIABLE,
+									mpi.Send(p2, icon7::FLAG_RELIABLE,
 											 "Broadcasted", nickname, message);
 								}
 							});
 						});
 	mpi.RegisterMessage("Msg",
-						[](icon6::Peer *peer, const std::string nickname,
+						[](icon7::Peer *peer, const std::string nickname,
 						   std::string message) -> bool {
 							std::string srcNickname = "";
 							if (peer->userPointer != nullptr) {
@@ -68,7 +67,7 @@ int main(int argc, char **argv)
 							}
 							auto it = peers.find(nickname);
 							if (it != peers.end()) {
-								mpi.Send(it->second, icon6::FLAG_RELIABLE,
+								mpi.Send(it->second, icon7::FLAG_RELIABLE,
 										 "Msg", srcNickname, message);
 								return true;
 							} else {
@@ -77,8 +76,8 @@ int main(int argc, char **argv)
 							}
 						});
 
-	icon6::Host *host = icon6::Host::MakeGameNetworkingSocketsHost(port);
-	host->SetDisconnect([](icon6::Peer *peer) {
+	icon7::Host *host = icon7::Host::MakeGameNetworkingSocketsHost(port);
+	host->SetDisconnect([](icon7::Peer *peer) {
 		if (peer->userPointer != nullptr) {
 			std::string *oldName = (std::string *)(peer->userPointer);
 			peers.erase(*oldName);
@@ -103,6 +102,6 @@ int main(int argc, char **argv)
 
 	delete host;
 
-	icon6::Deinitialize();
+	icon7::Deinitialize();
 	return 0;
 }
