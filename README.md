@@ -17,16 +17,8 @@ Unreliable message size is limited to MTU, which usually is around 1500 bytes,
 but for safety reasons it shouldn't be more than around 768 or 1024 bytes.
 
 Reliable messages (with headers) should be smaller than 64KiB (65536 bytes), but
-size is limited by 2^60 (1 EiB).
-
-
-Provides secure communication between two endpoints with UPD socket. Any client
-can connect to any other client (calling them servers is purely semantical).
-Networking and encryption is done with ValveSoftware/GameNetworkingSockets.
-User can pass OnReceive callback for all binary messages per-peer basis or user
-can use RPC or RMI semantics (set per Host).
-
-Each message is limited by GameNetworkingSockets to 512KiB.
+size is limited by 2^60 (1 EiB). Size of messages may be limited by underlying
+networking library more.
 
 ## Vulnerabilities
 
