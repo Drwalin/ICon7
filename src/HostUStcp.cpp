@@ -45,12 +45,12 @@ void HostUStcp::_InternalDestroy()
 	Host::_InternalDestroy();
 }
 
-bool HostUStcp::Init(const char *key_file_name, const char *cert_file_name,
+bool HostUStcp::Init(bool useSSL,
+		const char *key_file_name, const char *cert_file_name,
 					 const char *passphrase, const char *dh_params_file_name,
 					 const char *ca_file_name, const char *ssl_ciphers)
 {
-	SSL = key_file_name || cert_file_name || passphrase ||
-		  dh_params_file_name || ca_file_name || ssl_ciphers;
+	SSL = useSSL;
 	us_socket_context_options_t options{key_file_name, cert_file_name,
 										passphrase,	   dh_params_file_name,
 										ca_file_name,  ssl_ciphers};
