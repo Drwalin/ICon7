@@ -1,6 +1,6 @@
 /*
  *  This file is part of ICon7.
- *  Copyright (C) 2023 Marek Zalewski aka Drwalin
+ *  Copyright (C) 2023-2024 Marek Zalewski aka Drwalin
  *
  *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -23,51 +23,16 @@
 
 namespace icon7
 {
-struct Flags {
-	uint32_t field;
-	void GetNetworkOrder(void *ptr) const;
+using Flags = uint32_t;
 
-	Flags(uint32_t v) : field(v) {}
+enum FlagsValues : uint32_t {
+	FLAG_UNRELIABLE = 0,
+	FLAG_RELIABLE = 1,
 
-	Flags() : field(0) {}
-	Flags(Flags &&) = default;
-	Flags(Flags &) = default;
-	Flags(const Flags &) = default;
-
-	Flags &operator=(Flags &&) = default;
-	Flags &operator=(Flags &) = default;
-	Flags &operator=(const Flags &) = default;
-
-	inline Flags operator&(const Flags o) const { return field & o.field; }
-	inline Flags operator^(const Flags o) const { return field ^ o.field; }
-	inline Flags operator|(const Flags o) const { return field | o.field; }
-
-	inline Flags operator&=(const Flags o) { return *this = *this & o; }
-	inline Flags operator^=(const Flags o) { return *this = *this ^ o; }
-	inline Flags operator|=(const Flags o) { return *this = *this | o; }
-
-	inline bool operator==(const Flags o) const { return field == o.field; }
-	inline bool operator!=(const Flags o) const { return field != o.field; }
-	inline operator bool() const { return field; }
-
-	uint32_t GetSteamFlags() const;
+	FLAGS_CALL = 0,
+	FLAGS_CALL_NO_FEEDBACK = 2,
+	FLAGS_CALL_RETURN_FEEDBACK = 4
 };
-
-inline const static Flags FLAG_UNRELIABLE = 0;
-inline const static Flags FLAG_RELIABLE = 8;
-inline const static Flags FLAG_NO_NAGLE = 1;
-
-inline const static Flags FLAG_UNRELIABLE_NO_NAGLE =
-	FLAG_UNRELIABLE | FLAG_NO_NAGLE;
-inline const static Flags FLAG_RELIABLE_NO_NAGLE =
-	FLAG_RELIABLE | FLAG_NO_NAGLE;
-
-namespace MethodProtocolSendFlags
-{
-inline const uint8_t FUNCTION_SEND_PREFIX = 0;
-inline const uint8_t FUNCTION_CALL_PREFIX = 1;
-inline const uint8_t RETURN_CALLBACK = 4;
-} // namespace MethodProtocolSendFlags
 } // namespace icon7
 
 #endif

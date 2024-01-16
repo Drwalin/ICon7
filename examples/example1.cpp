@@ -1,79 +1,108 @@
+#include "icon7/Command.hpp"
+#include <cstdio>
+
+#include <iostream>
 #include <chrono>
 #include <thread>
 
-#include <unistd.h>
-#include <signal.h>
-
-#include <icon7/Host.hpp>
 #include <icon7/Peer.hpp>
+#include <icon7/Flags.hpp>
+#include <icon7/RPCEnvironment.hpp>
+#include <icon7/Flags.hpp>
+#include <icon7/PeerUStcp.hpp>
+#include <icon7/HostUStcp.hpp>
 
-std::vector<uint8_t> MakeVector(const char *str)
+icon7::RPCEnvironment rpc;
+
+int Sum(int a, int b)
 {
-	return std::vector<uint8_t>(str, str + (size_t)strlen(str) + 1);
+	printf("----------------------------------- sum %i + %i = %i\n", a, b,
+		   a + b);
+	return a + b;
+}
+
+int Mul(int a, int b)
+{
+	printf("----------------------------------- mul %i + %i = %i\n", a, b,
+		   a * b);
+	return a * b;
 }
 
 int main()
 {
-	uint16_t port1 = 4000, port2 = 4001;
-
-	pid_t c_pid = fork();
+	uint16_t port = 7312;
 
 	icon7::Initialize();
 
-	if (c_pid == -1) {
-		perror("fork");
-		exit(EXIT_FAILURE);
-	} else if (c_pid <= 0) {
-		icon7::Host *host1 = icon7::Host::MakeGameNetworkingSocketsHost(port1);
+	rpc.RegisterMessage("sum", Sum);
+	rpc.RegisterMessage("mul", Mul);
 
-		host1->SetReceive([](icon7::Peer *p, icon7::ByteReader &reader,
-							 icon7::Flags flags) {
-			printf(" message received by client: %s\n", (char *)reader.data());
-			fflush(stdout);
-		});
-		host1->RunAsync();
+	icon7::HostUStcp *hosta = new icon7::HostUStcp();
+	hosta->SetRpcEnvironment(&rpc);
+	hosta->Init();
+	hosta->RunAsync();
 
-		auto P1 = host1->ConnectPromise("127.0.0.1", port2);
-		P1.wait();
-		auto p1 = P1.get();
+	{
+		icon7::commands::ExecuteBooleanOnHost com;
+		com.function = [](auto host, bool v, void *) {
+			printf(" %s\n", v ? "Listening" : "Fail to listen");
+		};
+		hosta->ListenOnPort(port, std::move(com), nullptr);
+	}
 
-		if (p1 != nullptr) {
-			p1->Send(MakeVector("Message 1"), 0);
-			p1->Send(MakeVector("Message 2"), 0);
-			p1->Send(MakeVector("Message 3"), 0);
+	icon7::HostUStcp *hostb = new icon7::HostUStcp();
+	hostb->SetRpcEnvironment(&rpc);
+	hostb->Init();
+	hostb->RunAsync();
 
-			std::this_thread::sleep_for(std::chrono::milliseconds(200));
+	{
+		icon7::commands::ExecuteOnPeer com;
+		com.function = [](icon7::Peer *peer, auto x, void *) {
+			DEBUG("Connected to host!");
+			peer->Disconnect();
+		};
 
-			p1->Disconnect();
-		} else {
-			throw "Didn't connect to peer.";
-		}
+		hostb->Connect("127.0.0.1", port, std::move(com), nullptr);
+	}
 
-		host1->WaitStop();
-		delete host1;
-	} else {
-		icon7::Host *host2 = icon7::Host::MakeGameNetworkingSocketsHost(port2);
+	std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-		host2->SetReceive([](icon7::Peer *p, icon7::ByteReader &reader,
-							 icon7::Flags flags) {
-			printf(" message received by server: %s\n", (char *)reader.data());
-			fflush(stdout);
-			fflush(stdout);
-			std::string res = (char *)reader.data();
-			res = "Response " + res;
-			p->Send(MakeVector(res.c_str()), flags);
-		});
+	auto f = hostb->ConnectPromise("127.0.0.1", port);
 
-		host2->RunAsync();
+	std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+	std::thread t([&]() {
+		DEBUG("Waiting to connect second!!!!!!!!!!!!!!!!!!!!!!");
+		f.wait();
+		icon7::Peer *peer = f.get();
+		DEBUG("Connected to second!!!!!!!!!!!!!!!!!!!!!");
+
+		rpc.Send(peer, icon7::FLAG_RELIABLE, "sum", 3, 23);
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+		rpc.Call(peer, icon7::FLAG_RELIABLE,
+				 icon7::OnReturnCallback::Make<uint32_t>(
+					 [](icon7::Peer *peer, icon7::Flags flags,
+						uint32_t result) -> void {
+						 printf(" Multiplication result = %i\n", result);
+					 },
+					 [](icon7::Peer *peer) -> void {
+						 printf(" Multiplication timeout\n");
+					 },
+					 10000, peer),
+				 "mul", 5, 13);
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(200));
+		delete hosta;
+		delete hostb;
+	});
 
-		host2->Stop();
-		host2->WaitStop();
-		delete host2;
+	std::this_thread::sleep_for(std::chrono::milliseconds(200));
+	printf(" CLOSING TIMEOUT!");
+	DEBUG("Closing with timeout.");
 
-		kill(c_pid, SIGKILL);
-	}
+	exit(0);
 
 	icon7::Deinitialize();
 	return 0;

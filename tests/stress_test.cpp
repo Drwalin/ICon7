@@ -8,12 +8,12 @@
 #include <signal.h>
 #include <sys/mman.h>
 
-#include <icon7/Host.hpp>
-#include <icon7/MessagePassingEnvironment.hpp>
+#include <icon7/RPCEnvironment.hpp>
 #include <icon7/Flags.hpp>
-#include <icon7/PeerGNS.hpp>
+#include <icon7/PeerUStcp.hpp>
+#include <icon7/HostUStcp.hpp>
 
-icon7::MessagePassingEnvironment mpe;
+icon7::RPCEnvironment rpc;
 
 icon7::Host *host = nullptr;
 const uint32_t CLIENTS_NUM = 10;
@@ -56,8 +56,8 @@ struct IPC {
 	std::atomic<uint32_t> flags;
 	std::atomic<uint32_t> slavesRunningCount;
 
-	std::atomic<uint32_t> pendingReliable[64 * 1024];
-	std::atomic<uint32_t> unackedReliable[64 * 1024];
+	// 	std::atomic<uint32_t> pendingReliable[64 * 1024];
+	// 	std::atomic<uint32_t> unackedReliable[64 * 1024];
 
 	std::atomic<uint32_t> counterSentByClients;
 	std::atomic<uint32_t> counterSentByServer;
@@ -157,8 +157,8 @@ void Runner(icon7::Peer *peer)
 			auto now = std::chrono::steady_clock::now();
 			double dt = std::chrono::duration<double>(now - originTime).count();
 			icon7::Flags flag = ((processId >= 0) || ((msgSent % 16) == 0))
-									? icon7::FLAG_RELIABLE_NO_NAGLE
-									: icon7::FLAG_UNRELIABLE_NO_NAGLE;
+									? icon7::FLAG_RELIABLE
+									: icon7::FLAG_UNRELIABLE;
 			++msgSent;
 			uint64_t bytes = data.size() * 21 + 8 + 4 + 7;
 			if (processId >= 0) {
@@ -168,7 +168,7 @@ void Runner(icon7::Peer *peer)
 				ipc->counterSentByServer++;
 				ipc->serverSendBytes += bytes;
 			}
-			mpe.Send(peer, flag, "first", data, dt);
+			rpc.Send(peer, flag, "first", data, dt);
 		}
 	}
 	ipc->flags += 1;
@@ -309,14 +309,15 @@ void runTestSlave()
 {
 	host->Connect("127.0.0.1", serverPort);
 	while (ipc->runTestFlag != 0) {
-		icon7::Command com(icon7::commands::ExecuteFunctionPointer{[]() {
-			host->ForEachPeer(+[](icon7::Peer *p) {
-				auto stats = ((icon7::gns::Peer *)p)->GetRealTimeStats();
-				ipc->pendingReliable[processId] = stats.m_cbPendingReliable;
-				ipc->unackedReliable[processId] = stats.m_cbSentUnackedReliable;
-			});
-		}});
-		host->EnqueueCommand(std::move(com));
+		// 		icon7::Command com(icon7::commands::ExecuteFunctionPointer{[]()
+		// { 			host->ForEachPeer(+[](icon7::Peer *p) { 				auto stats =
+		// ((icon7::PeerUStcp *)p)->GetRealTimeStats();
+		// 				ipc->pendingReliable[processId] =
+		// stats.m_cbPendingReliable; 				ipc->unackedReliable[processId] =
+		// stats.m_cbSentUnackedReliable;
+		// 			});
+		// 		}});
+		// 		host->EnqueueCommand(std::move(com));
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 	icon7::Command com(icon7::commands::ExecuteFunctionPointer{
@@ -336,7 +337,7 @@ int main()
 	memset(ipc, 0, sizeof(IPC));
 	new (&ipc->mutex) Mutex;
 
-	mpe.RegisterMessage("first", FunctionReceive);
+	rpc.RegisterMessage("first", FunctionReceive);
 
 	pid_t pids[CLIENTS_NUM];
 	for (int i = 0; i < CLIENTS_NUM; ++i) {
@@ -361,14 +362,17 @@ int main()
 
 	icon7::Initialize();
 
-	if (processId < 0) {
-		host = icon7::Host::MakeGameNetworkingSocketsHost(serverPort);
-	} else {
-		host = icon7::Host::MakeGameNetworkingSocketsHost();
+	icon7::HostUStcp *_host = new icon7::HostUStcp();
+	_host->Init();
+	host = _host;
+
+	if (processId < 0) { // server
+		host->ListenOnPort(serverPort);
+	} else { // client
 	}
 
-	host->SetMessagePassingEnvironment(&mpe);
-	host->SetConnect(Run);
+	host->SetRpcEnvironment(&rpc);
+	host->SetOnConnect(Run);
 
 	host->RunAsync();
 
@@ -396,7 +400,7 @@ int main()
 		}
 	}
 
-	host->WaitStop();
+	host->WaitStopRunning();
 	delete host;
 
 	icon7::Deinitialize();
