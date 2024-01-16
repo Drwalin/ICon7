@@ -1,6 +1,6 @@
 /*
  *  This file is part of ICon7.
- *  Copyright (C) 2023 Marek Zalewski aka Drwalin
+ *  Copyright (C) 2023-2024 Marek Zalewski aka Drwalin
  *
  *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,8 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef ICON7_MESSAGE_PASSING_ENVIRONMENT_HPP
-#define ICON7_MESSAGE_PASSING_ENVIRONMENT_HPP
+#ifndef ICON7_RPC_ENVIRONMENT_HPP
+#define ICON7_RPC_ENVIRONMENT_HPP
 
 #include <string>
 #include <unordered_map>
@@ -38,12 +38,18 @@ namespace icon7
 
 class CommandExecutionQueue;
 
-class MessagePassingEnvironment
+class RPCEnvironment
 {
 public:
-	virtual ~MessagePassingEnvironment();
+	~RPCEnvironment();
 
-	virtual void OnReceive(Peer *peer, ByteReader &reader, Flags flags);
+	void OnReceive(Peer *peer, std::vector<uint8_t> &frameData,
+				   uint32_t headerSize, Flags flags);
+	/*
+	 * expects that reader already filled flags fully and reader is at body
+	 * offset
+	 */
+	void OnReceive(Peer *peer, ByteReader &reader, Flags flags);
 
 	template <typename Fun>
 	void RegisterMessage(const std::string &name, Fun &&fun,
@@ -61,19 +67,29 @@ public:
 	{
 		std::vector<uint8_t> buffer;
 		{
+			/*
+			 * need this block, because writer resizes to correct size
+			 * underlying buffer inside destructor
+			 */
 			bitscpp::ByteWriter writer(buffer);
-			writer.op(MethodProtocolSendFlags::FUNCTION_SEND_PREFIX);
-			writer.op(name);
-			(writer.op(args), ...);
+			SerializeSend(writer, flags, name, args...);
 		}
 		peer->Send(std::move(buffer), flags);
+	}
+
+	template <typename... Targs>
+	static void SerializeSend(bitscpp::ByteWriter &writer, Flags &flags,
+							  const std::string &name, const Targs &...args)
+	{
+		writer.op(name);
+		(writer.op(args), ...);
+		flags |= FLAGS_CALL_NO_FEEDBACK;
 	}
 
 	template <typename... Targs>
 	void Call(Peer *peer, Flags flags, OnReturnCallback &&callback,
 			  const std::string &name, const Targs &...args)
 	{
-		std::vector<uint8_t> buffer;
 		uint32_t returnCallbackId = 0;
 		{
 			std::lock_guard guard{mutexReturningCallbacks};
@@ -83,14 +99,18 @@ public:
 					 returningCallbacks.count(returnCallbackId) != 0);
 			returningCallbacks[returnCallbackId] = std::move(callback);
 		}
+		std::vector<uint8_t> buffer;
 		{
+			/*
+			 * need this block, because writer resizes to correct size
+			 * underlying buffer inside destructor
+			 */
 			bitscpp::ByteWriter writer(buffer);
-			writer.op(MethodProtocolSendFlags::FUNCTION_CALL_PREFIX);
+			writer.op(returnCallbackId);
 			writer.op(name);
 			(writer.op(args), ...);
-			writer.op(returnCallbackId);
 		}
-		peer->Send(std::move(buffer), flags);
+		peer->Send(std::move(buffer), flags | FLAGS_CALL);
 	}
 
 	void CheckForTimeoutFunctionCalls(uint32_t maxChecks = 10);

@@ -6,10 +6,13 @@
 
 #include <icon7/Peer.hpp>
 #include <icon7/Flags.hpp>
-#include <icon7/MessagePassingEnvironment.hpp>
+#include <icon7/RPCEnvironment.hpp>
+#include <icon7/Flags.hpp>
+#include <icon7/PeerUStcp.hpp>
+#include <icon7/HostUStcp.hpp>
 
 std::unordered_map<std::string, icon7::Peer *> peers;
-icon7::MessagePassingEnvironment mpi;
+icon7::RPCEnvironment rpc;
 
 int main(int argc, char **argv)
 {
@@ -24,14 +27,14 @@ int main(int argc, char **argv)
 
 	icon7::Initialize();
 
-	mpi.RegisterMessage("Broadcasted", [](icon7::Peer *peer,
+	rpc.RegisterMessage("Broadcasted", [](icon7::Peer *peer,
 										  const std::string &nickname,
 										  std::string message) {
 		printf("broadcast from %s: %s\n",
 			   nickname == "" ? "<anonymus>" : nickname.c_str(),
 			   message.c_str());
 	});
-	mpi.RegisterMessage("Msg", [](icon7::Peer *peer,
+	rpc.RegisterMessage("Msg", [](icon7::Peer *peer,
 								  const std::string &nickname,
 								  std::string message) {
 		printf("private message from %s: %s\n",
@@ -39,8 +42,10 @@ int main(int argc, char **argv)
 			   message.c_str());
 	});
 
-	icon7::Host *host = icon7::Host::MakeGameNetworkingSocketsHost();
-	host->SetMessagePassingEnvironment(&mpi);
+	icon7::HostUStcp *_host = new icon7::HostUStcp();
+	_host->Init();
+	icon7::Host *host = _host;
+	host->SetRpcEnvironment(&rpc);
 	host->RunAsync();
 
 	icon7::Peer *peer = host->ConnectPromise(argv[1], port).get();
@@ -53,20 +58,20 @@ int main(int argc, char **argv)
 		if (str.substr(0, 4) == "quit" && str.size() <= 6) {
 			peer->Disconnect();
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));
-			host->Stop();
-			host->WaitStop();
+			host->QueueStopRunning();
+			host->WaitStopRunning();
 			break;
 		} else if (str.substr(0, 5) == "nick ") {
-			mpi.Send(peer, icon7::FLAG_RELIABLE, "SetNickname",
+			rpc.Send(peer, icon7::FLAG_RELIABLE, "SetNickname",
 					 str.substr(5, -1));
 		} else if (str.substr(0, 4) == "msg ") {
 			auto end = str.find(' ', 5);
 			std::string recipient = str.substr(4, end - 4);
 			printf("Sending msg to `%s`\n", recipient.c_str());
-			mpi.Send(peer, icon7::FLAG_RELIABLE, "Msg", recipient,
+			rpc.Send(peer, icon7::FLAG_RELIABLE, "Msg", recipient,
 					 str.substr(end + 1));
 		} else {
-			mpi.Send(peer, icon7::FLAG_RELIABLE, "Broadcast", str);
+			rpc.Send(peer, icon7::FLAG_RELIABLE, "Broadcast", str);
 		}
 	}
 

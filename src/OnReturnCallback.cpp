@@ -1,6 +1,6 @@
 /*
  *  This file is part of ICon7.
- *  Copyright (C) 2023 Marek Zalewski aka Drwalin
+ *  Copyright (C) 2023-2024 Marek Zalewski aka Drwalin
  *
  *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ bool OnReturnCallback::IsExpired(
 
 void OnReturnCallback::Execute(Peer *peer, Flags flags, ByteReader &reader)
 {
-	if (peer != this->peer) {
+	if (peer != this->peer.get()) {
 		DEBUG("OnReturnedCallback executed by different peer than the request "
 			  "was sent to");
 	}
@@ -43,7 +43,7 @@ void OnReturnCallback::Execute(Peer *peer, Flags flags, ByteReader &reader)
 		com.flags = flags;
 		executionQueue->EnqueueCommand(std::move(command));
 	} else {
-		_internalOnReturnedValue(this->peer, flags, reader, onReturned);
+		_internalOnReturnedValue(this->peer.get(), flags, reader, onReturned);
 	}
 }
 
@@ -58,7 +58,7 @@ void OnReturnCallback::ExecuteTimeout()
 			com.function = onTimeout;
 			executionQueue->EnqueueCommand(std::move(command));
 		} else {
-			onTimeout(peer);
+			onTimeout(peer.get());
 		}
 	}
 }

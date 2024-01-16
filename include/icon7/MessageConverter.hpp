@@ -1,6 +1,6 @@
 /*
  *  This file is part of ICon7.
- *  Copyright (C) 2023 Marek Zalewski aka Drwalin
+ *  Copyright (C) 2023-2024 Marek Zalewski aka Drwalin
  *
  *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@
 namespace icon7
 {
 
-class MessagePassingEnvironment;
+class RPCEnvironment;
 class CommandExecutionQueue;
 
 class MessageConverter
@@ -39,7 +39,8 @@ class MessageConverter
 public:
 	virtual ~MessageConverter() = default;
 
-	virtual void Call(Peer *peer, ByteReader &reader, Flags flags) = 0;
+	virtual void Call(Peer *peer, ByteReader &reader, Flags flags,
+					  uint32_t returnId) = 0;
 
 	CommandExecutionQueue *executionQueue;
 };
@@ -49,19 +50,22 @@ template <typename Tret> class MessageReturnExecutor
 public:
 	template <typename TF, typename Tuple, size_t... SeqArgs>
 	static void Execute(TF &&onReceive, Tuple &args, Peer *peer, Flags flags,
-						ByteReader &reader, std::index_sequence<SeqArgs...>)
+						uint32_t returnId, std::index_sequence<SeqArgs...>)
 	{
 		Tret ret = onReceive(std::get<SeqArgs>(args)...);
-		if (reader.data()[0] == MethodProtocolSendFlags::FUNCTION_CALL_PREFIX &&
-			reader.get_remaining_bytes() == 4) {
-			uint32_t id;
-			reader.op(id);
+		if (returnId) {
 			std::vector<uint8_t> buffer;
-			bitscpp::ByteWriter writer(buffer);
-			writer.op(MethodProtocolSendFlags::RETURN_CALLBACK);
-			writer.op(id);
-			writer.op(ret);
-			peer->Send(std::move(buffer), flags);
+			{
+				/*
+				 * need this block, because writer resizes to correct size
+				 * underlying buffer inside destructor
+				 */
+				bitscpp::ByteWriter writer(buffer);
+				writer.op(returnId);
+				writer.op(ret);
+			}
+			peer->Send(std::move(buffer), ((flags | Flags(6)) ^ Flags(6)) |
+											  FLAGS_CALL_RETURN_FEEDBACK);
 		}
 	}
 };
@@ -71,18 +75,21 @@ template <> class MessageReturnExecutor<void>
 public:
 	template <typename TF, typename Tuple, size_t... SeqArgs>
 	static void Execute(TF &&onReceive, Tuple &args, Peer *peer, Flags flags,
-						ByteReader &reader, std::index_sequence<SeqArgs...>)
+						uint32_t returnId, std::index_sequence<SeqArgs...>)
 	{
 		onReceive(std::get<SeqArgs>(args)...);
-		if (reader.data()[0] == MethodProtocolSendFlags::FUNCTION_CALL_PREFIX &&
-			reader.get_remaining_bytes() == 4) {
-			uint32_t id;
-			reader.op(id);
+		if (returnId) {
 			std::vector<uint8_t> buffer;
-			bitscpp::ByteWriter writer(buffer);
-			writer.op(MethodProtocolSendFlags::RETURN_CALLBACK);
-			writer.op(id);
-			peer->Send(std::move(buffer), flags);
+			{
+				/*
+				 * need this block, because writer resizes to correct size
+				 * underlying buffer inside destructor
+				 */
+				bitscpp::ByteWriter writer(buffer);
+				writer.op(returnId);
+			}
+			peer->Send(std::move(buffer), ((flags | Flags(6)) ^ Flags(6)) |
+											  FLAGS_CALL_RETURN_FEEDBACK);
 		}
 	}
 };
@@ -101,23 +108,24 @@ public:
 
 	virtual ~MessageConverterSpec() = default;
 
-	virtual void Call(Peer *peer, ByteReader &reader, Flags flags) override
+	virtual void Call(Peer *peer, ByteReader &reader, Flags flags,
+					  uint32_t returnId) override
 	{
 		auto seq = std::index_sequence_for<Targs...>{};
-		_InternalCall(peer, flags, reader, seq);
+		_InternalCall(peer, flags, reader, returnId, seq);
 	}
 
 private:
 	template <size_t... SeqArgs>
 	void _InternalCall(Peer *peer, Flags flags, ByteReader &reader,
-					   std::index_sequence<SeqArgs...> seq)
+					   uint32_t returnId, std::index_sequence<SeqArgs...> seq)
 	{
 		TupleType args;
 		(PeerFlagsArgumentsReader::ReadType(peer, flags, reader,
 											std::get<SeqArgs>(args)),
 		 ...);
 		MessageReturnExecutor<Tret>::Execute(onReceive, args, peer, flags,
-											 reader, seq);
+											 returnId, seq);
 	}
 
 private:

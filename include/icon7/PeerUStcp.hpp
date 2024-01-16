@@ -1,6 +1,6 @@
 /*
  *  This file is part of ICon7.
- *  Copyright (C) 2023 Marek Zalewski aka Drwalin
+ *  Copyright (C) 2023-2024 Marek Zalewski aka Drwalin
  *
  *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,29 +16,32 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <cstring>
+#ifndef ICON7_PEER_USTCP_HPP
+#define ICON7_PEER_USTCP_HPP
 
-#include <steam/steamnetworkingtypes.h>
+#include "../../uSockets/src/libusockets.h"
 
-#include <bitscpp/Endianness.hpp>
-
-#include "../include/icon7/Flags.hpp"
+#include "Peer.hpp"
 
 namespace icon7
 {
-void Flags::GetNetworkOrder(void *ptr) const
-{
-	uint32_t v = bitscpp::HostToNetworkUint(field);
-	memcpy(ptr, &v, sizeof(uint32_t));
-}
+class Host;
 
-uint32_t Flags::GetSteamFlags() const
+class PeerUStcp : public Peer
 {
-	uint32_t ret = 0;
-	if (field & FLAG_RELIABLE)
-		ret |= k_nSteamNetworkingSend_Reliable;
-	if (field & FLAG_NO_NAGLE)
-		ret |= k_nSteamNetworkingSend_NoNagle;
-	return ret;
-}
+public:
+	PeerUStcp(Host *host, us_socket_t *socket);
+	virtual ~PeerUStcp();
+
+protected:
+	virtual bool _InternalSend(SendFrameStruct &dataFrame,
+							   bool hasMore) override;
+	virtual void _InternalDisconnect() override;
+
+protected:
+	us_socket_t *socket;
+	int SSL;
+};
 } // namespace icon7
+
+#endif

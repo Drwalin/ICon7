@@ -1,6 +1,6 @@
 /*
  *  This file is part of ICon7.
- *  Copyright (C) 2023 Marek Zalewski aka Drwalin
+ *  Copyright (C) 2023-2024 Marek Zalewski aka Drwalin
  *
  *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,88 +20,178 @@
 
 #include <thread>
 
-#include "../include/icon7/MessagePassingEnvironment.hpp"
-#include "../include/icon7/Host.hpp"
-#include "../include/icon7/Command.hpp"
+#include "../concurrentqueue/concurrentqueue.h"
 
+#define ICON7_PEER_CPP_INCLUDE_UNION_CONCURRENT_QUEUE
 #include "../include/icon7/Peer.hpp"
+#undef ICON7_PEER_CPP_INCLUDE_UNION_CONCURRENT_QUEUE
+
+#include "../include/icon7/Host.hpp"
+#include "../include/icon7/RPCEnvironment.hpp"
+#include "../include/icon7/Command.hpp"
+#include "../include/icon7/FramingProtocol.hpp"
 
 namespace icon7
 {
+
+Peer::SendFrameStruct::SendFrameStruct(
+	std::vector<uint8_t> &&_dataWithoutHeader, Flags flags)
+	: dataWithoutHeader(std::move(_dataWithoutHeader))
+{
+	this->flags = flags;
+	bytesSent = 0;
+	headerBytesSent = 0;
+	headerSize = FramingProtocol::GetHeaderSize(dataWithoutHeader.size());
+	*(uint32_t *)header = 0;
+	FramingProtocol::WriteHeader(header, headerSize, dataWithoutHeader.size(),
+								 flags);
+}
+Peer::SendFrameStruct::SendFrameStruct() {}
+
 Peer::Peer(Host *host) : host(host)
 {
 	userData = 0;
 	userPointer = nullptr;
-	callbackOnReceive = host->callbackOnReceive;
-	callbackOnDisconnect = host->callbackOnDisconnect;
+	onDisconnect = nullptr;
 	readyToUse = false;
-}
-Peer::~Peer() {}
-
-void Peer::Send(std::vector<uint8_t> &&data, Flags flags)
-{
-	if (!IsReadyToUse()) {
-		DEBUG("Send called on peer %p before ready to use", this);
-	}
-	Command command{commands::ExecuteSend{}};
-	commands::ExecuteSend &com = std::get<commands::ExecuteSend>(command.cmd);
-	com.flags = flags;
-	com.peer = this;
-	com.data = std::move(data);
-	host->EnqueueCommand(std::move(command));
+	disconnecting = false;
+	sendQueue = new QueueType();
+	sendingQueueSize = 0;
+	receivingHeaderSize = 0;
+	receivingFrameSize = 0;
 }
 
-void Peer::_InternalSendOrQueue(std::vector<uint8_t> &data, Flags flags)
+Peer::~Peer()
 {
-	bool wasQueued = !queuedSends.empty();
-	_InternalFlushQueuedSends();
-	if (queuedSends.empty() ||
-		((flags & FLAG_UNRELIABLE_NO_NAGLE) == FLAG_UNRELIABLE_NO_NAGLE)) {
-		if (_InternalSend(data.data(), data.size(), flags) == true) {
-			if (wasQueued) {
-				host->peersQueuedSends.erase(this);
-				host->peersQueuedSendsIterator = host->peersQueuedSends.begin();
-			}
-			return;
-		}
-	}
-	queuedSends.emplace();
-	queuedSends.back().data.swap(data);
-	queuedSends.back().flags = flags;
-	host->peersQueuedSends.insert(this);
-	host->peersQueuedSendsIterator = host->peersQueuedSends.begin();
+	delete sendQueue;
+	sendQueue = nullptr;
 }
 
-void Peer::_InternalFlushQueuedSends()
+void Peer::Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
 {
-	while (queuedSends.empty() == false) {
-		SendCommand &cmd = queuedSends.front();
-		if (_InternalSend(cmd.data.data(), cmd.data.size(), cmd.flags)) {
-			queuedSends.pop();
-		} else {
-			break;
-		}
+	if (disconnecting) {
+		// TODO: show some warning
+		return;
 	}
+	sendingQueueSize++;
+	sendQueue->enqueue(SendFrameStruct(std::move(dataWithoutHeader), flags));
+	DEBUG("");
+	host->InsertPeerToFlush(this);
 }
 
 void Peer::Disconnect()
 {
+	disconnecting = true;
 	Command command{commands::ExecuteDisconnect{}};
 	commands::ExecuteDisconnect &com =
 		std::get<commands::ExecuteDisconnect>(command.cmd);
-	com.peer = this;
+	com.peer = shared_from_this();
 	host->EnqueueCommand(std::move(command));
 }
 
-void Peer::SetReceiveCallback(void (*callback)(Peer *, ByteReader &, Flags))
+void Peer::_InternalOnData(uint8_t *data, uint32_t length)
 {
-	callbackOnReceive = callback;
+	DEBUG("");
+	while (length) {
+		DEBUG("");
+		if (receivingHeaderSize == 0) {
+			DEBUG("");
+			receivingHeaderSize = FramingProtocol::GetPacketHeaderSize(data[0]);
+		}
+		if (receivingFrameBuffer.size() < receivingHeaderSize) {
+			DEBUG("");
+			uint32_t bytes = std::min<uint32_t>(
+				length, receivingHeaderSize - receivingFrameBuffer.size());
+			receivingFrameBuffer.insert(receivingFrameBuffer.end(), data,
+										data + bytes);
+			length -= bytes;
+			data += bytes;
+		}
+		if (receivingFrameBuffer.size() < receivingHeaderSize) {
+			DEBUG("");
+			return;
+		}
+		if (receivingFrameBuffer.size() == receivingHeaderSize) {
+			DEBUG("");
+			receivingFrameSize =
+				receivingHeaderSize +
+				FramingProtocol::GetPacketBodySize(receivingFrameBuffer.data(),
+												   receivingHeaderSize);
+			receivingFrameBuffer.reserve(receivingFrameSize);
+		}
+
+		if (receivingFrameBuffer.size() < receivingFrameSize) {
+			DEBUG("");
+			uint32_t bytes = std::min<uint32_t>(
+				length, receivingFrameSize - receivingFrameBuffer.size());
+			receivingFrameBuffer.insert(receivingFrameBuffer.end(), data,
+										data + bytes);
+			length -= bytes;
+			data += bytes;
+		}
+
+		if (receivingFrameBuffer.size() == receivingFrameSize) {
+			DEBUG("Received: [header: %i] [body: %i]", receivingHeaderSize,
+				  receivingFrameSize - receivingHeaderSize);
+			host->GetRpcEnvironment()->OnReceive(
+				this, receivingFrameBuffer, receivingHeaderSize, FLAG_RELIABLE);
+			receivingFrameSize = 0;
+			receivingHeaderSize = 0;
+			receivingFrameBuffer.clear();
+		} else if (receivingFrameBuffer.size() >= receivingFrameSize) {
+			DEBUG("Error, Peer::_InternalOnData push to frame more than frame "
+				  "size was.");
+			throw;
+		} else {
+			continue;
+		}
+	}
 }
 
-void Peer::SetDisconnect(void (*callback)(Peer *))
+void Peer::_InternalOnWritable() { _InternalFlushQueuedSends(); }
+
+void Peer::_InternalOnDisconnect()
 {
-	callbackOnDisconnect = callback;
+	if (onDisconnect) {
+		onDisconnect(this);
+	} else if (host->onDisconnect) {
+		host->onDisconnect(this);
+	}
 }
+
+void Peer::_InternalOnTimeout() {}
+
+void Peer::_InternalOnLongTimeout() { _InternalDisconnect(); }
+
+bool Peer::_InternalHasQueuedSends() const { return sendingQueueSize != 0; }
 
 void Peer::SetReadyToUse() { readyToUse = true; }
+
+void Peer::_InternalFlushQueuedSends()
+{
+	DEBUG("");
+	_InternalPopQueuedSendsFromAsync();
+	for (uint32_t i = 0; i < 16 && sendQueueLocal.empty() == false; ++i) {
+		if (_InternalSend(sendQueueLocal.front(), sendingQueueSize > 1)) {
+			sendQueueLocal.pop();
+			sendingQueueSize--;
+		} else {
+			break;
+		}
+		if (sendQueueLocal.empty()) {
+			_InternalPopQueuedSendsFromAsync();
+		}
+	}
+	_InternalPopQueuedSendsFromAsync();
+}
+
+void Peer::_InternalPopQueuedSendsFromAsync()
+{
+	const uint32_t MAX_DEQUEUE = 16;
+	SendFrameStruct frames[MAX_DEQUEUE];
+	uint32_t poped = sendQueue->try_dequeue_bulk(frames, MAX_DEQUEUE);
+	for (uint32_t i = 0; i < poped; ++i) {
+		sendQueueLocal.push(std::move(frames[i]));
+	}
+}
 } // namespace icon7

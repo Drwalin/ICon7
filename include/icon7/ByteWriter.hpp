@@ -16,21 +16,40 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef ICON7_UTIL_HPP
-#define ICON7_UTIL_HPP
+#ifndef ICON7_BYTE_WRITER_HPP
+#define ICON7_BYTE_WRITER_HPP
+
+#include "../../bitscpp/include/bitscpp/ByteWriterExtensions.hpp"
 
 namespace icon7
 {
-template <typename... Args>
-auto ConvertLambdaToFunctionPtr(void (*fun)(Args...))
+class ByteWriter : public bitscpp::ByteWriter
 {
-	return fun;
-}
+public:
+	std::vector<uint8_t> _data;
 
-template <typename Fun> auto ConvertLambdaToFunctionPtr(Fun &&fun)
-{
-	return +fun;
-}
+public:
+	~ByteWriter();
+
+	ByteWriter(ByteWriter &&o)
+		: bitscpp::ByteWriter(_data), _data(std::move(o._data))
+	{
+	}
+
+	inline ByteWriter &operator=(ByteWriter &&o)
+	{
+		this->~ByteWriter();
+		new (this) ByteWriter(std::move(o));
+		return *this;
+	}
+
+	inline uint8_t const *data() { return _data.data(); }
+
+	ByteWriter(ByteWriter &) = delete;
+	ByteWriter(const ByteWriter &) = delete;
+	ByteWriter &operator=(ByteWriter &) = delete;
+	ByteWriter &operator=(const ByteWriter &) = delete;
+};
 } // namespace icon7
 
 #endif
