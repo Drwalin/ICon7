@@ -1,6 +1,6 @@
 /*
  *  This file is part of ICon7.
- *  Copyright (C) 2023 Marek Zalewski aka Drwalin
+ *  Copyright (C) 2023-2024 Marek Zalewski aka Drwalin
  *
  *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -60,7 +60,7 @@ public:
 		self->timeoutTimePoint =
 			std::chrono::steady_clock::now() +
 			(std::chrono::milliseconds(timeoutMilliseconds));
-		self->peer = peer;
+		self->peer = peer->shared_from_this();
 		self->_internalOnReturnedValue = [](Peer *peer, Flags flags,
 											ByteReader &reader,
 											void *func) -> void {
@@ -88,7 +88,7 @@ public:
 		self->timeoutTimePoint =
 			std::chrono::steady_clock::now() +
 			(std::chrono::milliseconds(timeoutMilliseconds));
-		self->peer = peer;
+		self->peer = peer->shared_from_this();
 		self->_internalOnReturnedValue = [](Peer *peer, Flags flags,
 											ByteReader &reader,
 											void *func) -> void {
@@ -103,7 +103,7 @@ public:
 	void (*onTimeout)(Peer *);
 	CommandExecutionQueue *executionQueue;
 	std::chrono::time_point<std::chrono::steady_clock> timeoutTimePoint;
-	Peer *peer;
+	std::shared_ptr<Peer> peer;
 	void *onReturned;
 };
 } // namespace icon7

@@ -1,6 +1,6 @@
 /*
  *  This file is part of ICon7.
- *  Copyright (C) 2023 Marek Zalewski aka Drwalin
+ *  Copyright (C) 2023-2024 Marek Zalewski aka Drwalin
  *
  *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,37 +19,35 @@
 #ifndef ICON7_BYTE_READER_HPP
 #define ICON7_BYTE_READER_HPP
 
-#include "../../bitscpp/include/bitscpp/ByteReaderExtensions.hpp"
+#include "../../bitscpp/include/bitscpp/ByteReader.hpp"
 
 namespace icon7
 {
 class ByteReader : public bitscpp::ByteReader<true>
 {
 public:
-	union {
-#ifdef ISTEAMNETWORKINGSOCKETS
-		ISteamNetworkingMessage *packet;
-#endif
-		void *_packet;
-	};
+	std::vector<uint8_t> _data;
 
 public:
-#ifdef ISTEAMNETWORKINGSOCKETS
-	ByteReader(ISteamNetworkingMessage *packet, uint32_t offset)
-		: bitscpp::ByteReader<true>((uint8_t *)packet->m_pData, offset,
-									packet->m_cbSize),
-		  packet(packet)
+	ByteReader(std::vector<uint8_t> &data, uint32_t offset)
+		: bitscpp::ByteReader<true>(nullptr, offset, data.size()), _data(data)
+	{
+		buffer = _data.data();
+	}
+
+	ByteReader(std::vector<uint8_t> &&data, uint32_t offset)
+		: bitscpp::ByteReader<true>(data.data(), offset, data.size()),
+		  _data(std::move(data))
 	{
 	}
-#endif
-	~ByteReader();
+
+	~ByteReader() = default;
 
 	ByteReader(ByteReader &&o)
 		: bitscpp::ByteReader<true>(o.buffer, o.offset, o.size),
-		  _packet(o._packet)
+		  _data(std::move(o._data))
 	{
 		errorReading_bufferToSmall = o.errorReading_bufferToSmall;
-		o._packet = nullptr;
 	}
 
 	inline ByteReader &operator=(ByteReader &&o)

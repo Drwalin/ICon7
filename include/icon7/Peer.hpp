@@ -1,6 +1,6 @@
 /*
  *  This file is part of ICon7.
- *  Copyright (C) 2023 Marek Zalewski aka Drwalin
+ *  Copyright (C) 2023-2024 Marek Zalewski aka Drwalin
  *
  *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,76 +22,100 @@
 #include <cinttypes>
 
 #include <vector>
+#include <atomic>
+#include <memory>
 #include <queue>
 
 #include "Flags.hpp"
 #include "ByteReader.hpp"
+#include "ByteWriter.hpp"
+#include "icon7/Command.hpp"
 
 namespace icon7
 {
 class Host;
 
-class Peer
+class Peer : public std::enable_shared_from_this<Peer>
 {
 public:
 	virtual ~Peer();
 
-	void Send(std::vector<uint8_t> &&data, Flags flags);
-
+	void Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags);
 	void Disconnect();
 
-	static constexpr uint32_t GetMaxSinglePacketMessagePayload()
-	{
-		return 1200;
-	}
-	virtual uint32_t GetRoundTripTime() const = 0;
-
 	inline bool IsReadyToUse() const { return readyToUse; }
+	inline bool IsDisconnecting() const { return disconnecting; }
 
-	inline Host *GetHost() { return host; }
+	void SetOnDisconnect(void (*callback)(Peer *)) { onDisconnect = callback; }
 
-	void SetReceiveCallback(void (*callback)(Peer *, ByteReader &,
-											 Flags flags));
-	void SetDisconnect(void (*callback)(Peer *));
+public: // thread unsafe, safe only in hosts loop thread
+	void _InternalOnData(uint8_t *data, uint32_t length);
+	void _InternalOnDisconnect();
+	void _InternalOnWritable();
+	void _InternalOnTimeout();
+	void _InternalOnLongTimeout();
+
+	bool _InternalHasQueuedSends() const;
 
 public:
 	uint64_t userData;
 	void *userPointer;
 
-	friend class Host;
-
-	// thread unsafe
-	virtual bool _InternalSend(const void *data, uint32_t length,
-							   Flags flags) = 0;
-	// thread unsafe
-	void _InternalSendOrQueue(std::vector<uint8_t> &data, Flags flags);
-	// thread unsafe
-	virtual void _InternalDisconnect() = 0;
+public:
+	Host *const host;
 
 protected:
-	void SetReadyToUse();
-
-	void CallCallbackDisconnect();
-
-	struct SendCommand {
-		std::vector<uint8_t> data;
+	struct SendFrameStruct {
+		std::vector<uint8_t> dataWithoutHeader;
+		uint32_t bytesSent;
 		Flags flags;
+		uint8_t header[4];
+		uint8_t headerBytesSent;
+		uint8_t headerSize;
+
+		SendFrameStruct(std::vector<uint8_t> &&dataWithoutHeader, Flags flags);
+		SendFrameStruct();
 	};
 
 	void _InternalFlushQueuedSends();
+	void _InternalPopQueuedSendsFromAsync();
+	/*
+	 * return true if successfully whole dataFrame has been sent.
+	 * false otherwise.
+	 */
+	virtual bool _InternalSend(SendFrameStruct &dataFrame, bool hasMore) = 0;
+	virtual void _InternalDisconnect() = 0;
+
+	friend class HostUStcp;
+	friend class commands::ExecuteDisconnect;
 
 protected:
 	Peer(Host *host);
 
+	void SetReadyToUse();
+
 protected:
-	std::queue<SendCommand> queuedSends;
+#ifdef ICON7_PEER_CPP_INCLUDE_UNION_CONCURRENT_QUEUE
+	using QueueType = moodycamel::ConcurrentQueue<SendFrameStruct>;
+#endif
 
-	Host *host;
+	union {
+		void *sendQueue_variable_name_placeholder;
+#ifdef ICON7_PEER_CPP_INCLUDE_UNION_CONCURRENT_QUEUE
+		QueueType *sendQueue;
+#endif
+	};
+	std::queue<SendFrameStruct> sendQueueLocal;
+	std::atomic<uint32_t> sendingQueueSize;
 
-	void (*callbackOnReceive)(Peer *, ByteReader &, Flags);
-	void (*callbackOnDisconnect)(Peer *);
+	void (*onDisconnect)(Peer *);
 
-	bool readyToUse;
+	std::atomic<bool> readyToUse;
+	std::atomic<bool> disconnecting;
+
+	std::vector<uint8_t> receivingFrameBuffer;
+	uint32_t receivingHeaderSize;
+	uint32_t receivingFrameSize;
 };
 } // namespace icon7
 

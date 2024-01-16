@@ -3,12 +3,6 @@ cmake_minimum_required(VERSION 3.8)
 add_executable(example1 example1)
 target_link_libraries(example1 icon7)
 
-add_executable(echo_server echo_server)
-target_link_libraries(echo_server icon7)
-
-add_executable(echo_client echo_client)
-target_link_libraries(echo_client icon7)
-
 add_executable(chat_server chat_server)
 target_link_libraries(chat_server icon7)
 

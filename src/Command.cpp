@@ -1,6 +1,6 @@
 /*
  *  This file is part of ICon7.
- *  Copyright (C) 2023 Marek Zalewski aka Drwalin
+ *  Copyright (C) 2023-2024 Marek Zalewski aka Drwalin
  *
  *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,12 +16,10 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <steam/steamnetworkingsockets.h>
-
-#include "../include/icon7/MessagePassingEnvironment.hpp"
+#include "../include/icon7/RPCEnvironment.hpp"
 #include "../include/icon7/CommandExecutionQueue.hpp"
-#include "../include/icon7/PeerGNS.hpp"
-#include "../include/icon7/HostGNS.hpp"
+#include "../include/icon7/PeerUStcp.hpp"
+#include "../include/icon7/HostUStcp.hpp"
 
 #include "../include/icon7/Command.hpp"
 
@@ -29,29 +27,66 @@ namespace icon7
 {
 namespace commands
 {
-void ExecuteOnPeer::Execute() { function(peer, data, userPointer); }
-
-void ExecuteOnPeerNoArgs::Execute() { function(peer); }
-
-void ExecuteRPC::Execute() { messageConverter->Call(peer, reader, flags); }
-
-void ExecuteReturnRC::Execute() { function(peer, flags, reader, funcPtr); }
-
-void ExecuteConnectGNS::Execute()
+void ExecuteOnPeer::Execute()
 {
-	onConnected.peer = host->_InternalConnect(&address);
-	if (executionQueue) {
-		executionQueue->EnqueueCommand(Command(std::move(onConnected)));
-	} else {
-		onConnected.Execute();
-	}
+	DEBUG("");
+	function(peer.get(), data, userPointer);
 }
 
-void ExecuteSend::Execute() { peer->_InternalSendOrQueue(data, flags); }
+void ExecuteOnPeerNoArgs::Execute()
+{
+	DEBUG("");
+	function(peer.get());
+}
 
-void ExecuteDisconnect::Execute() { peer->_InternalDisconnect(); }
+void ExecuteAddPeerToFlush::Execute()
+{
+	DEBUG("");
+	host->_InternalInsertPeerToFlush(peer.get());
+}
 
-void ExecuteFunctionPointer::Execute() { function(); }
+void ExecuteRPC::Execute()
+{
+	DEBUG("");
+	messageConverter->Call(peer.get(), reader, flags, returnId);
+}
+
+void ExecuteReturnRC::Execute()
+{
+	DEBUG("");
+	function(peer.get(), flags, reader, funcPtr);
+}
+
+void ExecuteBooleanOnHost::Execute()
+{
+	DEBUG("");
+	function(host, result, userPointer);
+}
+
+void ExecuteOnHost::Execute()
+{
+	DEBUG("");
+	function(host, userPointer);
+}
+
+void ExecuteConnect::Execute()
+{
+	DEBUG("");
+	host->_InternalConnect(*this);
+}
+
+void ExecuteDisconnect::Execute()
+{
+	DEBUG("");
+	if (!peer->IsDisconnecting())
+		peer->_InternalDisconnect();
+}
+
+void ExecuteFunctionPointer::Execute()
+{
+	DEBUG("");
+	function();
+}
 } // namespace commands
 
 using namespace commands;
