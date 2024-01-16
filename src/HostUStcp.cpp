@@ -174,7 +174,6 @@ void HostUStcp::_Internal_post_cb(struct us_loop_t *loop)
 
 void HostUStcp::_InternalConnect(commands::ExecuteConnect &com)
 {
-	DEBUG("");
 	us_socket_t *socket =
 		us_socket_context_connect(SSL, socketContext, com.address.c_str(),
 								  com.port, nullptr, 0, sizeof(Peer *));
@@ -200,7 +199,6 @@ template <bool SSL>
 us_socket_t *HostUStcp::_Internal_on_open(struct us_socket_t *socket,
 										  int isClient, char *ip, int ipLength)
 {
-	DEBUG("");
 	us_socket_context_t *context = us_socket_context(SSL, socket);
 	us_loop_t *loop = us_socket_context_loop(SSL, context);
 	HostUStcp *host = *(HostUStcp **)us_loop_ext(loop);
@@ -220,7 +218,6 @@ us_socket_t *HostUStcp::_Internal_on_open(struct us_socket_t *socket,
 	}
 	peer->SetReadyToUse();
 
-	DEBUG("");
 	host->Host::SingleLoopIteration();
 
 	return socket;
@@ -230,7 +227,6 @@ template <bool SSL>
 us_socket_t *HostUStcp::_Internal_on_close(struct us_socket_t *socket, int code,
 										   void *reason)
 {
-	DEBUG("");
 	Peer *peer = *(Peer **)us_socket_ext(SSL, socket);
 	HostUStcp *host = (HostUStcp *)peer->host;
 
@@ -245,7 +241,6 @@ template <bool SSL>
 us_socket_t *HostUStcp::_Internal_on_data(struct us_socket_t *socket,
 										  char *data, int length)
 {
-	DEBUG("");
 	Peer *peer = *(Peer **)us_socket_ext(SSL, socket);
 
 	peer->_InternalOnData((uint8_t *)data, length);
@@ -255,7 +250,6 @@ us_socket_t *HostUStcp::_Internal_on_data(struct us_socket_t *socket,
 template <bool SSL>
 us_socket_t *HostUStcp::_Internal_on_writable(struct us_socket_t *socket)
 {
-	DEBUG("");
 	Peer *peer = *(Peer **)us_socket_ext(SSL, socket);
 
 	peer->_InternalOnWritable();
@@ -265,7 +259,6 @@ us_socket_t *HostUStcp::_Internal_on_writable(struct us_socket_t *socket)
 template <bool SSL>
 us_socket_t *HostUStcp::_Internal_on_timeout(struct us_socket_t *socket)
 {
-	DEBUG("");
 	Peer *peer = *(Peer **)us_socket_ext(SSL, socket);
 
 	peer->_InternalOnTimeout();
@@ -275,7 +268,6 @@ us_socket_t *HostUStcp::_Internal_on_timeout(struct us_socket_t *socket)
 template <bool SSL>
 us_socket_t *HostUStcp::_Internal_on_long_timeout(struct us_socket_t *socket)
 {
-	DEBUG("");
 	Peer *peer = *(Peer **)us_socket_ext(SSL, socket);
 
 	peer->_InternalOnLongTimeout();
@@ -286,7 +278,6 @@ template <bool SSL>
 us_socket_t *HostUStcp::_Internal_on_connect_error(struct us_socket_t *socket,
 												   int code)
 {
-	DEBUG("");
 	Peer *peer = *(Peer **)us_socket_ext(SSL, socket);
 	HostUStcp *host = (HostUStcp *)peer->host;
 
@@ -299,7 +290,6 @@ us_socket_t *HostUStcp::_Internal_on_connect_error(struct us_socket_t *socket,
 template <bool SSL>
 us_socket_t *HostUStcp::_Internal_on_end(struct us_socket_t *socket)
 {
-	DEBUG("");
 	return socket;
 }
 

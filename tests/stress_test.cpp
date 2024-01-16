@@ -310,11 +310,12 @@ void runTestSlave()
 	host->Connect("127.0.0.1", serverPort);
 	while (ipc->runTestFlag != 0) {
 		// 		icon7::Command com(icon7::commands::ExecuteFunctionPointer{[]()
-		// { 			host->ForEachPeer(+[](icon7::Peer *p) { 				auto stats =
+		// { 			host->ForEachPeer(+[](icon7::Peer *p) { 				auto stats
+		// =
 		// ((icon7::PeerUStcp *)p)->GetRealTimeStats();
 		// 				ipc->pendingReliable[processId] =
-		// stats.m_cbPendingReliable; 				ipc->unackedReliable[processId] =
-		// stats.m_cbSentUnackedReliable;
+		// stats.m_cbPendingReliable; 				ipc->unackedReliable[processId]
+		// = stats.m_cbSentUnackedReliable;
 		// 			});
 		// 		}});
 		// 		host->EnqueueCommand(std::move(com));

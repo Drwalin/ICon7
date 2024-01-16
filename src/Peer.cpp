@@ -70,12 +70,12 @@ Peer::~Peer()
 void Peer::Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
 {
 	if (disconnecting) {
-		// TODO: show some warning
+		DEBUG(
+			"Dropping packets queued to send after begining of disconnecting.");
 		return;
 	}
 	sendingQueueSize++;
 	sendQueue->enqueue(SendFrameStruct(std::move(dataWithoutHeader), flags));
-	DEBUG("");
 	host->InsertPeerToFlush(this);
 }
 
@@ -91,15 +91,11 @@ void Peer::Disconnect()
 
 void Peer::_InternalOnData(uint8_t *data, uint32_t length)
 {
-	DEBUG("");
 	while (length) {
-		DEBUG("");
 		if (receivingHeaderSize == 0) {
-			DEBUG("");
 			receivingHeaderSize = FramingProtocol::GetPacketHeaderSize(data[0]);
 		}
 		if (receivingFrameBuffer.size() < receivingHeaderSize) {
-			DEBUG("");
 			uint32_t bytes = std::min<uint32_t>(
 				length, receivingHeaderSize - receivingFrameBuffer.size());
 			receivingFrameBuffer.insert(receivingFrameBuffer.end(), data,
@@ -108,11 +104,9 @@ void Peer::_InternalOnData(uint8_t *data, uint32_t length)
 			data += bytes;
 		}
 		if (receivingFrameBuffer.size() < receivingHeaderSize) {
-			DEBUG("");
 			return;
 		}
 		if (receivingFrameBuffer.size() == receivingHeaderSize) {
-			DEBUG("");
 			receivingFrameSize =
 				receivingHeaderSize +
 				FramingProtocol::GetPacketBodySize(receivingFrameBuffer.data(),
@@ -121,7 +115,6 @@ void Peer::_InternalOnData(uint8_t *data, uint32_t length)
 		}
 
 		if (receivingFrameBuffer.size() < receivingFrameSize) {
-			DEBUG("");
 			uint32_t bytes = std::min<uint32_t>(
 				length, receivingFrameSize - receivingFrameBuffer.size());
 			receivingFrameBuffer.insert(receivingFrameBuffer.end(), data,
@@ -131,8 +124,6 @@ void Peer::_InternalOnData(uint8_t *data, uint32_t length)
 		}
 
 		if (receivingFrameBuffer.size() == receivingFrameSize) {
-			DEBUG("Received: [header: %i] [body: %i]", receivingHeaderSize,
-				  receivingFrameSize - receivingHeaderSize);
 			host->GetRpcEnvironment()->OnReceive(
 				this, receivingFrameBuffer, receivingHeaderSize, FLAG_RELIABLE);
 			receivingFrameSize = 0;
@@ -169,7 +160,6 @@ void Peer::SetReadyToUse() { readyToUse = true; }
 
 void Peer::_InternalFlushQueuedSends()
 {
-	DEBUG("");
 	_InternalPopQueuedSendsFromAsync();
 	for (uint32_t i = 0; i < 16 && sendQueueLocal.empty() == false; ++i) {
 		if (_InternalSend(sendQueueLocal.front(), sendingQueueSize > 1)) {

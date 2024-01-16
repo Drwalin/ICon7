@@ -109,7 +109,6 @@ void Host::DisconnectAllAsync()
 
 void Host::DisconnectAll()
 {
-	DEBUG("");
 	for (auto &p : peers) {
 		p->Disconnect();
 	}
@@ -136,7 +135,6 @@ std::future<Peer *> Host::ConnectPromise(std::string address, uint16_t port)
 	commands::ExecuteOnPeer onConnected;
 	onConnected.userPointer = promise;
 	onConnected.function = [](auto peer, auto data, auto userPointer) {
-		DEBUG("");
 		std::promise<Peer *> *promise = (std::promise<Peer *> *)(userPointer);
 		promise->set_value(peer);
 		delete promise;
@@ -153,7 +151,6 @@ std::future<bool> Host::ListenOnPort(uint16_t port)
 	callback.host = this;
 	callback.userPointer = promise;
 	callback.function = [](Host *host, bool result, void *userPointer) {
-		DEBUG("");
 		std::promise<bool> *promise = (std::promise<bool> *)(userPointer);
 		promise->set_value(result);
 		delete promise;
