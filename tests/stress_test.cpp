@@ -150,7 +150,7 @@ void Runner(icon7::Peer *peer)
 	for (uint32_t i = 0; i < ipc->countMessages; ++i) {
 		if (ipc->runTestFlag == 0)
 			break;
-		std::this_thread::sleep_for(std::chrono::milliseconds(15));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		for (uint32_t j = 0; j < ((processId == -1) ? 4 : 1); ++j) {
 			uint32_t s = (processId == -1) ? GetRandomMessageSize() : 100;
 			data.resize(s / 21);
@@ -160,7 +160,7 @@ void Runner(icon7::Peer *peer)
 									? icon7::FLAG_RELIABLE
 									: icon7::FLAG_UNRELIABLE;
 			++msgSent;
-			uint64_t bytes = data.size() * 21 + 8 + 4 + 7;
+			uint64_t bytes = data.size() * 21 + 6;
 			if (processId >= 0) {
 				ipc->counterSentByClients++;
 				ipc->clientsSendBytes += bytes;
@@ -364,13 +364,20 @@ int main()
 	icon7::Initialize();
 
 	icon7::HostUStcp *_host = new icon7::HostUStcp();
-	_host->Init();
-	host = _host;
-
+	bool useSSL = true;
 	if (processId < 0) { // server
-		host->ListenOnPort(serverPort);
+		_host->Init(useSSL,
+				"../cert/user.key",
+				"../cert/user.crt",
+				"",
+				"../cert/dh2048.pem",
+				"../cert/rootca.crt"
+				);
+		_host->ListenOnPort(serverPort);
 	} else { // client
+		_host->Init(useSSL);
 	}
+	host = _host;
 
 	host->SetRpcEnvironment(&rpc);
 	host->SetOnConnect(Run);
