@@ -4,13 +4,15 @@
 #include <chrono>
 #include <thread>
 
-#include <icon7/Host.hpp>
 #include <icon7/Peer.hpp>
 #include <icon7/Flags.hpp>
-#include <icon7/MessagePassingEnvironment.hpp>
+#include <icon7/RPCEnvironment.hpp>
+#include <icon7/Flags.hpp>
+#include <icon7/PeerUStcp.hpp>
+#include <icon7/HostUStcp.hpp>
 
 std::unordered_map<std::string, icon7::Peer *> peers;
-icon7::MessagePassingEnvironment mpi;
+icon7::RPCEnvironment rpc;
 
 int main(int argc, char **argv)
 {
@@ -25,7 +27,7 @@ int main(int argc, char **argv)
 
 	icon7::Initialize();
 
-	mpi.RegisterMessage(
+	rpc.RegisterMessage(
 		"SetNickname",
 		[](icon7::Peer *peer, const std::string &nickname) -> bool {
 			if (peer->userPointer != nullptr) {
@@ -43,21 +45,21 @@ int main(int argc, char **argv)
 			}
 			return true;
 		});
-	mpi.RegisterMessage("Broadcast",
+	rpc.RegisterMessage("Broadcast",
 						[](icon7::Peer *peer, std::string message) {
 							std::string nickname = "";
 							if (peer->userPointer != nullptr) {
 								nickname = *(std::string *)(peer->userPointer);
 							}
 
-							peer->GetHost()->ForEachPeer([&](icon7::Peer *p2) {
+							peer->host->ForEachPeer([&](icon7::Peer *p2) {
 								if (p2 != peer) {
-									mpi.Send(p2, icon7::FLAG_RELIABLE,
+									rpc.Send(p2, icon7::FLAG_RELIABLE,
 											 "Broadcasted", nickname, message);
 								}
 							});
 						});
-	mpi.RegisterMessage("Msg",
+	rpc.RegisterMessage("Msg",
 						[](icon7::Peer *peer, const std::string nickname,
 						   std::string message) -> bool {
 							std::string srcNickname = "";
@@ -67,7 +69,7 @@ int main(int argc, char **argv)
 							}
 							auto it = peers.find(nickname);
 							if (it != peers.end()) {
-								mpi.Send(it->second, icon7::FLAG_RELIABLE,
+								rpc.Send(it->second, icon7::FLAG_RELIABLE,
 										 "Msg", srcNickname, message);
 								return true;
 							} else {
@@ -76,8 +78,12 @@ int main(int argc, char **argv)
 							}
 						});
 
-	icon7::Host *host = icon7::Host::MakeGameNetworkingSocketsHost(port);
-	host->SetDisconnect([](icon7::Peer *peer) {
+	icon7::HostUStcp *_host = new icon7::HostUStcp();
+	_host->Init();
+	icon7::Host *host = _host;
+	host->ListenOnPort(port);
+
+	host->SetOnDisconnect([](icon7::Peer *peer) {
 		if (peer->userPointer != nullptr) {
 			std::string *oldName = (std::string *)(peer->userPointer);
 			peers.erase(*oldName);
@@ -85,7 +91,7 @@ int main(int argc, char **argv)
 			peer->userPointer = nullptr;
 		}
 	});
-	host->SetMessagePassingEnvironment(&mpi);
+	host->SetRpcEnvironment(&rpc);
 	host->RunAsync();
 
 	printf("To exit write: quit\n");
@@ -94,8 +100,8 @@ int main(int argc, char **argv)
 		std::string str;
 		std::cin >> str;
 		if (str == "quit") {
-			host->Stop();
-			host->WaitStop();
+			host->QueueStopRunning();
+			host->WaitStopRunning();
 			break;
 		}
 	}

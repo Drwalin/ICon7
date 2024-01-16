@@ -1,6 +1,6 @@
 /*
  *  This file is part of ICon7.
- *  Copyright (C) 2023 Marek Zalewski aka Drwalin
+ *  Copyright (C) 2023-2024 Marek Zalewski aka Drwalin
  *
  *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@
 #include "../concurrentqueue/concurrentqueue.h"
 
 #include "../include/icon7/Peer.hpp"
-#include "../include/icon7/MessagePassingEnvironment.hpp"
 
 #include "../include/icon7/CommandExecutionQueue.hpp"
 
@@ -105,5 +104,10 @@ void CommandExecutionQueue::_InternalExecuteLoop(
 		}
 	}
 	queue->asyncExecutionFlags = STOPPED;
+}
+
+bool CommandExecutionQueue::HasAny() const
+{
+	return ((QueueType *)concurrentQueueCommands)->size_approx() != 0;
 }
 } // namespace icon7

@@ -1,6 +1,6 @@
 /*
  *  This file is part of ICon7.
- *  Copyright (C) 2023 Marek Zalewski aka Drwalin
+ *  Copyright (C) 2023-2024 Marek Zalewski aka Drwalin
  *
  *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,11 +21,13 @@
 
 #include <cinttypes>
 
-#include <vector>
 #include <variant>
+#include <memory>
+#include <vector>
 
 #include "Flags.hpp"
 #include "ByteReader.hpp"
+#include "ByteWriter.hpp"
 
 namespace icon7
 {
@@ -34,14 +36,10 @@ class Host;
 class Peer;
 class MessageConverter;
 
-namespace gns
-{
-class Peer;
-class Host;
-} // namespace gns
-
 class Command;
 class CommandExecutionQueue;
+
+// TODO: remove copy constructors/operators
 
 namespace commands
 {
@@ -51,7 +49,7 @@ public:
 	ExecuteOnPeerNoArgs(ExecuteOnPeerNoArgs &&) = default;
 	ExecuteOnPeerNoArgs &operator=(ExecuteOnPeerNoArgs &&) = default;
 
-	Peer *peer;
+	std::shared_ptr<Peer> peer;
 	void (*function)(Peer *peer);
 
 	void Execute();
@@ -64,11 +62,24 @@ public:
 	ExecuteOnPeer(ExecuteOnPeer &&) = default;
 	ExecuteOnPeer &operator=(ExecuteOnPeer &&) = default;
 
-	Peer *peer;
+	std::shared_ptr<Peer> peer;
 	std::vector<uint8_t> data;
 	void *userPointer;
 	void (*function)(Peer *peer, std::vector<uint8_t> &data,
 					 void *customSharedData);
+
+	void Execute();
+};
+
+class ExecuteAddPeerToFlush final
+{
+public:
+	ExecuteAddPeerToFlush() = default;
+	ExecuteAddPeerToFlush(ExecuteAddPeerToFlush &&) = default;
+	ExecuteAddPeerToFlush &operator=(ExecuteAddPeerToFlush &&) = default;
+
+	std::shared_ptr<Peer> peer;
+	Host *host;
 
 	void Execute();
 };
@@ -85,10 +96,11 @@ public:
 	{
 	}
 
-	Peer *peer;
+	std::shared_ptr<Peer> peer;
 	ByteReader reader;
 	MessageConverter *messageConverter;
 	Flags flags;
+	uint32_t returnId;
 
 	void Execute();
 };
@@ -105,7 +117,7 @@ public:
 	{
 	}
 
-	Peer *peer;
+	std::shared_ptr<Peer> peer;
 	void *funcPtr;
 	ByteReader reader;
 	void (*function)(Peer *, Flags, ByteReader &, void *);
@@ -114,51 +126,49 @@ public:
 	void Execute();
 };
 
-class ExecuteConnectGNS final
+class ExecuteBooleanOnHost final
 {
 public:
-	ExecuteConnectGNS(ExecuteConnectGNS &&) = default;
-	ExecuteConnectGNS &operator=(ExecuteConnectGNS &&) = default;
+	ExecuteBooleanOnHost() = default;
+	ExecuteBooleanOnHost(ExecuteBooleanOnHost &&) = default;
+	ExecuteBooleanOnHost &operator=(ExecuteBooleanOnHost &&) = default;
 
-#pragma pack(push, 1)
-	struct MockSteamNetworkingIPAddr {
-		struct IPv4MappedAddress {
-			uint64_t m_8zeros;
-			uint16_t m_0000;
-			uint16_t m_ffff;
-			uint8_t m_ip[4];
-		};
-		union {
-			uint8_t m_ipv6[16];
-			IPv4MappedAddress m_ipv4;
-		};
-		uint16_t m_port;
-	};
-#pragma pack(pop)
+	Host *host;
+	void *userPointer;
+	bool result;
 
-	gns::Host *host;
-	union {
-		MockSteamNetworkingIPAddr mockAddress;
-#ifdef ISTEAMNETWORKINGSOCKETS
-		SteamNetworkingIPAddr address;
-#endif
-	};
-
-	CommandExecutionQueue *executionQueue;
-	ExecuteOnPeer onConnected;
+	void (*function)(Host *, bool, void *);
 
 	void Execute();
 };
 
-class ExecuteSend final
+class ExecuteOnHost final
 {
 public:
-	ExecuteSend(ExecuteSend &&) = default;
-	ExecuteSend &operator=(ExecuteSend &&) = default;
+	ExecuteOnHost() = default;
+	ExecuteOnHost(ExecuteOnHost &&) = default;
+	ExecuteOnHost &operator=(ExecuteOnHost &&) = default;
 
-	std::vector<uint8_t> data;
-	Peer *peer;
-	Flags flags;
+	Host *host;
+	void *userPointer;
+
+	void (*function)(Host *, void *);
+
+	void Execute();
+};
+
+class ExecuteConnect final
+{
+public:
+	ExecuteConnect(ExecuteConnect &&) = default;
+	ExecuteConnect &operator=(ExecuteConnect &&) = default;
+
+	Host *host;
+	std::string address;
+	uint16_t port;
+
+	CommandExecutionQueue *executionQueue;
+	ExecuteOnPeer onConnected;
 
 	void Execute();
 };
@@ -169,7 +179,7 @@ public:
 	ExecuteDisconnect(ExecuteDisconnect &&) = default;
 	ExecuteDisconnect &operator=(ExecuteDisconnect &&) = default;
 
-	Peer *peer;
+	std::shared_ptr<Peer> peer;
 
 	void Execute();
 };
@@ -200,17 +210,25 @@ public:
 	Command &operator=(const Command &other) = delete;
 
 	std::variant<int, commands::ExecuteOnPeer, commands::ExecuteOnPeerNoArgs,
-				 commands::ExecuteRPC,
-				 commands::ExecuteReturnRC, commands::ExecuteConnectGNS,
-				 commands::ExecuteSend, commands::ExecuteDisconnect,
-				 commands::ExecuteFunctionPointer>
+				 commands::ExecuteAddPeerToFlush, commands::ExecuteRPC,
+				 commands::ExecuteReturnRC, commands::ExecuteBooleanOnHost,
+				 commands::ExecuteConnect, commands::ExecuteDisconnect,
+				 commands::ExecuteFunctionPointer, commands::ExecuteOnHost>
 		cmd;
 
 	void Execute();
 
 public:
+	Command(commands::ExecuteOnHost &&executeOnHost)
+		: cmd(std::move(executeOnHost))
+	{
+	}
 	Command(commands::ExecuteOnPeer &&executeOnPeer)
 		: cmd(std::move(executeOnPeer))
+	{
+	}
+	Command(commands::ExecuteAddPeerToFlush &&executeAddPeerToFlush)
+		: cmd(std::move(executeAddPeerToFlush))
 	{
 	}
 	Command(commands::ExecuteOnPeerNoArgs &&executeOnPeerNoArgs)
@@ -222,11 +240,12 @@ public:
 		: cmd(std::move(executeReturnRC))
 	{
 	}
-	Command(commands::ExecuteConnectGNS &&executeConnect)
-		: cmd(std::move(executeConnect))
+	Command(commands::ExecuteBooleanOnHost &&executeBooleanOnHost)
+		: cmd(std::move(executeBooleanOnHost))
 	{
 	}
-	Command(commands::ExecuteSend &&executeSend) : cmd(std::move(executeSend))
+	Command(commands::ExecuteConnect &&executeConnect)
+		: cmd(std::move(executeConnect))
 	{
 	}
 	Command(commands::ExecuteDisconnect &&executeDisconnect)
