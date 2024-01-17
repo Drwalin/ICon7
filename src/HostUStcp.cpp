@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <unistd.h>
+#include <openssl/ssl.h>
 
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/Peer.hpp"
@@ -47,10 +47,10 @@ void HostUStcp::_InternalDestroy()
 	Host::_InternalDestroy();
 }
 
-bool HostUStcp::Init(bool useSSL,
-		const char *key_file_name, const char *cert_file_name,
-					 const char *passphrase, const char *dh_params_file_name,
-					 const char *ca_file_name, const char *ssl_ciphers)
+bool HostUStcp::Init(bool useSSL, const char *key_file_name,
+					 const char *cert_file_name, const char *passphrase,
+					 const char *dh_params_file_name, const char *ca_file_name,
+					 const char *ssl_ciphers)
 {
 	SSL = useSSL;
 	us_socket_context_options_t options{key_file_name, cert_file_name,
@@ -87,6 +87,7 @@ bool HostUStcp::InitLoopAndContext(us_socket_context_options_t options)
 	loop = us_create_loop(nullptr, _Internal_wakeup_cb, _Internal_pre_cb,
 						  _Internal_post_cb, sizeof(Host *));
 	if (loop == nullptr) {
+		DEBUG("");
 		return false;
 	}
 	*(HostUStcp **)us_loop_ext(loop) = this;
@@ -95,6 +96,7 @@ bool HostUStcp::InitLoopAndContext(us_socket_context_options_t options)
 		us_create_socket_context(SSL, loop, sizeof(Host *), options);
 	if (socketContext == nullptr) {
 		us_loop_free(loop);
+		DEBUG("");
 		return false;
 	}
 	*(HostUStcp **)us_socket_context_ext(SSL, socketContext) = this;
@@ -108,10 +110,16 @@ bool HostUStcp::InitLoopAndContext(us_socket_context_options_t options)
 	return loop != nullptr;
 }
 
-std::future<bool> HostUStcp::ListenOnPort(uint16_t port)
+std::future<bool> HostUStcp::ListenOnPort(uint16_t port, IPProto ipProto)
 {
-	us_listen_socket_t *socket = us_socket_context_listen(
-		SSL, socketContext, "127.0.0.1", port, 0, sizeof(Host *));
+	us_listen_socket_t *socket = nullptr;
+	if (ipProto == IPv4) {
+		socket = us_socket_context_listen(SSL, socketContext, "127.0.0.1", port,
+										  0, sizeof(Host *));
+	} else {
+		socket = us_socket_context_listen(SSL, socketContext, "::1", port, 0,
+										  sizeof(Host *));
+	}
 	if (socket) {
 		listenSockets.insert(socket);
 	}
@@ -122,11 +130,11 @@ std::future<bool> HostUStcp::ListenOnPort(uint16_t port)
 	return future;
 }
 
-void HostUStcp::ListenOnPort(uint16_t port,
+void HostUStcp::ListenOnPort(uint16_t port, IPProto ipProto,
 							 commands::ExecuteBooleanOnHost &&callback,
 							 CommandExecutionQueue *queue)
 {
-	std::future<bool> future = ListenOnPort(port);
+	std::future<bool> future = ListenOnPort(port, ipProto);
 	future.wait();
 	callback.result = future.get();
 
@@ -235,6 +243,7 @@ us_socket_t *HostUStcp::_Internal_on_close(struct us_socket_t *socket, int code,
 	peer->disconnecting = true;
 
 	peer->_InternalOnDisconnect();
+	*(us_socket_t **)&(((PeerUStcp *)peer)->socket) = nullptr;
 	std::shared_ptr<Peer> p = peer->shared_from_this();
 	host->peers.erase(p);
 	host->peersToFlush.erase(p);

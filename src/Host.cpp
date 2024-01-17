@@ -145,7 +145,7 @@ std::future<Peer *> Host::ConnectPromise(std::string address, uint16_t port)
 	return future;
 }
 
-std::future<bool> Host::ListenOnPort(uint16_t port)
+std::future<bool> Host::ListenOnPort(uint16_t port, IPProto ipProto)
 {
 	std::promise<bool> *promise = new std::promise<bool>();
 	commands::ExecuteBooleanOnHost callback;
@@ -157,7 +157,7 @@ std::future<bool> Host::ListenOnPort(uint16_t port)
 		delete promise;
 	};
 	auto future = promise->get_future();
-	ListenOnPort(port, std::move(callback), nullptr);
+	ListenOnPort(port, ipProto, std::move(callback), nullptr);
 	return future;
 }
 
@@ -203,7 +203,7 @@ bool Host::IsRunningAsync() { return asyncRunnerFlags & RUNNING; }
 void Host::SingleLoopIteration()
 {
 	if (peersToFlush.empty() && commandQueue.HasAny() == false) {
-		if ( peers.size() < 20) {
+		if (peers.size() < 20) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
 		} else {
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));

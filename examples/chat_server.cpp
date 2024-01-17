@@ -81,7 +81,7 @@ int main(int argc, char **argv)
 	icon7::HostUStcp *_host = new icon7::HostUStcp();
 	_host->Init();
 	icon7::Host *host = _host;
-	host->ListenOnPort(port);
+	host->ListenOnPort(port, icon7::IPv4);
 
 	host->SetOnDisconnect([](icon7::Peer *peer) {
 		if (peer->userPointer != nullptr) {

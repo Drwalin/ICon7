@@ -47,7 +47,7 @@ int main()
 		com.function = [](auto host, bool v, void *) {
 			printf(" %s\n", v ? "Listening" : "Fail to listen");
 		};
-		hosta->ListenOnPort(port, std::move(com), nullptr);
+		hosta->ListenOnPort(port, icon7::IPv4, std::move(com), nullptr);
 	}
 
 	icon7::HostUStcp *hostb = new icon7::HostUStcp();

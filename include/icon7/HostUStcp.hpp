@@ -41,16 +41,16 @@ public:
 
 	virtual void _InternalDestroy() override;
 
-	bool Init(bool useSSL = false,
-			  const char *key_file_name = nullptr,
+	bool Init(bool useSSL = false, const char *key_file_name = nullptr,
 			  const char *cert_file_name = nullptr,
 			  const char *passphrase = nullptr,
 			  const char *dh_params_file_name = nullptr,
 			  const char *ca_file_name = nullptr,
 			  const char *ssl_ciphers = nullptr);
 
-	virtual std::future<bool> ListenOnPort(uint16_t port) override;
-	virtual void ListenOnPort(uint16_t port,
+	virtual std::future<bool> ListenOnPort(uint16_t port,
+										   IPProto ipProto) override;
+	virtual void ListenOnPort(uint16_t port, IPProto ipProto,
 							  commands::ExecuteBooleanOnHost &&callback,
 							  CommandExecutionQueue *queue) override;
 

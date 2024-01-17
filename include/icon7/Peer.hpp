@@ -88,7 +88,7 @@ protected:
 
 	friend class HostUStcp;
 	friend class commands::ExecuteDisconnect;
-	
+
 	std::atomic<bool> closed;
 
 protected:
@@ -114,7 +114,6 @@ protected:
 
 	std::atomic<bool> readyToUse;
 	std::atomic<bool> disconnecting;
-	
 
 	std::vector<uint8_t> receivingFrameBuffer;
 	uint32_t receivingHeaderSize;
