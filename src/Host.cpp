@@ -201,18 +201,21 @@ bool Host::IsRunningAsync() { return asyncRunnerFlags & RUNNING; }
 
 void Host::SingleLoopIteration()
 {
-	DispatchAllEventsFromQueue(16);
-	int i = 0;
+	if (peersToFlush.empty() && commandQueue.HasAny() == false) {
+		if ( peers.size() < 20) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(3));
+		} else {
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+	}
+	DispatchAllEventsFromQueue(128);
 	std::vector<std::shared_ptr<Peer>> toRemoveFromQueue;
-	toRemoveFromQueue.reserve(32);
+	toRemoveFromQueue.reserve(64);
 	for (auto p : peersToFlush) {
 		if (p->IsReadyToUse()) {
 			p->_InternalOnWritable();
 			toRemoveFromQueue.emplace_back(p);
 		}
-		++i;
-		if (i == 16)
-			break;
 	}
 	for (auto &p : toRemoveFromQueue) {
 		if (p->_InternalHasQueuedSends() == false) {
