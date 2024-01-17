@@ -316,7 +316,7 @@ void runTestSlave()
 		// 		icon7::Command com(icon7::commands::ExecuteFunctionPointer{[]()
 		// { 			host->ForEachPeer(+[](icon7::Peer *p) { auto stats
 		// =
-		// ((icon7::PeerUStcp *)p)->GetRealTimeStats();
+		// ((icon7::uS::tcp::Peer *)p)->GetRealTimeStats();
 		// 				ipc->pendingReliable[processId] =
 		// stats.m_cbPendingReliable; ipc->unackedReliable[processId] =
 		// stats.m_cbSentUnackedReliable;
@@ -368,7 +368,7 @@ int main()
 
 	icon7::Initialize();
 
-	icon7::HostUStcp *_host = new icon7::HostUStcp();
+	icon7::uS::tcp::Host *_host = new icon7::uS::tcp::Host();
 	bool useSSL = true;
 	if (processId < 0) { // server
 		_host->Init(useSSL, "../cert/user.key", "../cert/user.crt", "", nullptr,

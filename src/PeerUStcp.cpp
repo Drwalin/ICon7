@@ -28,15 +28,19 @@
 
 namespace icon7
 {
-PeerUStcp::PeerUStcp(Host *host, us_socket_t *socket) : Peer(host)
+namespace uS
+{
+namespace tcp
+{
+Peer::Peer(uS::tcp::Host *host, us_socket_t *socket) : icon7::Peer(host)
 {
 	this->socket = socket;
-	SSL = ((HostUStcp *)host)->SSL;
+	SSL = host->SSL;
 }
 
-PeerUStcp::~PeerUStcp() { socket = nullptr; }
+Peer::~Peer() { socket = nullptr; }
 
-bool PeerUStcp::_InternalSend(SendFrameStruct &f, bool hasMore)
+bool Peer::_InternalSend(SendFrameStruct &f, bool hasMore)
 {
 	if (f.headerBytesSent < f.headerSize) {
 		f.headerBytesSent +=
@@ -58,12 +62,14 @@ bool PeerUStcp::_InternalSend(SendFrameStruct &f, bool hasMore)
 	return true;
 }
 
-void PeerUStcp::_InternalDisconnect() { us_socket_shutdown(SSL, socket); }
+void Peer::_InternalDisconnect() { us_socket_shutdown(SSL, socket); }
 
-void PeerUStcp::_InternalClearInternalDataOnClose()
+void Peer::_InternalClearInternalDataOnClose()
 {
-	Peer::_InternalClearInternalDataOnClose();
+	icon7::Peer::_InternalClearInternalDataOnClose();
 	socket = nullptr;
 	SSL = 0;
 }
+} // namespace tcp
+} // namespace uS
 } // namespace icon7
