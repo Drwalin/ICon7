@@ -40,16 +40,12 @@ void Debug(const char *file, int line, const char *function, const char *fmt,
 
 	std::string funcName = function;
 	funcName = std::regex_replace(funcName, std::regex("\\[[^\\[\\]]+\\]"), "");
-	// 	funcName = std::regex_replace(funcName, std::regex("\\[[^\\[\\]]+\\]"),
-	// ""); 	funcName = std::regex_replace(funcName,
-	// std::regex("\\[[^\\[\\]]+\\]"), "");
 	funcName = std::regex_replace(funcName,
 								  std::regex(" ?(static|virtual|const) ?"), "");
 	funcName = std::regex_replace(funcName,
 								  std::regex(" ?(static|virtual|const) ?"), "");
 	funcName = std::regex_replace(funcName,
 								  std::regex(" ?(static|virtual|const) ?"), "");
-	// 	funcName = std::regex_replace(funcName, std::regex("[^ ]* "), "");
 	funcName =
 		std::regex_replace(funcName, std::regex("\\([^\\(\\)]+\\)"), "()");
 	funcName = std::regex_replace(
@@ -145,6 +141,42 @@ std::future<Peer *> Host::ConnectPromise(std::string address, uint16_t port)
 	return future;
 }
 
+void Host::_InternalConnect_Finish(commands::ExecuteConnect &com)
+{
+	if (com.onConnected.peer.get() != nullptr) {
+		peers.insert(com.onConnected.peer);
+	}
+
+	if (com.executionQueue) {
+		com.executionQueue->EnqueueCommand(std::move(com.onConnected));
+	} else {
+		com.onConnected.Execute();
+	}
+}
+
+void Host::_Internal_on_open_Finish(std::shared_ptr<Peer> peer)
+{
+	peers.insert(peer);
+
+	if (onConnect) {
+		onConnect(peer.get());
+	}
+	peer->SetReadyToUse();
+
+	this->Host::SingleLoopIteration();
+}
+
+void Host::_Internal_on_close_Finish(std::shared_ptr<Peer> peer)
+{
+	peer->disconnecting = true;
+
+	peer->_InternalOnDisconnect();
+	peer->_InternalClearInternalDataOnClose();
+	peers.erase(peer);
+	peersToFlush.erase(peer);
+	peer->closed = true;
+}
+
 std::future<bool> Host::ListenOnPort(uint16_t port, IPProto ipProto)
 {
 	std::promise<bool> *promise = new std::promise<bool>();
@@ -161,11 +193,38 @@ std::future<bool> Host::ListenOnPort(uint16_t port, IPProto ipProto)
 	return future;
 }
 
+void Host::ListenOnPort(uint16_t port, IPProto ipProto,
+						commands::ExecuteBooleanOnHost &&callback,
+						CommandExecutionQueue *queue)
+{
+	commands::ExecuteListen com;
+	com.host = this;
+	com.ipProto = ipProto;
+	com.port = port;
+	com.onListen = std::move(callback);
+	com.queue = queue;
+
+	EnqueueCommand(std::move(com));
+}
+
 void Host::Connect(std::string address, uint16_t port)
 {
 	commands::ExecuteOnPeer com;
 	com.function = [](auto a, auto b, auto c) {};
 	Connect(address, port, std::move(com), nullptr);
+}
+
+void Host::Connect(std::string address, uint16_t port,
+				   commands::ExecuteOnPeer &&onConnected,
+				   CommandExecutionQueue *queue)
+{
+	commands::ExecuteConnect com{};
+	com.executionQueue = queue;
+	com.port = port;
+	com.address = address;
+	com.onConnected = std::move(onConnected);
+	com.host = this;
+	EnqueueCommand(std::move(com));
 }
 
 void Host::EnqueueCommand(Command &&command)

@@ -110,7 +110,9 @@ bool HostUStcp::InitLoopAndContext(us_socket_context_options_t options)
 	return loop != nullptr;
 }
 
-std::future<bool> HostUStcp::ListenOnPort(uint16_t port, IPProto ipProto)
+void HostUStcp::_InternalListen(IPProto ipProto, uint16_t port,
+								commands::ExecuteBooleanOnHost &&com,
+								CommandExecutionQueue *queue)
 {
 	us_listen_socket_t *socket = nullptr;
 	if (ipProto == IPv4) {
@@ -124,38 +126,12 @@ std::future<bool> HostUStcp::ListenOnPort(uint16_t port, IPProto ipProto)
 		listenSockets.insert(socket);
 	}
 
-	std::promise<bool> promise;
-	std::future<bool> future = promise.get_future();
-	promise.set_value(socket != nullptr);
-	return future;
-}
-
-void HostUStcp::ListenOnPort(uint16_t port, IPProto ipProto,
-							 commands::ExecuteBooleanOnHost &&callback,
-							 CommandExecutionQueue *queue)
-{
-	std::future<bool> future = ListenOnPort(port, ipProto);
-	future.wait();
-	callback.result = future.get();
-
+	com.result = socket;
 	if (queue) {
-		queue->EnqueueCommand(std::move(callback));
+		queue->EnqueueCommand(std::move(com));
 	} else {
-		callback.Execute();
+		com.Execute();
 	}
-}
-
-void HostUStcp::Connect(std::string address, uint16_t port,
-						commands::ExecuteOnPeer &&onConnected,
-						CommandExecutionQueue *queue)
-{
-	commands::ExecuteConnect com{};
-	com.executionQueue = queue;
-	com.port = port;
-	com.address = address;
-	com.onConnected = std::move(onConnected);
-	com.host = this;
-	EnqueueCommand(std::move(com));
 }
 
 void HostUStcp::SingleLoopIteration()
@@ -192,17 +168,12 @@ void HostUStcp::_InternalConnect(commands::ExecuteConnect &com)
 	if (socket) {
 		peer = std::make_shared<PeerUStcp>(this, socket);
 		(*(Peer **)us_socket_ext(SSL, socket)) = peer.get();
-		peers.insert(peer);
 		com.onConnected.peer = peer;
 	} else {
 		com.onConnected.peer = nullptr;
 	}
 
-	if (com.executionQueue) {
-		com.executionQueue->EnqueueCommand(std::move(com.onConnected));
-	} else {
-		com.onConnected.Execute();
-	}
+	_InternalConnect_Finish(com);
 }
 
 template <bool SSL>
@@ -218,17 +189,11 @@ us_socket_t *HostUStcp::_Internal_on_open(struct us_socket_t *socket,
 	if (isClient == false) {
 		peer = std::make_shared<PeerUStcp>(host, socket);
 		(*(Peer **)us_socket_ext(SSL, socket)) = peer.get();
-		host->peers.insert(peer);
 	} else {
 		peer = (*(Peer **)us_socket_ext(SSL, socket))->shared_from_this();
 	}
 
-	if (host->onConnect) {
-		host->onConnect(peer.get());
-	}
-	peer->SetReadyToUse();
-
-	host->Host::SingleLoopIteration();
+	host->_Internal_on_open_Finish(peer);
 
 	return socket;
 }
@@ -240,14 +205,9 @@ us_socket_t *HostUStcp::_Internal_on_close(struct us_socket_t *socket, int code,
 	Peer *peer = *(Peer **)us_socket_ext(SSL, socket);
 	HostUStcp *host = (HostUStcp *)peer->host;
 
-	peer->disconnecting = true;
+	std::shared_ptr<Peer> _peer = peer->shared_from_this();
+	host->_Internal_on_close_Finish(_peer);
 
-	peer->_InternalOnDisconnect();
-	*(us_socket_t **)&(((PeerUStcp *)peer)->socket) = nullptr;
-	std::shared_ptr<Peer> p = peer->shared_from_this();
-	host->peers.erase(p);
-	host->peersToFlush.erase(p);
-	peer->closed = true;
 	return socket;
 }
 

@@ -33,6 +33,8 @@ enum FlagsValues : uint32_t {
 	FLAGS_CALL_NO_FEEDBACK = 2,
 	FLAGS_CALL_RETURN_FEEDBACK = 4
 };
+
+enum IPProto { IPv4 = 1, IPv6 = 2 };
 } // namespace icon7
 
 #endif
