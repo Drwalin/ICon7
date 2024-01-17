@@ -168,13 +168,12 @@ void Host::_Internal_on_open_Finish(std::shared_ptr<Peer> peer)
 
 void Host::_Internal_on_close_Finish(std::shared_ptr<Peer> peer)
 {
-	peer->disconnecting = true;
-
+	peer->peerFlags |= Peer::BIT_DISCONNECTING;
 	peer->_InternalOnDisconnect();
 	peer->_InternalClearInternalDataOnClose();
 	peers.erase(peer);
 	peersToFlush.erase(peer);
-	peer->closed = true;
+	peer->peerFlags |= Peer::BIT_CLOSED;
 }
 
 std::future<bool> Host::ListenOnPort(uint16_t port, IPProto ipProto)

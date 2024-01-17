@@ -53,9 +53,7 @@ Peer::Peer(Host *host) : host(host)
 	userData = 0;
 	userPointer = nullptr;
 	onDisconnect = nullptr;
-	readyToUse = false;
-	disconnecting = false;
-	closed = false;
+	peerFlags = 0;
 	sendQueue = new QueueType();
 	sendingQueueSize = 0;
 	receivingHeaderSize = 0;
@@ -70,7 +68,7 @@ Peer::~Peer()
 
 void Peer::Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
 {
-	if (disconnecting) {
+	if (IsDisconnecting()) {
 		// TODO: inform about dropping packets
 		return;
 	}
@@ -81,7 +79,7 @@ void Peer::Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
 
 void Peer::Disconnect()
 {
-	disconnecting = true;
+	peerFlags |= BIT_DISCONNECTING;
 	Command command{commands::ExecuteDisconnect{}};
 	commands::ExecuteDisconnect &com =
 		std::get<commands::ExecuteDisconnect>(command.cmd);
@@ -141,7 +139,7 @@ void Peer::_InternalOnData(uint8_t *data, uint32_t length)
 
 void Peer::_InternalOnWritable()
 {
-	if (closed) {
+	if (IsClosed()) {
 		return;
 	}
 	_InternalFlushQueuedSends();
@@ -162,7 +160,7 @@ void Peer::_InternalOnLongTimeout() { _InternalDisconnect(); }
 
 bool Peer::_InternalHasQueuedSends() const { return sendingQueueSize != 0; }
 
-void Peer::SetReadyToUse() { readyToUse = true; }
+void Peer::SetReadyToUse() { peerFlags |= BIT_READY; }
 
 void Peer::_InternalFlushQueuedSends()
 {
