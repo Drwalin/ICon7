@@ -107,8 +107,6 @@ protected:
 	Host();
 
 	friend class Peer;
-	friend class PeerUSockets;
-	friend class HostUSockets;
 
 protected:
 	void (*onConnect)(Peer *);

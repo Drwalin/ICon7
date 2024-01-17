@@ -78,7 +78,7 @@ int main(int argc, char **argv)
 							}
 						});
 
-	icon7::HostUStcp *_host = new icon7::HostUStcp();
+	icon7::uS::tcp::Host *_host = new icon7::uS::tcp::Host();
 	_host->Init();
 	icon7::Host *host = _host;
 	host->ListenOnPort(port, icon7::IPv4);

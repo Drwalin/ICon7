@@ -25,19 +25,23 @@
 
 namespace icon7
 {
+namespace uS
+{
+namespace tcp
+{
 
-class HostUStcp : public Host
+class Host : public icon7::Host
 {
 public:
-	HostUStcp();
-	virtual ~HostUStcp();
+	Host();
+	virtual ~Host();
 
-	HostUStcp(HostUStcp &) = delete;
-	HostUStcp(HostUStcp &&) = delete;
-	HostUStcp(const HostUStcp &) = delete;
-	HostUStcp &operator=(HostUStcp &) = delete;
-	HostUStcp &operator=(HostUStcp &&) = delete;
-	HostUStcp &operator=(const HostUStcp &) = delete;
+	Host(Host &) = delete;
+	Host(Host &&) = delete;
+	Host(const Host &) = delete;
+	Host &operator=(Host &) = delete;
+	Host &operator=(Host &&) = delete;
+	Host &operator=(const Host &) = delete;
 
 	virtual void _InternalDestroy() override;
 
@@ -89,7 +93,7 @@ private:
 
 	template <bool _SSL> void SetUSocketContextCallbacks();
 
-	friend class PeerUStcp;
+	friend class Peer;
 
 private:
 	int SSL;
@@ -99,6 +103,8 @@ private:
 	us_socket_context_t *socketContext;
 	std::unordered_set<us_listen_socket_t *> listenSockets;
 };
+} // namespace tcp
+} // namespace uS
 } // namespace icon7
 
 #endif

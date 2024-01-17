@@ -37,7 +37,7 @@ int main()
 	rpc.RegisterMessage("sum", Sum);
 	rpc.RegisterMessage("mul", Mul);
 
-	icon7::HostUStcp *hosta = new icon7::HostUStcp();
+	icon7::uS::tcp::Host *hosta = new icon7::uS::tcp::Host();
 	hosta->SetRpcEnvironment(&rpc);
 	hosta->Init();
 	hosta->RunAsync();
@@ -50,7 +50,7 @@ int main()
 		hosta->ListenOnPort(port, icon7::IPv4, std::move(com), nullptr);
 	}
 
-	icon7::HostUStcp *hostb = new icon7::HostUStcp();
+	icon7::uS::tcp::Host *hostb = new icon7::uS::tcp::Host();
 	hostb->SetRpcEnvironment(&rpc);
 	hostb->Init();
 	hostb->RunAsync();
