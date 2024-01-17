@@ -28,48 +28,48 @@
 
 namespace icon7
 {
-PeerUStcp::PeerUStcp(Host *host, us_socket_t *socket) : Peer(host)
+namespace uS
+{
+namespace tcp
+{
+Peer::Peer(uS::tcp::Host *host, us_socket_t *socket) : icon7::Peer(host)
 {
 	this->socket = socket;
-	SSL = ((HostUStcp *)host)->SSL;
+	SSL = host->SSL;
 }
 
-PeerUStcp::~PeerUStcp() { socket = nullptr; }
+Peer::~Peer() { socket = nullptr; }
 
-bool PeerUStcp::_InternalSend(SendFrameStruct &f, bool hasMore)
+bool Peer::_InternalSend(SendFrameStruct &f, bool hasMore)
 {
 	if (f.headerBytesSent < f.headerSize) {
-		uint8_t *b = f.header;
-		DEBUG("sending header bytes: %u   --   %2.2X %2.2X %2.2X %2.2X",
-			  f.headerSize - f.headerBytesSent, b[0], b[1], b[2], b[3]);
 		f.headerBytesSent +=
 			us_socket_write(SSL, socket, (char *)(f.header + f.headerBytesSent),
 							f.headerSize - f.headerBytesSent,
 							(f.dataWithoutHeader.size() ? 1 : 0) || hasMore);
 		if (f.headerBytesSent < f.headerSize) {
-			DEBUG("FALSE");
 			return false;
 		}
 	}
-	DEBUG("");
 	if (f.bytesSent < f.dataWithoutHeader.size()) {
-		uint8_t *b = f.dataWithoutHeader.data();
-		DEBUG("sending data bytes: %u   --   %2.2X %2.2X %2.2X %2.2X %2.2X",
-			  f.dataWithoutHeader.size() - f.bytesSent, b[0], b[1], b[2], b[3],
-			  b[4]);
 		f.bytesSent += us_socket_write(
 			SSL, socket, (char *)(f.dataWithoutHeader.data() + f.bytesSent),
 			f.dataWithoutHeader.size() - f.bytesSent, hasMore);
 	}
 	if (f.bytesSent < f.dataWithoutHeader.size()) {
-		DEBUG("FALSE");
 		return false;
 	}
-	DEBUG("Sent: [header: %i] [body: %i]", f.headerSize,
-		  f.dataWithoutHeader.size());
-	DEBUG("TRUE");
 	return true;
 }
 
-void PeerUStcp::_InternalDisconnect() { us_socket_shutdown(SSL, socket); }
+void Peer::_InternalDisconnect() { us_socket_shutdown(SSL, socket); }
+
+void Peer::_InternalClearInternalDataOnClose()
+{
+	icon7::Peer::_InternalClearInternalDataOnClose();
+	socket = nullptr;
+	SSL = 0;
+}
+} // namespace tcp
+} // namespace uS
 } // namespace icon7

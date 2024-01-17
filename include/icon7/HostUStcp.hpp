@@ -25,37 +25,32 @@
 
 namespace icon7
 {
+namespace uS
+{
+namespace tcp
+{
 
-class HostUStcp : public Host
+class Host : public icon7::Host
 {
 public:
-	HostUStcp();
-	virtual ~HostUStcp();
+	Host();
+	virtual ~Host();
 
-	HostUStcp(HostUStcp &) = delete;
-	HostUStcp(HostUStcp &&) = delete;
-	HostUStcp(const HostUStcp &) = delete;
-	HostUStcp &operator=(HostUStcp &) = delete;
-	HostUStcp &operator=(HostUStcp &&) = delete;
-	HostUStcp &operator=(const HostUStcp &) = delete;
+	Host(Host &) = delete;
+	Host(Host &&) = delete;
+	Host(const Host &) = delete;
+	Host &operator=(Host &) = delete;
+	Host &operator=(Host &&) = delete;
+	Host &operator=(const Host &) = delete;
 
 	virtual void _InternalDestroy() override;
 
-	bool Init(const char *key_file_name = nullptr,
+	bool Init(bool useSSL = false, const char *key_file_name = nullptr,
 			  const char *cert_file_name = nullptr,
 			  const char *passphrase = nullptr,
 			  const char *dh_params_file_name = nullptr,
 			  const char *ca_file_name = nullptr,
 			  const char *ssl_ciphers = nullptr);
-
-	virtual std::future<bool> ListenOnPort(uint16_t port) override;
-	virtual void ListenOnPort(uint16_t port,
-							  commands::ExecuteBooleanOnHost &&callback,
-							  CommandExecutionQueue *queue) override;
-
-	virtual void Connect(std::string address, uint16_t port,
-						 commands::ExecuteOnPeer &&onConnected,
-						 CommandExecutionQueue *queue = nullptr) override;
 
 	virtual void SingleLoopIteration() override;
 
@@ -66,6 +61,9 @@ private:
 
 	virtual void
 	_InternalConnect(commands::ExecuteConnect &connectCommand) override;
+	virtual void _InternalListen(IPProto ipProto, uint16_t port,
+								 commands::ExecuteBooleanOnHost &&com,
+								 CommandExecutionQueue *queue) override;
 
 	static void _Internal_wakeup_cb(struct us_loop_t *loop);
 	static void _Internal_pre_cb(struct us_loop_t *loop);
@@ -95,7 +93,7 @@ private:
 
 	template <bool _SSL> void SetUSocketContextCallbacks();
 
-	friend class PeerUStcp;
+	friend class Peer;
 
 private:
 	int SSL;
@@ -105,6 +103,8 @@ private:
 	us_socket_context_t *socketContext;
 	std::unordered_set<us_listen_socket_t *> listenSockets;
 };
+} // namespace tcp
+} // namespace uS
 } // namespace icon7
 
 #endif

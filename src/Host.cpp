@@ -26,6 +26,7 @@
 
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/Peer.hpp"
+#include "../include/icon7/RPCEnvironment.hpp"
 
 #include "../include/icon7/Host.hpp"
 
@@ -39,16 +40,12 @@ void Debug(const char *file, int line, const char *function, const char *fmt,
 
 	std::string funcName = function;
 	funcName = std::regex_replace(funcName, std::regex("\\[[^\\[\\]]+\\]"), "");
-	// 	funcName = std::regex_replace(funcName, std::regex("\\[[^\\[\\]]+\\]"),
-	// ""); 	funcName = std::regex_replace(funcName,
-	// std::regex("\\[[^\\[\\]]+\\]"), "");
 	funcName = std::regex_replace(funcName,
 								  std::regex(" ?(static|virtual|const) ?"), "");
 	funcName = std::regex_replace(funcName,
 								  std::regex(" ?(static|virtual|const) ?"), "");
 	funcName = std::regex_replace(funcName,
 								  std::regex(" ?(static|virtual|const) ?"), "");
-	// 	funcName = std::regex_replace(funcName, std::regex("[^ ]* "), "");
 	funcName =
 		std::regex_replace(funcName, std::regex("\\([^\\(\\)]+\\)"), "()");
 	funcName = std::regex_replace(
@@ -109,7 +106,6 @@ void Host::DisconnectAllAsync()
 
 void Host::DisconnectAll()
 {
-	DEBUG("");
 	for (auto &p : peers) {
 		p->Disconnect();
 	}
@@ -136,7 +132,6 @@ std::future<Peer *> Host::ConnectPromise(std::string address, uint16_t port)
 	commands::ExecuteOnPeer onConnected;
 	onConnected.userPointer = promise;
 	onConnected.function = [](auto peer, auto data, auto userPointer) {
-		DEBUG("");
 		std::promise<Peer *> *promise = (std::promise<Peer *> *)(userPointer);
 		promise->set_value(peer);
 		delete promise;
@@ -146,21 +141,69 @@ std::future<Peer *> Host::ConnectPromise(std::string address, uint16_t port)
 	return future;
 }
 
-std::future<bool> Host::ListenOnPort(uint16_t port)
+void Host::_InternalConnect_Finish(commands::ExecuteConnect &com)
+{
+	if (com.onConnected.peer.get() != nullptr) {
+		peers.insert(com.onConnected.peer);
+	}
+
+	if (com.executionQueue) {
+		com.executionQueue->EnqueueCommand(std::move(com.onConnected));
+	} else {
+		com.onConnected.Execute();
+	}
+}
+
+void Host::_Internal_on_open_Finish(std::shared_ptr<Peer> peer)
+{
+	peers.insert(peer);
+
+	if (onConnect) {
+		onConnect(peer.get());
+	}
+	peer->SetReadyToUse();
+
+	this->Host::SingleLoopIteration();
+}
+
+void Host::_Internal_on_close_Finish(std::shared_ptr<Peer> peer)
+{
+	peer->peerFlags |= Peer::BIT_DISCONNECTING;
+	peer->_InternalOnDisconnect();
+	peer->_InternalClearInternalDataOnClose();
+	peers.erase(peer);
+	peersToFlush.erase(peer);
+	peer->peerFlags |= Peer::BIT_CLOSED;
+}
+
+std::future<bool> Host::ListenOnPort(uint16_t port, IPProto ipProto)
 {
 	std::promise<bool> *promise = new std::promise<bool>();
 	commands::ExecuteBooleanOnHost callback;
 	callback.host = this;
 	callback.userPointer = promise;
 	callback.function = [](Host *host, bool result, void *userPointer) {
-		DEBUG("");
 		std::promise<bool> *promise = (std::promise<bool> *)(userPointer);
 		promise->set_value(result);
 		delete promise;
 	};
 	auto future = promise->get_future();
-	ListenOnPort(port, std::move(callback), nullptr);
+	ListenOnPort(port, ipProto, std::move(callback), nullptr);
 	return future;
+}
+
+void Host::ListenOnPort(uint16_t port, IPProto ipProto,
+						commands::ExecuteBooleanOnHost &&callback,
+						CommandExecutionQueue *queue)
+{
+	commands::ExecuteListen com;
+	com.host = this;
+	com.ipProto = ipProto;
+	com.port = port;
+	com.onListen = std::move(callback);
+	com.queue = queue;
+
+	EnqueueCommand(std::move(com));
 }
 
 void Host::Connect(std::string address, uint16_t port)
@@ -168,6 +211,19 @@ void Host::Connect(std::string address, uint16_t port)
 	commands::ExecuteOnPeer com;
 	com.function = [](auto a, auto b, auto c) {};
 	Connect(address, port, std::move(com), nullptr);
+}
+
+void Host::Connect(std::string address, uint16_t port,
+				   commands::ExecuteOnPeer &&onConnected,
+				   CommandExecutionQueue *queue)
+{
+	commands::ExecuteConnect com{};
+	com.executionQueue = queue;
+	com.port = port;
+	com.address = address;
+	com.onConnected = std::move(onConnected);
+	com.host = this;
+	EnqueueCommand(std::move(com));
 }
 
 void Host::EnqueueCommand(Command &&command)
@@ -204,24 +260,28 @@ bool Host::IsRunningAsync() { return asyncRunnerFlags & RUNNING; }
 
 void Host::SingleLoopIteration()
 {
-	DispatchAllEventsFromQueue(16);
-	int i = 0;
+	if (peersToFlush.empty() && commandQueue.HasAny() == false) {
+		if (peers.size() < 20) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(3));
+		} else {
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+	}
+	DispatchAllEventsFromQueue(128);
 	std::vector<std::shared_ptr<Peer>> toRemoveFromQueue;
-	toRemoveFromQueue.reserve(32);
+	toRemoveFromQueue.reserve(64);
 	for (auto p : peersToFlush) {
 		if (p->IsReadyToUse()) {
 			p->_InternalOnWritable();
 			toRemoveFromQueue.emplace_back(p);
 		}
-		++i;
-		if (i == 16)
-			break;
 	}
 	for (auto &p : toRemoveFromQueue) {
 		if (p->_InternalHasQueuedSends() == false) {
 			peersToFlush.erase(p);
 		}
 	}
+	rpcEnvironment->CheckForTimeoutFunctionCalls(16);
 }
 
 void Host::InsertPeerToFlush(Peer *peer)

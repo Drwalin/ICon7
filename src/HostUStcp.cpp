@@ -16,41 +16,46 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <openssl/ssl.h>
+
 #include "../include/icon7/Command.hpp"
-#include "../include/icon7/Peer.hpp"
 #include "../include/icon7/PeerUStcp.hpp"
 
 #include "../include/icon7/HostUStcp.hpp"
 
 namespace icon7
 {
-HostUStcp::HostUStcp()
+namespace uS
+{
+namespace tcp
+{
+Host::Host()
 {
 	SSL = -1;
 	loop = nullptr;
 	socketContext = nullptr;
 }
 
-HostUStcp::~HostUStcp() {}
+Host::~Host() {}
 
-void HostUStcp::_InternalDestroy()
+void Host::_InternalDestroy()
 {
 	this->EnqueueCommand(
-		commands::ExecuteOnHost{this, nullptr, [](Host *_host, void *) {
-									HostUStcp *host = (HostUStcp *)_host;
+		commands::ExecuteOnHost{this, nullptr, [](icon7::Host *_host, void *) {
+									Host *host = (Host *)_host;
 									for (auto s : host->listenSockets) {
 										us_listen_socket_close(host->SSL, s);
 									}
 								}});
-	Host::_InternalDestroy();
+	icon7::Host::_InternalDestroy();
 }
 
-bool HostUStcp::Init(const char *key_file_name, const char *cert_file_name,
-					 const char *passphrase, const char *dh_params_file_name,
-					 const char *ca_file_name, const char *ssl_ciphers)
+bool Host::Init(bool useSSL, const char *key_file_name,
+				const char *cert_file_name, const char *passphrase,
+				const char *dh_params_file_name, const char *ca_file_name,
+				const char *ssl_ciphers)
 {
-	SSL = key_file_name || cert_file_name || passphrase ||
-		  dh_params_file_name || ca_file_name || ssl_ciphers;
+	SSL = useSSL;
 	us_socket_context_options_t options{key_file_name, cert_file_name,
 										passphrase,	   dh_params_file_name,
 										ca_file_name,  ssl_ciphers};
@@ -60,42 +65,43 @@ bool HostUStcp::Init(const char *key_file_name, const char *cert_file_name,
 	return true;
 }
 
-template <bool _SSL> void HostUStcp::SetUSocketContextCallbacks()
+template <bool _SSL> void Host::SetUSocketContextCallbacks()
 {
 	us_socket_context_on_open(_SSL, socketContext,
-							  HostUStcp::_Internal_on_open<_SSL>);
+							  Host::_Internal_on_open<_SSL>);
 	us_socket_context_on_close(_SSL, socketContext,
-							   HostUStcp::_Internal_on_close<_SSL>);
+							   Host::_Internal_on_close<_SSL>);
 	us_socket_context_on_data(_SSL, socketContext,
-							  HostUStcp::_Internal_on_data<_SSL>);
+							  Host::_Internal_on_data<_SSL>);
 	us_socket_context_on_writable(_SSL, socketContext,
-								  HostUStcp::_Internal_on_writable<_SSL>);
+								  Host::_Internal_on_writable<_SSL>);
 	us_socket_context_on_timeout(_SSL, socketContext,
-								 HostUStcp::_Internal_on_timeout<_SSL>);
-	us_socket_context_on_long_timeout(
-		_SSL, socketContext, HostUStcp::_Internal_on_long_timeout<_SSL>);
-	us_socket_context_on_connect_error(
-		_SSL, socketContext, HostUStcp::_Internal_on_connect_error<_SSL>);
-	us_socket_context_on_end(_SSL, socketContext,
-							 HostUStcp::_Internal_on_end<_SSL>);
+								 Host::_Internal_on_timeout<_SSL>);
+	us_socket_context_on_long_timeout(_SSL, socketContext,
+									  Host::_Internal_on_long_timeout<_SSL>);
+	us_socket_context_on_connect_error(_SSL, socketContext,
+									   Host::_Internal_on_connect_error<_SSL>);
+	us_socket_context_on_end(_SSL, socketContext, Host::_Internal_on_end<_SSL>);
 }
 
-bool HostUStcp::InitLoopAndContext(us_socket_context_options_t options)
+bool Host::InitLoopAndContext(us_socket_context_options_t options)
 {
 	loop = us_create_loop(nullptr, _Internal_wakeup_cb, _Internal_pre_cb,
 						  _Internal_post_cb, sizeof(Host *));
 	if (loop == nullptr) {
+		DEBUG("");
 		return false;
 	}
-	*(HostUStcp **)us_loop_ext(loop) = this;
+	*(Host **)us_loop_ext(loop) = this;
 
 	socketContext =
 		us_create_socket_context(SSL, loop, sizeof(Host *), options);
 	if (socketContext == nullptr) {
 		us_loop_free(loop);
+		DEBUG("");
 		return false;
 	}
-	*(HostUStcp **)us_socket_context_ext(SSL, socketContext) = this;
+	*(Host **)us_socket_context_ext(SSL, socketContext) = this;
 
 	if (SSL) {
 		SetUSocketContextCallbacks<true>();
@@ -106,189 +112,151 @@ bool HostUStcp::InitLoopAndContext(us_socket_context_options_t options)
 	return loop != nullptr;
 }
 
-std::future<bool> HostUStcp::ListenOnPort(uint16_t port)
+void Host::_InternalListen(IPProto ipProto, uint16_t port,
+						   commands::ExecuteBooleanOnHost &&com,
+						   CommandExecutionQueue *queue)
 {
-	us_listen_socket_t *socket = us_socket_context_listen(
-		SSL, socketContext, "127.0.0.1", port, 0, sizeof(Host *));
+	us_listen_socket_t *socket = nullptr;
+	if (ipProto == IPv4) {
+		socket = us_socket_context_listen(SSL, socketContext, "127.0.0.1", port,
+										  0, sizeof(Host *));
+	} else {
+		socket = us_socket_context_listen(SSL, socketContext, "::1", port, 0,
+										  sizeof(Host *));
+	}
 	if (socket) {
 		listenSockets.insert(socket);
 	}
 
-	std::promise<bool> promise;
-	std::future<bool> future = promise.get_future();
-	promise.set_value(socket != nullptr);
-	return future;
-}
-
-void HostUStcp::ListenOnPort(uint16_t port,
-							 commands::ExecuteBooleanOnHost &&callback,
-							 CommandExecutionQueue *queue)
-{
-	std::future<bool> future = ListenOnPort(port);
-	future.wait();
-	callback.result = future.get();
-
+	com.result = socket;
 	if (queue) {
-		queue->EnqueueCommand(std::move(callback));
+		queue->EnqueueCommand(std::move(com));
 	} else {
-		callback.Execute();
+		com.Execute();
 	}
 }
 
-void HostUStcp::Connect(std::string address, uint16_t port,
-						commands::ExecuteOnPeer &&onConnected,
-						CommandExecutionQueue *queue)
-{
-	commands::ExecuteConnect com{};
-	com.executionQueue = queue;
-	com.port = port;
-	com.address = address;
-	com.onConnected = std::move(onConnected);
-	com.host = this;
-	EnqueueCommand(std::move(com));
-}
-
-void HostUStcp::SingleLoopIteration()
+void Host::SingleLoopIteration()
 {
 	us_loop_run(loop);
-	Host::SingleLoopIteration();
+	icon7::Host::SingleLoopIteration();
 }
 
-void HostUStcp::_Internal_wakeup_cb(struct us_loop_t *loop)
+void Host::_Internal_wakeup_cb(struct us_loop_t *loop)
 {
-	auto host = (*(HostUStcp **)us_loop_ext(loop));
-	host->Host::SingleLoopIteration();
+	auto host = (*(Host **)us_loop_ext(loop));
+	host->icon7::Host::SingleLoopIteration();
 }
 
-void HostUStcp::_Internal_pre_cb(struct us_loop_t *loop)
+void Host::_Internal_pre_cb(struct us_loop_t *loop)
 {
-	auto host = (*(HostUStcp **)us_loop_ext(loop));
-	host->Host::SingleLoopIteration();
+	auto host = (*(Host **)us_loop_ext(loop));
+	host->icon7::Host::SingleLoopIteration();
 }
 
-void HostUStcp::_Internal_post_cb(struct us_loop_t *loop)
+void Host::_Internal_post_cb(struct us_loop_t *loop)
 {
-	auto host = (*(HostUStcp **)us_loop_ext(loop));
-	host->Host::SingleLoopIteration();
+	auto host = (*(Host **)us_loop_ext(loop));
+	host->icon7::Host::SingleLoopIteration();
 }
 
-void HostUStcp::_InternalConnect(commands::ExecuteConnect &com)
+void Host::_InternalConnect(commands::ExecuteConnect &com)
 {
-	DEBUG("");
 	us_socket_t *socket =
 		us_socket_context_connect(SSL, socketContext, com.address.c_str(),
-								  com.port, nullptr, 0, sizeof(Peer *));
+								  com.port, nullptr, 0, sizeof(icon7::Peer *));
 
-	std::shared_ptr<Peer> peer;
+	std::shared_ptr<icon7::Peer> peer;
 	if (socket) {
-		peer = std::make_shared<PeerUStcp>(this, socket);
-		(*(Peer **)us_socket_ext(SSL, socket)) = peer.get();
-		peers.insert(peer);
+		peer = std::make_shared<uS::tcp::Peer>(this, socket);
+		(*(icon7::Peer **)us_socket_ext(SSL, socket)) = peer.get();
 		com.onConnected.peer = peer;
 	} else {
 		com.onConnected.peer = nullptr;
 	}
 
-	if (com.executionQueue) {
-		com.executionQueue->EnqueueCommand(std::move(com.onConnected));
-	} else {
-		com.onConnected.Execute();
-	}
+	_InternalConnect_Finish(com);
 }
 
 template <bool SSL>
-us_socket_t *HostUStcp::_Internal_on_open(struct us_socket_t *socket,
-										  int isClient, char *ip, int ipLength)
+us_socket_t *Host::_Internal_on_open(struct us_socket_t *socket, int isClient,
+									 char *ip, int ipLength)
 {
-	DEBUG("");
 	us_socket_context_t *context = us_socket_context(SSL, socket);
 	us_loop_t *loop = us_socket_context_loop(SSL, context);
-	HostUStcp *host = *(HostUStcp **)us_loop_ext(loop);
+	Host *host = *(Host **)us_loop_ext(loop);
 
-	std::shared_ptr<Peer> peer;
+	std::shared_ptr<icon7::Peer> peer;
 
 	if (isClient == false) {
-		peer = std::make_shared<PeerUStcp>(host, socket);
-		(*(Peer **)us_socket_ext(SSL, socket)) = peer.get();
-		host->peers.insert(peer);
+		peer = std::make_shared<uS::tcp::Peer>(host, socket);
+		(*(icon7::Peer **)us_socket_ext(SSL, socket)) = peer.get();
 	} else {
-		peer = (*(Peer **)us_socket_ext(SSL, socket))->shared_from_this();
+		peer =
+			(*(icon7::Peer **)us_socket_ext(SSL, socket))->shared_from_this();
 	}
 
-	if (host->onConnect) {
-		host->onConnect(peer.get());
-	}
-	peer->SetReadyToUse();
-
-	DEBUG("");
-	host->Host::SingleLoopIteration();
+	host->_Internal_on_open_Finish(peer);
 
 	return socket;
 }
 
 template <bool SSL>
-us_socket_t *HostUStcp::_Internal_on_close(struct us_socket_t *socket, int code,
-										   void *reason)
+us_socket_t *Host::_Internal_on_close(struct us_socket_t *socket, int code,
+									  void *reason)
 {
-	DEBUG("");
-	Peer *peer = *(Peer **)us_socket_ext(SSL, socket);
-	HostUStcp *host = (HostUStcp *)peer->host;
+	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
+	Host *host = (Host *)peer->host;
 
-	peer->disconnecting = true;
+	std::shared_ptr<icon7::Peer> _peer = peer->shared_from_this();
+	host->_Internal_on_close_Finish(_peer);
 
-	peer->_InternalOnDisconnect();
-	host->peers.erase(peer->shared_from_this());
 	return socket;
 }
 
 template <bool SSL>
-us_socket_t *HostUStcp::_Internal_on_data(struct us_socket_t *socket,
-										  char *data, int length)
+us_socket_t *Host::_Internal_on_data(struct us_socket_t *socket, char *data,
+									 int length)
 {
-	DEBUG("");
-	Peer *peer = *(Peer **)us_socket_ext(SSL, socket);
+	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
 
 	peer->_InternalOnData((uint8_t *)data, length);
 	return socket;
 }
 
 template <bool SSL>
-us_socket_t *HostUStcp::_Internal_on_writable(struct us_socket_t *socket)
+us_socket_t *Host::_Internal_on_writable(struct us_socket_t *socket)
 {
-	DEBUG("");
-	Peer *peer = *(Peer **)us_socket_ext(SSL, socket);
+	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
 
 	peer->_InternalOnWritable();
 	return socket;
 }
 
 template <bool SSL>
-us_socket_t *HostUStcp::_Internal_on_timeout(struct us_socket_t *socket)
+us_socket_t *Host::_Internal_on_timeout(struct us_socket_t *socket)
 {
-	DEBUG("");
-	Peer *peer = *(Peer **)us_socket_ext(SSL, socket);
+	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
 
 	peer->_InternalOnTimeout();
 	return socket;
 }
 
 template <bool SSL>
-us_socket_t *HostUStcp::_Internal_on_long_timeout(struct us_socket_t *socket)
+us_socket_t *Host::_Internal_on_long_timeout(struct us_socket_t *socket)
 {
-	DEBUG("");
-	Peer *peer = *(Peer **)us_socket_ext(SSL, socket);
+	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
 
 	peer->_InternalOnLongTimeout();
 	return socket;
 }
 
 template <bool SSL>
-us_socket_t *HostUStcp::_Internal_on_connect_error(struct us_socket_t *socket,
-												   int code)
+us_socket_t *Host::_Internal_on_connect_error(struct us_socket_t *socket,
+											  int code)
 {
-	DEBUG("");
-	Peer *peer = *(Peer **)us_socket_ext(SSL, socket);
-	HostUStcp *host = (HostUStcp *)peer->host;
+	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
+	Host *host = (Host *)peer->host;
 
 	peer->_InternalOnDisconnect();
 	host->peers.erase(peer->shared_from_this());
@@ -297,16 +265,17 @@ us_socket_t *HostUStcp::_Internal_on_connect_error(struct us_socket_t *socket,
 }
 
 template <bool SSL>
-us_socket_t *HostUStcp::_Internal_on_end(struct us_socket_t *socket)
+us_socket_t *Host::_Internal_on_end(struct us_socket_t *socket)
 {
-	DEBUG("");
 	return socket;
 }
 
-void HostUStcp::EnqueueCommand(Command &&command)
+void Host::EnqueueCommand(Command &&command)
 {
-	Host::EnqueueCommand(std::move(command));
+	icon7::Host::EnqueueCommand(std::move(command));
 	us_wakeup_loop(loop);
 }
 
+} // namespace tcp
+} // namespace uS
 } // namespace icon7

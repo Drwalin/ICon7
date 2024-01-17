@@ -142,6 +142,7 @@ template <typename... Args> void Print(const char *fmt, Args... args)
 
 void Runner(icon7::Peer *peer)
 {
+	std::shared_ptr<icon7::Peer> object_keeper = peer->shared_from_this();
 	while (peer->IsReadyToUse() == false) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
@@ -150,7 +151,7 @@ void Runner(icon7::Peer *peer)
 	for (uint32_t i = 0; i < ipc->countMessages; ++i) {
 		if (ipc->runTestFlag == 0)
 			break;
-		std::this_thread::sleep_for(std::chrono::milliseconds(15));
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		for (uint32_t j = 0; j < ((processId == -1) ? 4 : 1); ++j) {
 			uint32_t s = (processId == -1) ? GetRandomMessageSize() : 100;
 			data.resize(s / 21);
@@ -160,7 +161,7 @@ void Runner(icon7::Peer *peer)
 									? icon7::FLAG_RELIABLE
 									: icon7::FLAG_UNRELIABLE;
 			++msgSent;
-			uint64_t bytes = data.size() * 21 + 8 + 4 + 7;
+			uint64_t bytes = data.size() * 21 + 6;
 			if (processId >= 0) {
 				ipc->counterSentByClients++;
 				ipc->clientsSendBytes += bytes;
@@ -173,6 +174,9 @@ void Runner(icon7::Peer *peer)
 	}
 	ipc->flags += 1;
 	ipc->connectionsDoneSending++;
+
+	std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+	peer->Disconnect();
 }
 
 void Run(icon7::Peer *peer) { std::thread(Runner, peer).detach(); }
@@ -310,10 +314,11 @@ void runTestSlave()
 	host->Connect("127.0.0.1", serverPort);
 	while (ipc->runTestFlag != 0) {
 		// 		icon7::Command com(icon7::commands::ExecuteFunctionPointer{[]()
-		// { 			host->ForEachPeer(+[](icon7::Peer *p) { 				auto stats =
-		// ((icon7::PeerUStcp *)p)->GetRealTimeStats();
+		// { 			host->ForEachPeer(+[](icon7::Peer *p) { auto stats
+		// =
+		// ((icon7::uS::tcp::Peer *)p)->GetRealTimeStats();
 		// 				ipc->pendingReliable[processId] =
-		// stats.m_cbPendingReliable; 				ipc->unackedReliable[processId] =
+		// stats.m_cbPendingReliable; ipc->unackedReliable[processId] =
 		// stats.m_cbSentUnackedReliable;
 		// 			});
 		// 		}});
@@ -327,6 +332,7 @@ void runTestSlave()
 
 int main()
 {
+	DEBUG("");
 	const std::vector<uint32_t> messagesCount = {2 * 1024,	  16 * 1024,
 												 64 * 1024,	  256 * 1024,
 												 1024 * 1024, 8 * 1024 * 1024};
@@ -362,14 +368,20 @@ int main()
 
 	icon7::Initialize();
 
-	icon7::HostUStcp *_host = new icon7::HostUStcp();
-	_host->Init();
-	host = _host;
-
+	icon7::uS::tcp::Host *_host = new icon7::uS::tcp::Host();
+	bool useSSL = true;
 	if (processId < 0) { // server
-		host->ListenOnPort(serverPort);
+		_host->Init(useSSL, "../cert/user.key", "../cert/user.crt", "", nullptr,
+					"../cert/rootca.crt",
+					"ECDHE-ECDSA-AES256-GCM-SHA384:"
+					"ECDHE-ECDSA-AES128-GCM-SHA256:"
+					"ECDHE-ECDSA-CHACHA20-POLY1305:"
+					"DHE-RSA-AES256-GCM-SHA384:");
+		_host->ListenOnPort(serverPort, icon7::IPv4);
 	} else { // client
+		_host->Init(useSSL);
 	}
+	host = _host;
 
 	host->SetRpcEnvironment(&rpc);
 	host->SetOnConnect(Run);

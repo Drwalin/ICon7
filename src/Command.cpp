@@ -18,8 +18,6 @@
 
 #include "../include/icon7/RPCEnvironment.hpp"
 #include "../include/icon7/CommandExecutionQueue.hpp"
-#include "../include/icon7/PeerUStcp.hpp"
-#include "../include/icon7/HostUStcp.hpp"
 
 #include "../include/icon7/Command.hpp"
 
@@ -27,66 +25,45 @@ namespace icon7
 {
 namespace commands
 {
-void ExecuteOnPeer::Execute()
-{
-	DEBUG("");
-	function(peer.get(), data, userPointer);
-}
+void ExecuteOnPeer::Execute() { function(peer.get(), data, userPointer); }
 
-void ExecuteOnPeerNoArgs::Execute()
-{
-	DEBUG("");
-	function(peer.get());
-}
+void ExecuteOnPeerNoArgs::Execute() { function(peer.get()); }
 
 void ExecuteAddPeerToFlush::Execute()
 {
-	DEBUG("");
 	host->_InternalInsertPeerToFlush(peer.get());
 }
 
 void ExecuteRPC::Execute()
 {
-	DEBUG("");
 	messageConverter->Call(peer.get(), reader, flags, returnId);
 }
 
 void ExecuteReturnRC::Execute()
 {
-	DEBUG("");
 	function(peer.get(), flags, reader, funcPtr);
 }
 
-void ExecuteBooleanOnHost::Execute()
-{
-	DEBUG("");
-	function(host, result, userPointer);
-}
+void ExecuteBooleanOnHost::Execute() { function(host, result, userPointer); }
 
-void ExecuteOnHost::Execute()
-{
-	DEBUG("");
-	function(host, userPointer);
-}
+void ExecuteOnHost::Execute() { function(host, userPointer); }
 
-void ExecuteConnect::Execute()
+void ExecuteConnect::Execute() { host->_InternalConnect(*this); }
+
+void ExecuteListen::Execute()
 {
-	DEBUG("");
-	host->_InternalConnect(*this);
+	host->_InternalListen(ipProto, port, std::move(onListen));
 }
 
 void ExecuteDisconnect::Execute()
 {
-	DEBUG("");
-	if (!peer->IsDisconnecting())
+	if (peer->IsClosed() == false) {
 		peer->_InternalDisconnect();
+	} else {
+	}
 }
 
-void ExecuteFunctionPointer::Execute()
-{
-	DEBUG("");
-	function();
-}
+void ExecuteFunctionPointer::Execute() { function(); }
 } // namespace commands
 
 using namespace commands;

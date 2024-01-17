@@ -27,21 +27,33 @@ namespace icon7
 {
 class Host;
 
-class PeerUStcp : public Peer
+namespace uS
+{
+namespace tcp
+{
+class Host;
+
+class Peer : public icon7::Peer
 {
 public:
-	PeerUStcp(Host *host, us_socket_t *socket);
-	virtual ~PeerUStcp();
+	Peer(uS::tcp::Host *host, us_socket_t *socket);
+	virtual ~Peer();
 
 protected:
 	virtual bool _InternalSend(SendFrameStruct &dataFrame,
 							   bool hasMore) override;
 	virtual void _InternalDisconnect() override;
 
+	virtual void _InternalClearInternalDataOnClose() override;
+
+	friend class HostUStcp;
+
 protected:
 	us_socket_t *socket;
 	int SSL;
 };
+} // namespace tcp
+} // namespace uS
 } // namespace icon7
 
 #endif
