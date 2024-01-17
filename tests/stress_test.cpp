@@ -174,7 +174,7 @@ void Runner(icon7::Peer *peer)
 	}
 	ipc->flags += 1;
 	ipc->connectionsDoneSending++;
-	
+
 	std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 	peer->Disconnect();
 }
@@ -314,12 +314,13 @@ void runTestSlave()
 	host->Connect("127.0.0.1", serverPort);
 	while (ipc->runTestFlag != 0) {
 		// 		icon7::Command com(icon7::commands::ExecuteFunctionPointer{[]()
-		// { 			host->ForEachPeer(+[](icon7::Peer *p) { 				auto stats
+		// { 			host->ForEachPeer(+[](icon7::Peer *p) { 				auto
+		// stats
 		// =
 		// ((icon7::PeerUStcp *)p)->GetRealTimeStats();
 		// 				ipc->pendingReliable[processId] =
-		// stats.m_cbPendingReliable; 				ipc->unackedReliable[processId]
-		// = stats.m_cbSentUnackedReliable;
+		// stats.m_cbPendingReliable; ipc->unackedReliable[processId] =
+		// stats.m_cbSentUnackedReliable;
 		// 			});
 		// 		}});
 		// 		host->EnqueueCommand(std::move(com));
@@ -371,14 +372,13 @@ int main()
 	icon7::HostUStcp *_host = new icon7::HostUStcp();
 	bool useSSL = true;
 	if (processId < 0) { // server
-		_host->Init(useSSL,
-				"../cert/user.key",
-				"../cert/user.crt",
-				"",
-				"../cert/dh2048.pem",
-				"../cert/rootca.crt"
-				);
-		_host->ListenOnPort(serverPort);
+		_host->Init(useSSL, "../cert/user.key", "../cert/user.crt", "", nullptr,
+					"../cert/rootca.crt",
+					"ECDHE-ECDSA-AES256-GCM-SHA384:"
+					"ECDHE-ECDSA-AES128-GCM-SHA256:"
+					"ECDHE-ECDSA-CHACHA20-POLY1305:"
+					"DHE-RSA-AES256-GCM-SHA384:");
+		_host->ListenOnPort(serverPort, icon7::IPv4);
 	} else { // client
 		_host->Init(useSSL);
 	}

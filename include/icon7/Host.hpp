@@ -39,6 +39,8 @@ void Debug(const char *file, int line, const char *function, const char *fmt,
 class Peer;
 class RPCEnvironment;
 
+enum IPProto { IPv4 = 1, IPv6 = 2 };
+
 class Host
 {
 public:
@@ -54,8 +56,8 @@ public:
 	virtual void _InternalDestroy();
 	void DisconnectAllAsync();
 
-	virtual std::future<bool> ListenOnPort(uint16_t port);
-	virtual void ListenOnPort(uint16_t port,
+	virtual std::future<bool> ListenOnPort(uint16_t port, IPProto ipProto);
+	virtual void ListenOnPort(uint16_t port, IPProto ipProto,
 							  commands::ExecuteBooleanOnHost &&callback,
 							  CommandExecutionQueue *queue = nullptr) = 0;
 

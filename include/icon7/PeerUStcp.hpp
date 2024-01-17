@@ -26,6 +26,7 @@
 namespace icon7
 {
 class Host;
+class HostUStcp;
 
 class PeerUStcp : public Peer
 {
@@ -37,6 +38,8 @@ protected:
 	virtual bool _InternalSend(SendFrameStruct &dataFrame,
 							   bool hasMore) override;
 	virtual void _InternalDisconnect() override;
+
+	friend class HostUStcp;
 
 protected:
 	us_socket_t *socket;
