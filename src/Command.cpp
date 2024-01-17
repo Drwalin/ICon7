@@ -54,8 +54,10 @@ void ExecuteConnect::Execute() { host->_InternalConnect(*this); }
 
 void ExecuteDisconnect::Execute()
 {
-	if (!peer->IsDisconnecting())
+	if (!peer->closed) {
 		peer->_InternalDisconnect();
+	} else {
+	}
 }
 
 void ExecuteFunctionPointer::Execute() { function(); }
