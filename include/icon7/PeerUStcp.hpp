@@ -39,6 +39,8 @@ protected:
 							   bool hasMore) override;
 	virtual void _InternalDisconnect() override;
 
+	virtual void _InternalClearInternalDataOnClose() override;
+
 	friend class HostUStcp;
 
 protected:

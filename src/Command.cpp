@@ -18,8 +18,6 @@
 
 #include "../include/icon7/RPCEnvironment.hpp"
 #include "../include/icon7/CommandExecutionQueue.hpp"
-#include "../include/icon7/PeerUStcp.hpp"
-#include "../include/icon7/HostUStcp.hpp"
 
 #include "../include/icon7/Command.hpp"
 
@@ -51,6 +49,11 @@ void ExecuteBooleanOnHost::Execute() { function(host, result, userPointer); }
 void ExecuteOnHost::Execute() { function(host, userPointer); }
 
 void ExecuteConnect::Execute() { host->_InternalConnect(*this); }
+
+void ExecuteListen::Execute()
+{
+	host->_InternalListen(ipProto, port, std::move(onListen));
+}
 
 void ExecuteDisconnect::Execute()
 {

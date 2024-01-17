@@ -190,4 +190,6 @@ void Peer::_InternalPopQueuedSendsFromAsync()
 		sendQueueLocal.push(std::move(frames[i]));
 	}
 }
+
+void Peer::_InternalClearInternalDataOnClose() {}
 } // namespace icon7

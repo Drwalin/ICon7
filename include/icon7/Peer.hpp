@@ -86,7 +86,9 @@ protected:
 	virtual bool _InternalSend(SendFrameStruct &dataFrame, bool hasMore) = 0;
 	virtual void _InternalDisconnect() = 0;
 
-	friend class HostUStcp;
+	virtual void _InternalClearInternalDataOnClose();
+
+	friend class Host;
 	friend class commands::ExecuteDisconnect;
 
 	std::atomic<bool> closed;

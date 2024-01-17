@@ -59,4 +59,11 @@ bool PeerUStcp::_InternalSend(SendFrameStruct &f, bool hasMore)
 }
 
 void PeerUStcp::_InternalDisconnect() { us_socket_shutdown(SSL, socket); }
+
+void PeerUStcp::_InternalClearInternalDataOnClose()
+{
+	Peer::_InternalClearInternalDataOnClose();
+	socket = nullptr;
+	SSL = 0;
+}
 } // namespace icon7

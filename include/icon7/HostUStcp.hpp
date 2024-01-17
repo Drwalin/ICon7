@@ -48,16 +48,6 @@ public:
 			  const char *ca_file_name = nullptr,
 			  const char *ssl_ciphers = nullptr);
 
-	virtual std::future<bool> ListenOnPort(uint16_t port,
-										   IPProto ipProto) override;
-	virtual void ListenOnPort(uint16_t port, IPProto ipProto,
-							  commands::ExecuteBooleanOnHost &&callback,
-							  CommandExecutionQueue *queue) override;
-
-	virtual void Connect(std::string address, uint16_t port,
-						 commands::ExecuteOnPeer &&onConnected,
-						 CommandExecutionQueue *queue = nullptr) override;
-
 	virtual void SingleLoopIteration() override;
 
 	virtual void EnqueueCommand(Command &&command) override;
@@ -67,6 +57,9 @@ private:
 
 	virtual void
 	_InternalConnect(commands::ExecuteConnect &connectCommand) override;
+	virtual void _InternalListen(IPProto ipProto, uint16_t port,
+								 commands::ExecuteBooleanOnHost &&com,
+								 CommandExecutionQueue *queue) override;
 
 	static void _Internal_wakeup_cb(struct us_loop_t *loop);
 	static void _Internal_pre_cb(struct us_loop_t *loop);
