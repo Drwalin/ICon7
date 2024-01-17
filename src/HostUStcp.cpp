@@ -16,6 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <unistd.h>
+
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/Peer.hpp"
 #include "../include/icon7/PeerUStcp.hpp"
@@ -233,7 +235,10 @@ us_socket_t *HostUStcp::_Internal_on_close(struct us_socket_t *socket, int code,
 	peer->disconnecting = true;
 
 	peer->_InternalOnDisconnect();
-	host->peers.erase(peer->shared_from_this());
+	std::shared_ptr<Peer> p = peer->shared_from_this();
+	host->peers.erase(p);
+	host->peersToFlush.erase(p);
+	peer->closed = true;
 	return socket;
 }
 

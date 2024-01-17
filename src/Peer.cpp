@@ -55,6 +55,7 @@ Peer::Peer(Host *host) : host(host)
 	onDisconnect = nullptr;
 	readyToUse = false;
 	disconnecting = false;
+	closed = false;
 	sendQueue = new QueueType();
 	sendingQueueSize = 0;
 	receivingHeaderSize = 0;
@@ -70,8 +71,7 @@ Peer::~Peer()
 void Peer::Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
 {
 	if (disconnecting) {
-		DEBUG(
-			"Dropping packets queued to send after begining of disconnecting.");
+		// TODO: inform about dropping packets
 		return;
 	}
 	sendingQueueSize++;
@@ -139,7 +139,13 @@ void Peer::_InternalOnData(uint8_t *data, uint32_t length)
 	}
 }
 
-void Peer::_InternalOnWritable() { _InternalFlushQueuedSends(); }
+void Peer::_InternalOnWritable()
+{
+	if (closed) {
+		return;
+	}
+	_InternalFlushQueuedSends();
+}
 
 void Peer::_InternalOnDisconnect()
 {
