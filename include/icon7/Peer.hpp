@@ -43,8 +43,12 @@ public:
 	void Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags);
 	void Disconnect();
 
-	inline bool IsReadyToUse() const { return readyToUse; }
-	inline bool IsDisconnecting() const { return disconnecting; }
+	inline bool IsReadyToUse() const { return peerFlags & BIT_READY; }
+	inline bool IsDisconnecting() const
+	{
+		return peerFlags & BIT_DISCONNECTING;
+	}
+	inline bool IsClosed() const { return peerFlags & BIT_CLOSED; }
 
 	void SetOnDisconnect(void (*callback)(Peer *)) { onDisconnect = callback; }
 
@@ -86,13 +90,19 @@ protected:
 	virtual bool _InternalSend(SendFrameStruct &dataFrame, bool hasMore) = 0;
 	virtual void _InternalDisconnect() = 0;
 
-	friend class HostUStcp;
+	virtual void _InternalClearInternalDataOnClose();
+
+	friend class Host;
 	friend class commands::ExecuteDisconnect;
 
 protected:
 	Peer(Host *host);
 
 	void SetReadyToUse();
+
+	inline const static uint32_t BIT_READY = 1;
+	inline const static uint32_t BIT_DISCONNECTING = 2;
+	inline const static uint32_t BIT_CLOSED = 4;
 
 protected:
 #ifdef ICON7_PEER_CPP_INCLUDE_UNION_CONCURRENT_QUEUE
@@ -110,8 +120,7 @@ protected:
 
 	void (*onDisconnect)(Peer *);
 
-	std::atomic<bool> readyToUse;
-	std::atomic<bool> disconnecting;
+	std::atomic<uint32_t> peerFlags;
 
 	std::vector<uint8_t> receivingFrameBuffer;
 	uint32_t receivingHeaderSize;

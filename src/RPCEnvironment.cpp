@@ -37,24 +37,6 @@ RPCEnvironment::~RPCEnvironment()
 void RPCEnvironment::OnReceive(Peer *peer, std::vector<uint8_t> &frameData,
 							   uint32_t headerSize, Flags flags)
 {
-	fprintf(stdout, "\nsize: %u\n", (uint32_t)frameData.size());
-
-	for (int j = 0; j < frameData.size();) {
-		int oldj = j;
-		for (int i = 0; i < 16 && j < frameData.size(); ++i, ++j) {
-			uint8_t b = frameData[j];
-			fprintf(stdout, "%2.2X\t", (uint32_t)b);
-		}
-		j -= 1;
-		j = oldj;
-		fprintf(stdout, "\n");
-		for (int i = 0; i < 16 && j < frameData.size(); ++i, ++j) {
-			uint8_t b = frameData[j];
-			fprintf(stdout, "`%c`\t", b);
-		}
-		fprintf(stdout, "\n");
-	}
-
 	flags = FramingProtocol::GetPacketFlags(frameData.data(), flags);
 	ByteReader reader(std::move(frameData), headerSize);
 	OnReceive(peer, reader, flags);
@@ -63,24 +45,19 @@ void RPCEnvironment::OnReceive(Peer *peer, std::vector<uint8_t> &frameData,
 
 void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader, Flags flags)
 {
-	DEBUG("");
 	switch (flags & 6) {
 	case FLAGS_CALL:
 	case FLAGS_CALL_NO_FEEDBACK: {
-		DEBUG("");
 		uint32_t returnId = 0;
 		if ((flags & 6) == FLAGS_CALL) {
 			reader.op(returnId);
 		}
 		std::string name;
 		reader.op(name);
-		DEBUG("Executing RPC: '%s'", name.c_str());
 		auto it = registeredMessages.find(name);
 		if (registeredMessages.end() != it) {
-			DEBUG("");
 			auto mtd = it->second;
 			if (mtd->executionQueue) {
-				DEBUG("");
 				Command command{commands::ExecuteRPC(std::move(reader))};
 				commands::ExecuteRPC &com =
 					std::get<commands::ExecuteRPC>(command.cmd);
@@ -90,32 +67,26 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader, Flags flags)
 				com.messageConverter = mtd;
 				mtd->executionQueue->EnqueueCommand(std::move(command));
 			} else {
-				DEBUG("");
 				mtd->Call(peer, reader, flags, returnId);
 			}
 		} else {
-			DEBUG("");
 		}
 	} break;
 	case FLAGS_CALL_RETURN_FEEDBACK: {
-		DEBUG("");
 		uint32_t id;
 		reader.op(id);
 		OnReturnCallback callback;
 		bool found = false;
 		{
-			DEBUG("");
 			std::lock_guard guard{mutexReturningCallbacks};
 			auto it2 = returningCallbacks.find(id);
 			if (it2 != returningCallbacks.end()) {
-				DEBUG("");
 				callback = std::move(it2->second);
 				returningCallbacks.erase(it2);
 				found = true;
 			}
 		}
 		if (found) {
-			DEBUG("");
 			callback.Execute(peer, flags, reader);
 		} else {
 			DEBUG("Remote function call returned value but OnReturnedCallback "
@@ -130,6 +101,7 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader, Flags flags)
 void RPCEnvironment::CheckForTimeoutFunctionCalls(uint32_t maxChecks)
 {
 	std::vector<OnReturnCallback> timeouts;
+	timeouts.reserve(16);
 	auto now = std::chrono::steady_clock::now();
 	if (mutexReturningCallbacks.try_lock()) {
 		auto it = returningCallbacks.find(lastCheckedId);
@@ -138,7 +110,8 @@ void RPCEnvironment::CheckForTimeoutFunctionCalls(uint32_t maxChecks)
 		for (int i = 0; i < maxChecks && it != returningCallbacks.end(); ++i) {
 			lastCheckedId = it->first;
 			if (it->second.IsExpired(now)) {
-				auto next = it;
+				std::unordered_map<uint32_t, OnReturnCallback>::iterator next =
+					it;
 				++next;
 				uint32_t nextId = 0;
 				if (next != returningCallbacks.end()) {

@@ -54,19 +54,19 @@ public:
 	virtual void _InternalDestroy();
 	void DisconnectAllAsync();
 
-	virtual std::future<bool> ListenOnPort(uint16_t port);
-	virtual void ListenOnPort(uint16_t port,
-							  commands::ExecuteBooleanOnHost &&callback,
-							  CommandExecutionQueue *queue = nullptr) = 0;
+	virtual std::future<bool> ListenOnPort(uint16_t port, IPProto ipProto);
+	void ListenOnPort(uint16_t port, IPProto ipProto,
+					  commands::ExecuteBooleanOnHost &&callback,
+					  CommandExecutionQueue *queue = nullptr);
 
 	void SetOnConnect(void (*callback)(Peer *)) { onConnect = callback; }
 	void SetOnDisconnect(void (*callback)(Peer *)) { onDisconnect = callback; }
 
 	std::future<Peer *> ConnectPromise(std::string address, uint16_t port);
 	void Connect(std::string address, uint16_t port);
-	virtual void Connect(std::string address, uint16_t port,
-						 commands::ExecuteOnPeer &&onConnected,
-						 CommandExecutionQueue *queue = nullptr) = 0;
+	void Connect(std::string address, uint16_t port,
+				 commands::ExecuteOnPeer &&onConnected,
+				 CommandExecutionQueue *queue = nullptr);
 
 	void RunAsync();
 	void WaitStopRunning();
@@ -92,6 +92,12 @@ public: // thread unsafe, safe only in hosts loop thread
 
 	void _InternalInsertPeerToFlush(Peer *peer);
 	virtual void _InternalConnect(commands::ExecuteConnect &connectCommand) = 0;
+	virtual void _InternalListen(IPProto ipProto, uint16_t port,
+								 commands::ExecuteBooleanOnHost &&com,
+								 CommandExecutionQueue *queue = nullptr) = 0;
+	void _InternalConnect_Finish(commands::ExecuteConnect &connectCommand);
+	void _Internal_on_open_Finish(std::shared_ptr<Peer> peer);
+	void _Internal_on_close_Finish(std::shared_ptr<Peer> peer);
 
 public:
 	uint64_t userData;
@@ -101,8 +107,6 @@ protected:
 	Host();
 
 	friend class Peer;
-	friend class PeerUSockets;
-	friend class HostUSockets;
 
 protected:
 	void (*onConnect)(Peer *);

@@ -157,6 +157,23 @@ public:
 	void Execute();
 };
 
+class ExecuteListen final
+{
+public:
+	ExecuteListen() = default;
+	ExecuteListen(ExecuteListen &&) = default;
+	ExecuteListen &operator=(ExecuteListen &&) = default;
+
+	IPProto ipProto;
+	Host *host;
+	uint16_t port;
+
+	ExecuteBooleanOnHost onListen;
+	CommandExecutionQueue *queue;
+
+	void Execute();
+};
+
 class ExecuteConnect final
 {
 public:
@@ -212,8 +229,9 @@ public:
 	std::variant<int, commands::ExecuteOnPeer, commands::ExecuteOnPeerNoArgs,
 				 commands::ExecuteAddPeerToFlush, commands::ExecuteRPC,
 				 commands::ExecuteReturnRC, commands::ExecuteBooleanOnHost,
-				 commands::ExecuteConnect, commands::ExecuteDisconnect,
-				 commands::ExecuteFunctionPointer, commands::ExecuteOnHost>
+				 commands::ExecuteConnect, commands::ExecuteListen,
+				 commands::ExecuteDisconnect, commands::ExecuteFunctionPointer,
+				 commands::ExecuteOnHost>
 		cmd;
 
 	void Execute();
@@ -246,6 +264,10 @@ public:
 	}
 	Command(commands::ExecuteConnect &&executeConnect)
 		: cmd(std::move(executeConnect))
+	{
+	}
+	Command(commands::ExecuteListen &&executeListen)
+		: cmd(std::move(executeListen))
 	{
 	}
 	Command(commands::ExecuteDisconnect &&executeDisconnect)
