@@ -57,7 +57,7 @@ void ExecuteListen::Execute()
 
 void ExecuteDisconnect::Execute()
 {
-	if (!peer->closed) {
+	if (peer->IsClosed() == false) {
 		peer->_InternalDisconnect();
 	} else {
 	}
