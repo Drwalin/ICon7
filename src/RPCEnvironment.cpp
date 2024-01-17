@@ -101,6 +101,7 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader, Flags flags)
 void RPCEnvironment::CheckForTimeoutFunctionCalls(uint32_t maxChecks)
 {
 	std::vector<OnReturnCallback> timeouts;
+	timeouts.reserve(16);
 	auto now = std::chrono::steady_clock::now();
 	if (mutexReturningCallbacks.try_lock()) {
 		auto it = returningCallbacks.find(lastCheckedId);
@@ -109,7 +110,8 @@ void RPCEnvironment::CheckForTimeoutFunctionCalls(uint32_t maxChecks)
 		for (int i = 0; i < maxChecks && it != returningCallbacks.end(); ++i) {
 			lastCheckedId = it->first;
 			if (it->second.IsExpired(now)) {
-				auto next = it;
+				std::unordered_map<uint32_t, OnReturnCallback>::iterator next =
+					it;
 				++next;
 				uint32_t nextId = 0;
 				if (next != returningCallbacks.end()) {

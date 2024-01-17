@@ -26,6 +26,7 @@
 
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/Peer.hpp"
+#include "../include/icon7/RPCEnvironment.hpp"
 
 #include "../include/icon7/Host.hpp"
 
@@ -222,6 +223,7 @@ void Host::SingleLoopIteration()
 			peersToFlush.erase(p);
 		}
 	}
+	rpcEnvironment->CheckForTimeoutFunctionCalls(16);
 }
 
 void Host::InsertPeerToFlush(Peer *peer)
