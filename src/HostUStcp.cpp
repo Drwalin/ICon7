@@ -40,14 +40,19 @@ Host::~Host() {}
 
 void Host::_InternalDestroy()
 {
-	this->EnqueueCommand(
-		commands::ExecuteOnHost{this, nullptr, [](icon7::Host *_host, void *) {
-									Host *host = (Host *)_host;
-									for (auto s : host->listenSockets) {
-										us_listen_socket_close(host->SSL, s);
-									}
-								}});
+	this->EnqueueCommand(commands::ExecuteOnHost{
+		this, nullptr, [](icon7::Host *_host, void *) {
+			Host *host = (Host *)_host;
+			// close all sockets
+			us_socket_context_close(host->SSL, host->socketContext);
+		}});
+
 	icon7::Host::_InternalDestroy();
+
+	us_socket_context_free(SSL, socketContext);
+	us_loop_free(loop);
+	socketContext = nullptr;
+	loop = nullptr;
 }
 
 bool Host::Init(bool useSSL, const char *key_file_name,
@@ -89,7 +94,6 @@ bool Host::InitLoopAndContext(us_socket_context_options_t options)
 	loop = us_create_loop(nullptr, _Internal_wakeup_cb, _Internal_pre_cb,
 						  _Internal_post_cb, sizeof(Host *));
 	if (loop == nullptr) {
-		DEBUG("");
 		return false;
 	}
 	*(Host **)us_loop_ext(loop) = this;
@@ -98,7 +102,6 @@ bool Host::InitLoopAndContext(us_socket_context_options_t options)
 		us_create_socket_context(SSL, loop, sizeof(Host *), options);
 	if (socketContext == nullptr) {
 		us_loop_free(loop);
-		DEBUG("");
 		return false;
 	}
 	*(Host **)us_socket_context_ext(SSL, socketContext) = this;
@@ -270,10 +273,18 @@ us_socket_t *Host::_Internal_on_end(struct us_socket_t *socket)
 	return socket;
 }
 
-void Host::EnqueueCommand(Command &&command)
+void Host::WakeUp() { us_wakeup_loop(loop); }
+
+void Host::StopListening()
 {
-	icon7::Host::EnqueueCommand(std::move(command));
-	us_wakeup_loop(loop);
+	EnqueueCommand(commands::ExecuteOnHost{
+		this, nullptr, [](icon7::Host *host, void *) {
+			for (us_listen_socket_t *s : ((tcp::Host *)host)->listenSockets) {
+				us_listen_socket_close(((tcp::Host *)host)->SSL, s);
+			}
+			((tcp::Host *)host)->listenSockets.clear();
+		}});
+	WakeUp();
 }
 
 } // namespace tcp

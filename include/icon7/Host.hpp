@@ -62,11 +62,14 @@ public:
 	void SetOnConnect(void (*callback)(Peer *)) { onConnect = callback; }
 	void SetOnDisconnect(void (*callback)(Peer *)) { onDisconnect = callback; }
 
-	std::future<Peer *> ConnectPromise(std::string address, uint16_t port);
+	std::future<std::shared_ptr<Peer>> ConnectPromise(std::string address,
+													  uint16_t port);
 	void Connect(std::string address, uint16_t port);
 	void Connect(std::string address, uint16_t port,
 				 commands::ExecuteOnPeer &&onConnected,
 				 CommandExecutionQueue *queue = nullptr);
+
+	virtual void StopListening() = 0;
 
 	void RunAsync();
 	void WaitStopRunning();
@@ -75,12 +78,14 @@ public:
 	bool IsQueuedStopAsync();
 
 	CommandExecutionQueue *GetCommandExecutionQueue() { return &commandQueue; }
-	virtual void EnqueueCommand(Command &&command);
+	void EnqueueCommand(Command &&command);
 
 	void InsertPeerToFlush(Peer *peer);
 
 	inline RPCEnvironment *GetRpcEnvironment() { return rpcEnvironment; }
 	inline void SetRpcEnvironment(RPCEnvironment *env) { rpcEnvironment = env; }
+
+	virtual void WakeUp();
 
 public: // thread unsafe, safe only in hosts loop thread
 	void ForEachPeer(void(func)(icon7::Peer *));

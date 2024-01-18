@@ -119,9 +119,9 @@ protected:
 	std::unordered_map<std::string, MessageConverter *> registeredMessages;
 
 	std::mutex mutexReturningCallbacks;
-	uint32_t returnCallCallbackIdGenerator;
+	uint32_t returnCallCallbackIdGenerator = 0;
 	std::unordered_map<uint32_t, OnReturnCallback> returningCallbacks;
-	uint32_t lastCheckedId;
+	uint32_t lastCheckedId = 1;
 };
 } // namespace icon7
 

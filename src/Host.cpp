@@ -73,28 +73,37 @@ Host::Host()
 	asyncRunnerFlags = 0;
 }
 
-Host::~Host() { _InternalDestroy(); }
+Host::~Host()
+{
+	WaitStopRunning();
+	asyncRunner.join();
+}
 
 void Host::WaitStopRunning()
 {
 	QueueStopRunning();
 	while (IsRunningAsync()) {
 		QueueStopRunning();
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		WakeUp();
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 }
 
 void Host::_InternalDestroy()
 {
 	DisconnectAllAsync();
-	DispatchAllEventsFromQueue(0x7FFFFFFF);
-	while (commandQueue.HasAny()) {
-		DispatchAllEventsFromQueue(0x7FFFFFFF);
+	StopListening();
+	QueueStopRunning();
+	while (IsRunningAsync()) {
+		DisconnectAllAsync();
+		StopListening();
+		QueueStopRunning();
+		WakeUp();
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
-	WaitStopRunning();
-	DispatchAllEventsFromQueue(0x7FFFFFFF);
+	DispatchAllEventsFromQueue(1024);
 	while (commandQueue.HasAny()) {
-		DispatchAllEventsFromQueue(0x7FFFFFFF);
+		DispatchAllEventsFromQueue(1024);
 	}
 }
 
@@ -126,14 +135,17 @@ uint32_t Host::DispatchAllEventsFromQueue(uint32_t maxEvents)
 	return dequeued;
 }
 
-std::future<Peer *> Host::ConnectPromise(std::string address, uint16_t port)
+std::future<std::shared_ptr<Peer>> Host::ConnectPromise(std::string address,
+														uint16_t port)
 {
-	std::promise<Peer *> *promise = new std::promise<Peer *>();
+	std::promise<std::shared_ptr<Peer>> *promise =
+		new std::promise<std::shared_ptr<Peer>>();
 	commands::ExecuteOnPeer onConnected;
 	onConnected.userPointer = promise;
 	onConnected.function = [](auto peer, auto data, auto userPointer) {
-		std::promise<Peer *> *promise = (std::promise<Peer *> *)(userPointer);
-		promise->set_value(peer);
+		std::promise<std::shared_ptr<Peer>> *promise =
+			(std::promise<std::shared_ptr<Peer>> *)(userPointer);
+		promise->set_value(peer->shared_from_this());
 		delete promise;
 	};
 	auto future = promise->get_future();
@@ -229,6 +241,7 @@ void Host::Connect(std::string address, uint16_t port,
 void Host::EnqueueCommand(Command &&command)
 {
 	commandQueue.EnqueueCommand(std::move(command));
+	WakeUp();
 }
 
 enum RunnerFlags : uint32_t { RUNNING = 1, QUEUE_STOP = 2 };
@@ -236,21 +249,23 @@ enum RunnerFlags : uint32_t { RUNNING = 1, QUEUE_STOP = 2 };
 void Host::RunAsync()
 {
 	asyncRunnerFlags = 0;
-	asyncRunner = std::thread([this]() {
-		asyncRunnerFlags |= RUNNING;
-		while (IsQueuedStopAsync() == false) {
-			SingleLoopIteration();
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		}
-		asyncRunnerFlags &= ~RUNNING;
-	});
-	asyncRunner.detach();
+	asyncRunner = std::thread(
+		[](Host *host) {
+			host->asyncRunnerFlags |= RUNNING;
+			while (host->IsQueuedStopAsync() == false) {
+				host->SingleLoopIteration();
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			}
+			host->asyncRunnerFlags &= ~RUNNING;
+		},
+		this);
 }
 
 void Host::QueueStopRunning()
 {
+	asyncRunnerFlags |= QUEUE_STOP;
 	if (IsRunningAsync()) {
-		asyncRunnerFlags |= QUEUE_STOP;
+		WakeUp();
 	}
 }
 
@@ -308,6 +323,8 @@ void Host::ForEachPeer(std::function<void(icon7::Peer *)> func)
 		func(p.get());
 	}
 }
+
+void Host::WakeUp() {}
 
 void Initialize() {}
 void Deinitialize() {}
