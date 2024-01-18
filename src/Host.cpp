@@ -175,7 +175,7 @@ void Host::_Internal_on_open_Finish(std::shared_ptr<Peer> peer)
 	}
 	peer->SetReadyToUse();
 
-	this->Host::SingleLoopIteration();
+	_InternalSingleLoopIteration();
 }
 
 void Host::_Internal_on_close_Finish(std::shared_ptr<Peer> peer)
@@ -273,7 +273,7 @@ bool Host::IsQueuedStopAsync() { return asyncRunnerFlags & QUEUE_STOP; }
 
 bool Host::IsRunningAsync() { return asyncRunnerFlags & RUNNING; }
 
-void Host::SingleLoopIteration()
+void Host::_InternalSingleLoopIteration()
 {
 	if (peersToFlush.empty() && commandQueue.HasAny() == false) {
 		if (peers.size() < 20) {

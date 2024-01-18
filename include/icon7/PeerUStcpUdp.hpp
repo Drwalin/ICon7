@@ -16,43 +16,47 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef ICON7_PEER_US_TCP_HPP
-#define ICON7_PEER_US_TCP_HPP
+#ifndef ICON7_PEER_US_TCPUDP_HPP
+#define ICON7_PEER_US_TCPUDP_HPP
 
-#include "../../uSockets/src/libusockets.h"
+#include "SendFrameStruct.hpp"
+#include "HostUStcpUdp.hpp"
 
-#include "Peer.hpp"
+#include "PeerUStcp.hpp"
 
 namespace icon7
 {
-class Host;
-
 namespace uS
 {
-namespace tcp
+namespace tcpudp
 {
-class Host;
-
-class Peer : public icon7::Peer
+class Peer : public icon7::uS::tcp::Peer
 {
 public:
-	Peer(uS::tcp::Host *host, us_socket_t *socket);
+	Peer(uS::tcpudp::Host *host, us_socket_t *socket);
 	virtual ~Peer();
 
 protected:
+	// push packets to udpSendFrames
+	// or
+	// override  _InternalPopQueuedSendsFromAsync() and move directly to
+	// udpSendFrames from sendQueue
 	virtual bool _InternalSend(SendFrameStruct &dataFrame,
 							   bool hasMore) override;
 	virtual void _InternalDisconnect() override;
 
 	virtual void _InternalClearInternalDataOnClose() override;
 
+	virtual bool _InternalHasQueuedSends() const override;
+
 	friend class HostUStcp;
 
 protected:
-	us_socket_t *socket;
-	int SSL;
+	IPProto ipVersion;
+	Host::IpAddress ipAddress;
+	std::vector<SendFrameStruct> udpSendFrames;
 };
-} // namespace tcp
+} // namespace tcpudp
 } // namespace uS
 } // namespace icon7
 

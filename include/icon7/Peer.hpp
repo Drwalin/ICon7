@@ -26,11 +26,16 @@
 #include <memory>
 #include <queue>
 
+#ifdef ICON7_INCLUDE_CONCURRENT_QUEUE_CPP
+#include "../concurrentqueue/concurrentqueue.h"
+#endif
+
 #include "Flags.hpp"
 #include "ByteReader.hpp"
 #include "ByteWriter.hpp"
 #include "Command.hpp"
 #include "FrameDecoder.hpp"
+#include "SendFrameStruct.hpp"
 
 namespace icon7
 {
@@ -48,7 +53,7 @@ public:
 	Peer &operator=(Peer &) = delete;
 	Peer &operator=(const Peer &) = delete;
 
-	void Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags);
+	virtual void Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags);
 	void Disconnect();
 
 	inline bool IsReadyToUse() const { return peerFlags & BIT_READY; }
@@ -67,7 +72,7 @@ public: // thread unsafe, safe only in hosts loop thread
 	void _InternalOnTimeout();
 	void _InternalOnLongTimeout();
 
-	bool _InternalHasQueuedSends() const;
+	virtual bool _InternalHasQueuedSends() const;
 
 public:
 	uint64_t userData;
@@ -77,20 +82,8 @@ public:
 	Host *const host;
 
 protected:
-	struct SendFrameStruct {
-		std::vector<uint8_t> dataWithoutHeader;
-		uint32_t bytesSent;
-		Flags flags;
-		uint8_t header[4];
-		uint8_t headerBytesSent;
-		uint8_t headerSize;
-
-		SendFrameStruct(std::vector<uint8_t> &&dataWithoutHeader, Flags flags);
-		SendFrameStruct();
-	};
-
-	void _InternalFlushQueuedSends();
-	void _InternalPopQueuedSendsFromAsync();
+	virtual void _InternalFlushQueuedSends();
+	virtual void _InternalPopQueuedSendsFromAsync();
 	/*
 	 * return true if successfully whole dataFrame has been sent.
 	 * false otherwise.
@@ -118,13 +111,13 @@ protected:
 	inline const static uint32_t BIT_CLOSED = 4;
 
 protected:
-#ifdef ICON7_PEER_CPP_INCLUDE_UNION_CONCURRENT_QUEUE
+#ifdef ICON7_INCLUDE_CONCURRENT_QUEUE_CPP
 	using QueueType = moodycamel::ConcurrentQueue<SendFrameStruct>;
 #endif
 
 	union {
 		void *sendQueue_variable_name_placeholder;
-#ifdef ICON7_PEER_CPP_INCLUDE_UNION_CONCURRENT_QUEUE
+#ifdef ICON7_INCLUDE_CONCURRENT_QUEUE_CPP
 		QueueType *sendQueue;
 #endif
 	};
@@ -136,9 +129,6 @@ protected:
 	std::atomic<uint32_t> peerFlags;
 
 	FrameDecoder frameDecoder;
-	std::vector<uint8_t> receivingFrameBuffer;
-	uint32_t receivingHeaderSize;
-	uint32_t receivingFrameSize;
 };
 } // namespace icon7
 
