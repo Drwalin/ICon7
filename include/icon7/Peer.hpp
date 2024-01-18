@@ -29,7 +29,8 @@
 #include "Flags.hpp"
 #include "ByteReader.hpp"
 #include "ByteWriter.hpp"
-#include "icon7/Command.hpp"
+#include "Command.hpp"
+#include "FrameDecoder.hpp"
 
 namespace icon7
 {
@@ -39,6 +40,13 @@ class Peer : public std::enable_shared_from_this<Peer>
 {
 public:
 	virtual ~Peer();
+
+	Peer(Peer &&) = delete;
+	Peer(Peer &) = delete;
+	Peer(const Peer &) = delete;
+	Peer &operator=(Peer &&) = delete;
+	Peer &operator=(Peer &) = delete;
+	Peer &operator=(const Peer &) = delete;
 
 	void Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags);
 	void Disconnect();
@@ -92,6 +100,11 @@ protected:
 
 	virtual void _InternalClearInternalDataOnClose();
 
+	virtual void _InternalOnPacket(std::vector<uint8_t> &buffer,
+								   uint32_t headerSize);
+	static void _Internal_static_OnPacket(std::vector<uint8_t> &buffer,
+										  uint32_t headerSize, void *peer);
+
 	friend class Host;
 	friend class commands::ExecuteDisconnect;
 
@@ -122,6 +135,7 @@ protected:
 
 	std::atomic<uint32_t> peerFlags;
 
+	FrameDecoder frameDecoder;
 	std::vector<uint8_t> receivingFrameBuffer;
 	uint32_t receivingHeaderSize;
 	uint32_t receivingFrameSize;

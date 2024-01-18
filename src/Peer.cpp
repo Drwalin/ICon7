@@ -18,8 +18,6 @@
 
 #include <cstring>
 
-#include <thread>
-
 #include "../concurrentqueue/concurrentqueue.h"
 
 #define ICON7_PEER_CPP_INCLUDE_UNION_CONCURRENT_QUEUE
@@ -29,6 +27,7 @@
 #include "../include/icon7/Host.hpp"
 #include "../include/icon7/RPCEnvironment.hpp"
 #include "../include/icon7/Command.hpp"
+#include "../include/icon7/CommandExecutionQueue.hpp"
 #include "../include/icon7/FramingProtocol.hpp"
 
 namespace icon7
@@ -89,52 +88,19 @@ void Peer::Disconnect()
 
 void Peer::_InternalOnData(uint8_t *data, uint32_t length)
 {
-	while (length) {
-		if (receivingHeaderSize == 0) {
-			receivingHeaderSize = FramingProtocol::GetPacketHeaderSize(data[0]);
-		}
-		if (receivingFrameBuffer.size() < receivingHeaderSize) {
-			uint32_t bytes = std::min<uint32_t>(
-				length, receivingHeaderSize - receivingFrameBuffer.size());
-			receivingFrameBuffer.insert(receivingFrameBuffer.end(), data,
-										data + bytes);
-			length -= bytes;
-			data += bytes;
-		}
-		if (receivingFrameBuffer.size() < receivingHeaderSize) {
-			return;
-		}
-		if (receivingFrameBuffer.size() == receivingHeaderSize) {
-			receivingFrameSize =
-				receivingHeaderSize +
-				FramingProtocol::GetPacketBodySize(receivingFrameBuffer.data(),
-												   receivingHeaderSize);
-			receivingFrameBuffer.reserve(receivingFrameSize);
-		}
+	frameDecoder.PushData(data, length, _Internal_static_OnPacket, this);
+}
 
-		if (receivingFrameBuffer.size() < receivingFrameSize) {
-			uint32_t bytes = std::min<uint32_t>(
-				length, receivingFrameSize - receivingFrameBuffer.size());
-			receivingFrameBuffer.insert(receivingFrameBuffer.end(), data,
-										data + bytes);
-			length -= bytes;
-			data += bytes;
-		}
+void Peer::_Internal_static_OnPacket(std::vector<uint8_t> &buffer,
+									 uint32_t headerSize, void *peer)
+{
+	((Peer *)peer)->_InternalOnPacket(buffer, headerSize);
+}
 
-		if (receivingFrameBuffer.size() == receivingFrameSize) {
-			host->GetRpcEnvironment()->OnReceive(
-				this, receivingFrameBuffer, receivingHeaderSize, FLAG_RELIABLE);
-			receivingFrameSize = 0;
-			receivingHeaderSize = 0;
-			receivingFrameBuffer.clear();
-		} else if (receivingFrameBuffer.size() >= receivingFrameSize) {
-			DEBUG("Error, Peer::_InternalOnData push to frame more than frame "
-				  "size was.");
-			throw;
-		} else {
-			continue;
-		}
-	}
+void Peer::_InternalOnPacket(std::vector<uint8_t> &buffer, uint32_t headerSize)
+{
+	host->GetRpcEnvironment()->OnReceive(this, buffer, headerSize,
+										 FLAG_RELIABLE);
 }
 
 void Peer::_InternalOnWritable()
