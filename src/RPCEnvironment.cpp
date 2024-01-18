@@ -90,7 +90,8 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader, Flags flags)
 			callback.Execute(peer, flags, reader);
 		} else {
 			DEBUG("Remote function call returned value but OnReturnedCallback "
-				  "already expired.");
+				  "already expired. returnId = %u/%u",
+				  id, this->returnCallCallbackIdGenerator);
 		}
 	} break;
 	default:

@@ -48,7 +48,7 @@ int main(int argc, char **argv)
 	host->SetRpcEnvironment(&rpc);
 	host->RunAsync();
 
-	icon7::Peer *peer = host->ConnectPromise(argv[1], port).get();
+	icon7::Peer *peer = host->ConnectPromise(argv[1], port).get().get();
 
 	printf("To exit write: quit\n");
 

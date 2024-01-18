@@ -54,7 +54,9 @@ public:
 
 	virtual void SingleLoopIteration() override;
 
-	virtual void EnqueueCommand(Command &&command) override;
+	virtual void WakeUp() override;
+
+	virtual void StopListening() override;
 
 private:
 	bool InitLoopAndContext(us_socket_context_options_t options);

@@ -47,6 +47,11 @@ if(ICON7_BUILD_TEST)
 		tests/stress_test
 	)
 	target_link_libraries(stress_test icon7)
+	
+	add_executable(multi_test
+		tests/multi_testing
+	)
+	target_link_libraries(multi_test icon7)
 endif()
 
 if(ICON7_BUILD_EXAMPLES)
