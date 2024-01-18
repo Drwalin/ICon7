@@ -16,8 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef ICON7_HOST_USTCP_HPP
-#define ICON7_HOST_USTCP_HPP
+#ifndef ICON7_HOST_US_TCP_HPP
+#define ICON7_HOST_US_TCP_HPP
 
 #include "../uSockets/src/libusockets.h"
 
@@ -29,6 +29,7 @@ namespace uS
 {
 namespace tcp
 {
+class Peer;
 
 class Host : public icon7::Host
 {
@@ -95,9 +96,11 @@ private:
 
 	template <bool _SSL> void SetUSocketContextCallbacks();
 
+	virtual std::shared_ptr<icon7::uS::tcp::Peer> MakePeer(us_socket_t *socket);
+
 	friend class Peer;
 
-private:
+protected:
 	int SSL;
 
 	struct us_loop_t *loop;

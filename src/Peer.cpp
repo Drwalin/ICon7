@@ -18,11 +18,7 @@
 
 #include <cstring>
 
-#include "../concurrentqueue/concurrentqueue.h"
-
-#define ICON7_PEER_CPP_INCLUDE_UNION_CONCURRENT_QUEUE
-#include "../include/icon7/Peer.hpp"
-#undef ICON7_PEER_CPP_INCLUDE_UNION_CONCURRENT_QUEUE
+#define ICON7_INCLUDE_CONCURRENT_QUEUE_CPP
 
 #include "../include/icon7/Host.hpp"
 #include "../include/icon7/RPCEnvironment.hpp"
@@ -30,22 +26,10 @@
 #include "../include/icon7/CommandExecutionQueue.hpp"
 #include "../include/icon7/FramingProtocol.hpp"
 
+#include "../include/icon7/Peer.hpp"
+
 namespace icon7
 {
-
-Peer::SendFrameStruct::SendFrameStruct(
-	std::vector<uint8_t> &&_dataWithoutHeader, Flags flags)
-	: dataWithoutHeader(std::move(_dataWithoutHeader))
-{
-	this->flags = flags;
-	bytesSent = 0;
-	headerBytesSent = 0;
-	headerSize = FramingProtocol::GetHeaderSize(dataWithoutHeader.size());
-	*(uint32_t *)header = 0;
-	FramingProtocol::WriteHeader(header, headerSize, dataWithoutHeader.size(),
-								 flags);
-}
-Peer::SendFrameStruct::SendFrameStruct() {}
 
 Peer::Peer(Host *host) : host(host)
 {
@@ -55,8 +39,6 @@ Peer::Peer(Host *host) : host(host)
 	peerFlags = 0;
 	sendQueue = new QueueType();
 	sendingQueueSize = 0;
-	receivingHeaderSize = 0;
-	receivingFrameSize = 0;
 }
 
 Peer::~Peer()

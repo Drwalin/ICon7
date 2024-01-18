@@ -16,44 +16,25 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef ICON7_PEER_US_TCP_HPP
-#define ICON7_PEER_US_TCP_HPP
+#include "../include/icon7/FramingProtocol.hpp"
 
-#include "../../uSockets/src/libusockets.h"
-
-#include "Peer.hpp"
+#include "../include/icon7/SendFrameStruct.hpp"
 
 namespace icon7
 {
-class Host;
 
-namespace uS
+SendFrameStruct::SendFrameStruct(std::vector<uint8_t> &&_dataWithoutHeader,
+								 Flags flags)
+	: dataWithoutHeader(std::move(_dataWithoutHeader))
 {
-namespace tcp
-{
-class Host;
+	this->flags = flags;
+	bytesSent = 0;
+	headerBytesSent = 0;
+	headerSize = FramingProtocol::GetHeaderSize(dataWithoutHeader.size());
+	*(uint32_t *)header = 0;
+	FramingProtocol::WriteHeader(header, headerSize, dataWithoutHeader.size(),
+								 flags);
+}
+SendFrameStruct::SendFrameStruct() {}
 
-class Peer : public icon7::Peer
-{
-public:
-	Peer(uS::tcp::Host *host, us_socket_t *socket);
-	virtual ~Peer();
-
-protected:
-	virtual bool _InternalSend(SendFrameStruct &dataFrame,
-							   bool hasMore) override;
-	virtual void _InternalDisconnect() override;
-
-	virtual void _InternalClearInternalDataOnClose() override;
-
-	friend class HostUStcp;
-
-protected:
-	us_socket_t *socket;
-	int SSL;
-};
-} // namespace tcp
-} // namespace uS
 } // namespace icon7
-
-#endif

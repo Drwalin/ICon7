@@ -333,8 +333,8 @@ void runTestSlave()
 int main()
 {
 	DEBUG("");
-	const std::vector<uint32_t> messagesCount = {2 * 1024,	  16 * 1024,
-												 64 * 1024,	  256 * 1024,
+	const std::vector<uint32_t> messagesCount = {64 * 1024,	  2 * 1024,
+												 16 * 1024,	  256 * 1024,
 												 1024 * 1024, 8 * 1024 * 1024};
 
 	ipc =

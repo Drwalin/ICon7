@@ -76,16 +76,23 @@ represents header structure:
 ```
 
 xx - (2 least significant bits of first byte) - determine size of header:
-    - 00 - header 1 byte, body size of from 1 to 16 bytes
-    - 01 - header 2 bytes, body size of from 1 to 4 KiB
-    - 10 - header 3 bytes, body size of from 1 byte to 1 MiB
-    - 11 - header 4 bytes, body size of from 1 byte to 256 MiB 
+```
+    - 00 - header 1 byte, body size from 1 to 16 bytes
+    - 01 - header 2 bytes, body size from 1 to 4 KiB
+    - 10 - header 3 bytes, body size from 1 byte to 1 MiB
+    - 11 - header 4 bytes, body size from 1 byte to 256 MiB 
+```
+
 yy - determines type of RPC message:
+```
     - 00 - function/procedure call without feedback
     - 01 - function/procedure call where callee awaits returned value
            (or signal of execution finished in case of `void` return type)
     - 10 - return feedback
-    - 11 - UNUSED
+    - 11 - Controll sequence. Then first body byte values between 0x00-0x7F are
+           reserved for future use; it's values between 0x80-0xFF are to be used
+           by underlying networking library.
+```
 
 zzzz...zz - size of body of message, stored in little endian. Effectively to
     extract size of message body one needs to get little endian integer from

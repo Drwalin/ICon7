@@ -16,8 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <openssl/ssl.h>
-
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/PeerUStcp.hpp"
 
@@ -142,25 +140,25 @@ void Host::_InternalListen(IPProto ipProto, uint16_t port,
 void Host::SingleLoopIteration()
 {
 	us_loop_run(loop);
-	icon7::Host::SingleLoopIteration();
+	_InternalSingleLoopIteration();
 }
 
 void Host::_Internal_wakeup_cb(struct us_loop_t *loop)
 {
 	auto host = (*(Host **)us_loop_ext(loop));
-	host->icon7::Host::SingleLoopIteration();
+	host->_InternalSingleLoopIteration();
 }
 
 void Host::_Internal_pre_cb(struct us_loop_t *loop)
 {
 	auto host = (*(Host **)us_loop_ext(loop));
-	host->icon7::Host::SingleLoopIteration();
+	host->_InternalSingleLoopIteration();
 }
 
 void Host::_Internal_post_cb(struct us_loop_t *loop)
 {
 	auto host = (*(Host **)us_loop_ext(loop));
-	host->icon7::Host::SingleLoopIteration();
+	host->_InternalSingleLoopIteration();
 }
 
 void Host::_InternalConnect(commands::ExecuteConnect &com)
@@ -171,7 +169,7 @@ void Host::_InternalConnect(commands::ExecuteConnect &com)
 
 	std::shared_ptr<icon7::Peer> peer;
 	if (socket) {
-		peer = std::make_shared<uS::tcp::Peer>(this, socket);
+		peer = MakePeer(socket);
 		(*(icon7::Peer **)us_socket_ext(SSL, socket)) = peer.get();
 		com.onConnected.peer = peer;
 	} else {
@@ -192,7 +190,7 @@ us_socket_t *Host::_Internal_on_open(struct us_socket_t *socket, int isClient,
 	std::shared_ptr<icon7::Peer> peer;
 
 	if (isClient == false) {
-		peer = std::make_shared<uS::tcp::Peer>(host, socket);
+		peer = host->MakePeer(socket);
 		(*(icon7::Peer **)us_socket_ext(SSL, socket)) = peer.get();
 	} else {
 		peer =
@@ -285,6 +283,11 @@ void Host::StopListening()
 			((tcp::Host *)host)->listenSockets.clear();
 		}});
 	WakeUp();
+}
+
+std::shared_ptr<Peer> Host::MakePeer(us_socket_t *socket)
+{
+	return std::make_shared<uS::tcp::Peer>(this, socket);
 }
 
 } // namespace tcp

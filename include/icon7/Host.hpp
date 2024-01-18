@@ -93,7 +93,8 @@ public: // thread unsafe, safe only in hosts loop thread
 	uint32_t DispatchAllEventsFromQueue(uint32_t maxEventsDispatched = 100);
 	void DisconnectAll();
 
-	virtual void SingleLoopIteration();
+	virtual void SingleLoopIteration() = 0;
+	virtual void _InternalSingleLoopIteration();
 
 	void _InternalInsertPeerToFlush(Peer *peer);
 	virtual void _InternalConnect(commands::ExecuteConnect &connectCommand) = 0;
