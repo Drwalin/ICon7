@@ -54,6 +54,7 @@ public:
 	Peer &operator=(const Peer &) = delete;
 
 	virtual void Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags);
+	virtual void SendLocalThread(std::vector<uint8_t> &&dataWithoutHeader, Flags flags);
 	void Disconnect();
 
 	inline bool IsReadyToUse() const { return peerFlags & BIT_READY; }
@@ -80,6 +81,7 @@ public:
 
 public:
 	Host *const host;
+	bool isClient;
 
 protected:
 	virtual void _InternalFlushQueuedSends();
@@ -93,10 +95,13 @@ protected:
 
 	virtual void _InternalClearInternalDataOnClose();
 
-	virtual void _InternalOnPacket(std::vector<uint8_t> &buffer,
-								   uint32_t headerSize);
 	static void _Internal_static_OnPacket(std::vector<uint8_t> &buffer,
 										  uint32_t headerSize, void *peer);
+	void _InternalOnPacket(std::vector<uint8_t> &buffer, uint32_t headerSize);
+	void _InternalOnPacketWithControllSequence(std::vector<uint8_t> &buffer,
+			uint32_t headerSize);
+	virtual void _InternalOnPacketWithControllSequenceBackend(
+			std::vector<uint8_t> &buffer, uint32_t headerSize);
 
 	friend class Host;
 	friend class commands::ExecuteDisconnect;

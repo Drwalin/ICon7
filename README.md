@@ -84,15 +84,14 @@ xx - (2 least significant bits of first byte) - determine size of header:
 ```
 
 yy - determines type of RPC message:
-```
-    - 00 - function/procedure call without feedback
-    - 01 - function/procedure call where callee awaits returned value
+- 00 - function/procedure call without feedback
+- 01 - function/procedure call where callee awaits returned value
            (or signal of execution finished in case of `void` return type)
-    - 10 - return feedback
-    - 11 - Controll sequence. Then first body byte values between 0x00-0x7F are
+- 10 - return feedback
+- 11 - Controll sequence. See Controll packet structure.
+    Then first body byte values between 0x00-0x7F are
            reserved for future use; it's values between 0x80-0xFF are to be used
            by underlying networking library.
-```
 
 zzzz...zz - size of body of message, stored in little endian. Effectively to
     extract size of message body one needs to get little endian integer from
@@ -106,6 +105,20 @@ zzzz...zz - size of body of message, stored in little endian. Effectively to
         bodySize = (tmp>>4) + 1;
     } else if ...
 ```
+
+### Controll packet structure
+```
+         Header           1 byte
+  ___________________   ___________
+ /                   \ /           \
++----------+----------+-------------+------------------+
+| zzzz11xx | zz....zz | vector call | ... message body |
++----------+----------+-------------+------------------+
+```
+
+Vector call byte values:
+- 0x00-0x7F - reserved for future use in protocol
+- 0x80-0xFF - reserved for use for underlying backend implementation
 
 ### structure of message body
 
@@ -135,4 +148,34 @@ A message that is a return feedback of function call, as data has first 4 bytes
 call id.
 
 Then there may be optional returned values.
+
+## Implemented backends
+
+### uSockets tcp
+
+### uSocket tcp+udp
+
+Custom protocol for controll sequence:
+
+Vector call byte in controll sequence values:
+
+Vector call `0x80` is sent through tcp connection by server. Packet data:
+| offset | bytes | description                                                        |
+|--------|-------|--------------------------------------------------------------------|
+| 0      | 1     | Vector call of value `0x80`                                        |
+| 1      | 32    | random bytes sequence identifying this connection                  |
+| 33     | 32    | server encryption key (present only for SSL encrypted connections) |
+
+Vector call `0x81` is sent through tcp connection by client, only for SSL
+connections. Packet data:
+| offset | bytes | description                 |
+|--------|-------|-----------------------------|
+| 0      | 1     | Vector call of value `0x81` |
+| 1      | 32    | client encryption key       |
+
+Vector call `0x82` is sent as acknowledgement after receiving first udp packet
+from client by server. Packet data:
+| offset | bytes | description                 |
+|--------|-------|-----------------------------|
+| 0      | 1     | Vector call of value `0x82` |
 

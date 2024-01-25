@@ -114,8 +114,7 @@ bool Host::InitLoopAndContext(us_socket_context_options_t options)
 }
 
 void Host::_InternalListen(IPProto ipProto, uint16_t port,
-						   commands::ExecuteBooleanOnHost &&com,
-						   CommandExecutionQueue *queue)
+						   commands::ExecuteBooleanOnHost &com)
 {
 	us_listen_socket_t *socket = nullptr;
 	if (ipProto == IPv4) {
@@ -130,11 +129,6 @@ void Host::_InternalListen(IPProto ipProto, uint16_t port,
 	}
 
 	com.result = socket;
-	if (queue) {
-		queue->EnqueueCommand(std::move(com));
-	} else {
-		com.Execute();
-	}
 }
 
 void Host::SingleLoopIteration()
@@ -196,6 +190,8 @@ us_socket_t *Host::_Internal_on_open(struct us_socket_t *socket, int isClient,
 		peer =
 			(*(icon7::Peer **)us_socket_ext(SSL, socket))->shared_from_this();
 	}
+	
+	peer->isClient = isClient;
 
 	host->_Internal_on_open_Finish(peer);
 
