@@ -16,26 +16,31 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef ICON7_FLAGS_HPP
-#define ICON7_FLAGS_HPP
+#include <cstring>
 
-#include <cinttypes>
+#include <random>
+
+#include "../include/icon7/Random.hpp"
 
 namespace icon7
 {
-using Flags = uint32_t;
+static std::random_device rd;
+static std::mt19937_64 mt(rd());
+uint64_t Random::UInt64()
+{
+	return mt();
+}
 
-enum FlagsValues : uint32_t {
-	FLAG_UNRELIABLE = 0,
-	FLAG_RELIABLE = 1,
+void Random::Bytes(void *_ptr, std::size_t bytes)
+{
+	uint8_t *ptr = (uint8_t *)_ptr;
+	for (; bytes >= 8; bytes -= 8, ptr += 8) {
+		*(uint64_t*)ptr = mt();
+	}
+	if (bytes) {
+		uint64_t v = mt();
+		memcpy(ptr, &v, bytes);
+	}
+}
+}
 
-	FLAGS_CALL = 0,
-	FLAGS_CALL_NO_FEEDBACK = 2,
-	FLAGS_CALL_RETURN_FEEDBACK = 4,
-	FLAGS_PROTOCOL_CONTROLL_SEQUENCE = 6,
-};
-
-enum IPProto { IPinvalid = 0, IPv4 = 4, IPv6 = 6 };
-} // namespace icon7
-
-#endif

@@ -6,4 +6,4 @@
 	url = https://github.com/Drwalin/bitscpp.git
 [submodule "uSockets"]
 	path = uSockets
-	url = https://github.com/uNetworking/uSockets.git
+	url = https://github.com/Drwalin/uSockets.git

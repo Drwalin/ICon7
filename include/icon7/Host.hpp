@@ -99,10 +99,9 @@ public: // thread unsafe, safe only in hosts loop thread
 	void _InternalInsertPeerToFlush(Peer *peer);
 	virtual void _InternalConnect(commands::ExecuteConnect &connectCommand) = 0;
 	virtual void _InternalListen(IPProto ipProto, uint16_t port,
-								 commands::ExecuteBooleanOnHost &&com,
-								 CommandExecutionQueue *queue = nullptr) = 0;
+								 commands::ExecuteBooleanOnHost &com) = 0;
 	void _InternalConnect_Finish(commands::ExecuteConnect &connectCommand);
-	void _Internal_on_open_Finish(std::shared_ptr<Peer> peer);
+	virtual void _Internal_on_open_Finish(std::shared_ptr<Peer> peer);
 	void _Internal_on_close_Finish(std::shared_ptr<Peer> peer);
 
 public:

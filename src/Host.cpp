@@ -174,8 +174,6 @@ void Host::_Internal_on_open_Finish(std::shared_ptr<Peer> peer)
 		onConnect(peer.get());
 	}
 	peer->SetReadyToUse();
-
-	_InternalSingleLoopIteration();
 }
 
 void Host::_Internal_on_close_Finish(std::shared_ptr<Peer> peer)

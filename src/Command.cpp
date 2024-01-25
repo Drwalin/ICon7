@@ -52,7 +52,12 @@ void ExecuteConnect::Execute() { host->_InternalConnect(*this); }
 
 void ExecuteListen::Execute()
 {
-	host->_InternalListen(ipProto, port, std::move(onListen));
+	host->_InternalListen(ipProto, port, onListen);
+	if (queue) {
+		queue->EnqueueCommand(std::move(onListen));
+	} else {
+		onListen.Execute();
+	}
 }
 
 void ExecuteDisconnect::Execute()

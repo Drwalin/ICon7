@@ -57,6 +57,13 @@ void Peer::Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
 	sendQueue->enqueue(SendFrameStruct(std::move(dataWithoutHeader), flags));
 	host->InsertPeerToFlush(this);
 }
+void Peer::SendLocalThread(std::vector<uint8_t> &&dataWithoutHeader,
+		Flags flags)
+{
+	sendingQueueSize++;
+	sendQueueLocal.push(SendFrameStruct(std::move(dataWithoutHeader), flags));
+	host->_InternalInsertPeerToFlush(this);
+}
 
 void Peer::Disconnect()
 {
@@ -81,8 +88,40 @@ void Peer::_Internal_static_OnPacket(std::vector<uint8_t> &buffer,
 
 void Peer::_InternalOnPacket(std::vector<uint8_t> &buffer, uint32_t headerSize)
 {
-	host->GetRpcEnvironment()->OnReceive(this, buffer, headerSize,
-										 FLAG_RELIABLE);
+	if (buffer.size() == headerSize) {
+		DEBUG("Error: protocol doesn't allow for 0 sized packets.");
+		return;
+	}
+	if (FramingProtocol::GetPacketFlags(buffer.data(), 0) &
+		FLAGS_PROTOCOL_CONTROLL_SEQUENCE) {
+		_InternalOnPacketWithControllSequence(buffer, headerSize);
+	} else {
+		host->GetRpcEnvironment()->OnReceive(this, buffer, headerSize,
+											 FLAG_RELIABLE);
+	}
+}
+
+void Peer::_InternalOnPacketWithControllSequence(std::vector<uint8_t> &buffer,
+												 uint32_t headerSize)
+{
+	uint8_t vectorCall = buffer[headerSize];
+	if (vectorCall <= 0x7F) {
+		// TODO: decode here future controll sequences
+		uint32_t vectorCall = buffer[headerSize];
+		DEBUG("Received packet with undefined controll sequence: 0x%X",
+			  vectorCall);
+	} else {
+		_InternalOnPacketWithControllSequenceBackend(buffer, headerSize);
+	}
+}
+
+void Peer::_InternalOnPacketWithControllSequenceBackend(
+	std::vector<uint8_t> &buffer, uint32_t headerSize)
+{
+	uint32_t vectorCall = buffer[headerSize];
+	DEBUG("Unhandled packet with controll sequence by backend. Vector call "
+		  "value: 0x%X",
+		  vectorCall);
 }
 
 void Peer::_InternalOnWritable()

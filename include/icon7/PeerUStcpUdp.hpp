@@ -35,26 +35,53 @@ class Peer : public icon7::uS::tcp::Peer
 public:
 	Peer(uS::tcpudp::Host *host, us_socket_t *socket);
 	virtual ~Peer();
+	
+	const uint32_t maxUnreliablePacketSize;
 
 protected:
-	// push packets to udpSendFrames
-	// or
-	// override  _InternalPopQueuedSendsFromAsync() and move directly to
-	// udpSendFrames from sendQueue
+	/* push packets to udpSendFrames
+	 * or
+	 * override  _InternalPopQueuedSendsFromAsync() and move directly to
+	 * udpSendFrames from sendQueue
+	 * if total frame size is larger than maxUnreliablePacketSize then packets
+	 * are send alone in hopes that the internet won't drop it. User needs to
+	 * take care of size of packets
+	 */
 	virtual bool _InternalSend(SendFrameStruct &dataFrame,
 							   bool hasMore) override;
+	virtual void _InternalFlushQueuedSends() override;
 	virtual void _InternalDisconnect() override;
 
 	virtual void _InternalClearInternalDataOnClose() override;
 
 	virtual bool _InternalHasQueuedSends() const override;
+	
+	void _InternalOnUdpPacket(void *data, uint32_t bytes);
+	virtual void _InternalOnPacketWithControllSequenceBackend(
+			std::vector<uint8_t> &buffer, uint32_t headerSize) override;
 
-	friend class HostUStcp;
+	friend class Host;
 
 protected:
 	IPProto ipVersion;
 	Host::IpAddress ipAddress;
-	std::vector<SendFrameStruct> udpSendFrames;
+	union {
+		struct sockaddr_in ip4;
+		struct sockaddr_in ip6;
+	};
+	std::multimap<uint32_t, SendFrameStruct> udpSendFrames;
+	FrameDecoder udpFrameDecoder;
+	
+	uint8_t connectionIdentifier[32];
+	uint8_t sendingKey[32];
+	uint8_t receivingKey[32];
+	
+	bool hasEstablishUdpEndpoint;
+	bool hasConnectionIdentifier;
+	
+private:
+	std::vector<SendFrameStruct> tmpUdpPacketCollection; 
+	std::vector<int> tmpUdpPacketCollectionSizes; 
 };
 } // namespace tcpudp
 } // namespace uS
