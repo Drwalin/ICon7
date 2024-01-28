@@ -142,46 +142,46 @@ void Host::_InternalOnReceiveUdpPacket(int receivedPacketsCount)
 {
 	IpAddress address;
 	for (int i = 0; i < receivedPacketsCount; ++i) {
-		memset(&address, 0, sizeof(IpAddress));
-		void *endpoint = us_udp_packet_buffer_peer(receivingBuffer, i);
-
-		struct sockaddr_storage *addr = (struct sockaddr_storage *)endpoint;
-		IPProto proto;
-		if (addr->ss_family == AF_INET) {
-			proto = IPv4;
-		} else if (addr->ss_family == AF_INET6) {
-			proto = IPv6;
-		} else {
-			// invalid packet received: dropping
-			continue;
-		}
-
-		if (proto == IPv4) {
-			address.proto = 4;
-			struct sockaddr_in ip = *(struct sockaddr_in *)addr;
-			address.port = ip.sin_port;
-			memcpy(address.ip, &ip.sin_addr, 4);
-		} else {
-			address.proto = 6;
-			struct sockaddr_in6 ip = *(struct sockaddr_in6 *)addr;
-			address.port = ip.sin6_port;
-			memcpy(address.ip, &ip.sin6_addr, 4);
-		}
-
-		void *payload =
-			(void *)us_udp_packet_buffer_payload(receivingBuffer, i);
-		int bytes = us_udp_packet_buffer_payload_length(receivingBuffer, i);
-
-		auto it = peerAddresses.find(address);
-		if (it == peerAddresses.end()) {
-			// TODO: try to add this address to the correct peer
-			if (bytes != 32) {
-				// TODO: invalid payload for unknown address, dropping packet
-				continue;
-			}
-		} else {
-			it->second->_InternalOnUdpPacket(payload, bytes);
-		}
+// 		memset(&address, 0, sizeof(IpAddress));
+// 		void *endpoint = us_udp_packet_buffer_peer(receivingBuffer, i);
+// 
+// 		struct sockaddr_storage *addr = (struct sockaddr_storage *)endpoint;
+// 		IPProto proto;
+// 		if (addr->ss_family == AF_INET) {
+// 			proto = IPv4;
+// 		} else if (addr->ss_family == AF_INET6) {
+// 			proto = IPv6;
+// 		} else {
+// 			// invalid packet received: dropping
+// 			continue;
+// 		}
+// 
+// 		if (proto == IPv4) {
+// 			address.proto = 4;
+// 			struct sockaddr_in ip = *(struct sockaddr_in *)addr;
+// 			address.port = ip.sin_port;
+// 			memcpy(address.ip, &ip.sin_addr, 4);
+// 		} else {
+// 			address.proto = 6;
+// 			struct sockaddr_in6 ip = *(struct sockaddr_in6 *)addr;
+// 			address.port = ip.sin6_port;
+// 			memcpy(address.ip, &ip.sin6_addr, 4);
+// 		}
+// 
+// 		void *payload =
+// 			(void *)us_udp_packet_buffer_payload(receivingBuffer, i);
+// 		int bytes = us_udp_packet_buffer_payload_length(receivingBuffer, i);
+// 
+// 		auto it = peerAddresses.find(address);
+// 		if (it == peerAddresses.end()) {
+// 			// TODO: try to add this address to the correct peer
+// 			if (bytes != 32) {
+// 				// TODO: invalid payload for unknown address, dropping packet
+// 				continue;
+// 			}
+// 		} else {
+// 			it->second->_InternalOnUdpPacket(payload, bytes);
+// 		}
 	}
 }
 
@@ -225,32 +225,22 @@ void Host::_Internal_on_open_Finish(std::shared_ptr<icon7::Peer> _peer)
 {
 	icon7::uS::tcp::Host::_Internal_on_open_Finish(_peer);
 	Peer *peer = (Peer *)_peer.get();
+	
+	peer->_InternalOnOpenFinish();
+}
 
-	if (peer->isClient) {
-		peer->hasEstablishUdpEndpoint = true;
-		peer->hasConnectionIdentifier = false;
-		if (peer->SSL) {
-			std::vector<uint8_t> data;
-			data.resize(33);
-			data[0] = 0x81;
-			memcpy(data.data() + 1, peer->receivingKey, 32);
-			peer->SendLocalThread(std::move(data),
-								  FLAG_RELIABLE |
-									  FLAGS_PROTOCOL_CONTROLL_SEQUENCE);
+uint32_t Host::GenerateNewReceivingIdentityForPeer(std::shared_ptr<Peer> peer)
+{
+	for (;; ++firstFreeReceivingIdentity) {
+		if (firstFreeReceivingIdentity == 0) {
+			continue;
 		}
-	} else {
-		peer->hasEstablishUdpEndpoint = false;
-		peer->hasConnectionIdentifier = true;
-		std::vector<uint8_t> data;
-		data.resize(33 + (peer->SSL ? 32 : 0));
-		data[0] = 0x80;
-		memcpy(data.data() + 1, peer->connectionIdentifier, 32);
-		if (peer->SSL) {
-			memcpy(data.data() + 33, peer->receivingKey, 32);
+		if (peerByReceivingIdentity.count(firstFreeReceivingIdentity) == 0) {
+			break;
 		}
-		peer->SendLocalThread(std::move(data),
-							  FLAG_RELIABLE | FLAGS_PROTOCOL_CONTROLL_SEQUENCE);
 	}
+	peerByReceivingIdentity[firstFreeReceivingIdentity] = peer;
+	return firstFreeReceivingIdentity;
 }
 
 } // namespace tcpudp

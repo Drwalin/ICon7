@@ -17,6 +17,7 @@
  */
 
 #include <algorithm>
+#include <memory>
 
 #include "../include/icon7/HostUStcpUdp.hpp"
 #include "../include/icon7/RPCEnvironment.hpp"
@@ -37,18 +38,16 @@ Peer::Peer(uS::tcpudp::Host *host, us_socket_t *socket)
 												   // CHACHA20-POLY1305 nonce
 												   // and mac 16+12
 {
-	memset(&ipAddress, 0, sizeof(ipAddress));
 	tmpUdpPacketCollection.reserve(32);
 	tmpUdpPacketCollectionSizes.reserve(32);
-	Random::Bytes(connectionIdentifier, 32);
 	Random::Bytes(sendingKey, 32);
 	Random::Bytes(receivingKey, 32);
-	hasEstablishUdpEndpoint = false;
+	hasPeerEstablishThisEndpoint = false;
+	hasRemoteAddress = false;
 }
 
 Peer::~Peer()
 {
-	Random::Bytes(connectionIdentifier, 32);
 	Random::Bytes(sendingKey, 32);
 	Random::Bytes(receivingKey, 32);
 }
@@ -67,61 +66,64 @@ bool Peer::_InternalSend(SendFrameStruct &dataFrame, bool hasMore)
 void Peer::_InternalFlushQueuedSends()
 {
 	icon7::uS::tcp::Peer::_InternalFlushQueuedSends();
-	if (hasEstablishUdpEndpoint == false) {
+	if (hasPeerEstablishThisEndpoint == false) {
+		// TODO: send udp packets with connection identity until receiving
+		// 		 controll sequence with vector call 0x82
 	} else {
-	if (ipAddress.proto == IPProto::IPinvalid) {
-		if (udpSendFrames.size() > 50) {
-			// TODO: reconsider dropping all unreliable packets befor
-			// establishing upd endpoint
-			udpSendFrames.clear();
-		}
-		return;
-	}
-	Host *host = (Host *)(this->host);
-	tmpUdpPacketCollection.clear();
-	tmpUdpPacketCollectionSizes.clear();
-	while (host->_InternalCanSendMorePackets() &&
-		   udpSendFrames.empty() == false) {
-		uint32_t totalSize = 0;
-
-		for (auto it = udpSendFrames.rbegin(); it != udpSendFrames.rend();
-			 ++it) {
-			if (totalSize == 0 ||
-				((totalSize + it->first) <= maxUnreliablePacketSize)) {
-				totalSize += it->first;
-				tmpUdpPacketCollectionSizes.push_back(totalSize);
-				if (totalSize >= maxUnreliablePacketSize) {
-					break;
-				}
+		if (hasRemoteAddress == false) {
+			if (udpSendFrames.size() > 50) {
+				// TODO: reconsider dropping all unreliable packets befor
+				// 		 establishing upd endpoint
+				udpSendFrames.clear();
 			}
+			return;
 		}
-
-		// TODO: adjust it for encryption
-		uint8_t *packetPackingPtr =
-			(uint8_t *)host->_InternalGetNextPacketDataPointer();
-
-		for (auto it : tmpUdpPacketCollectionSizes) {
-			auto p = udpSendFrames.find(it);
-			// no check if p != .end() becaues in tmpUdpPacketCollectionSizes
-			// should be only valid keys
-			auto &f = p->second;
-			memcpy(packetPackingPtr, f.header, f.headerSize);
-			packetPackingPtr += f.headerSize;
-			memcpy(packetPackingPtr, f.dataWithoutHeader.data(),
-				   f.dataWithoutHeader.size());
-			packetPackingPtr += f.dataWithoutHeader.size();
-			udpSendFrames.erase(it);
-		}
-
-		if (SSL) {
-			// TODO: encrypt SSL, adjust totalSize
-			// totalSize += encryption_overhead;
-		}
-
-		host->_InternalFinishSendingPacket(totalSize, &ip4);
-
+		Host *host = (Host *)(this->host);
 		tmpUdpPacketCollection.clear();
 		tmpUdpPacketCollectionSizes.clear();
+		while (host->_InternalCanSendMorePackets() &&
+			   udpSendFrames.empty() == false) {
+			uint32_t totalSize = 0;
+
+			for (auto it = udpSendFrames.rbegin(); it != udpSendFrames.rend();
+				 ++it) {
+				if (totalSize == 0 ||
+					((totalSize + it->first) <= maxUnreliablePacketSize)) {
+					totalSize += it->first;
+					tmpUdpPacketCollectionSizes.push_back(totalSize);
+					if (totalSize >= maxUnreliablePacketSize) {
+						break;
+					}
+				}
+			}
+
+			// TODO: adjust it for encryption
+			uint8_t *packetPackingPtr =
+				(uint8_t *)host->_InternalGetNextPacketDataPointer();
+
+			for (auto it : tmpUdpPacketCollectionSizes) {
+				auto p = udpSendFrames.find(it);
+				// no check if p != .end() becaues in
+				// tmpUdpPacketCollectionSizes should be only valid keys
+				auto &f = p->second;
+				memcpy(packetPackingPtr, f.header, f.headerSize);
+				packetPackingPtr += f.headerSize;
+				memcpy(packetPackingPtr, f.dataWithoutHeader.data(),
+					   f.dataWithoutHeader.size());
+				packetPackingPtr += f.dataWithoutHeader.size();
+				udpSendFrames.erase(it);
+			}
+
+			if (SSL) {
+				// TODO: encrypt SSL, adjust totalSize
+				// totalSize += encryption_overhead;
+			}
+
+			host->_InternalFinishSendingPacket(totalSize, &ip4);
+
+			tmpUdpPacketCollection.clear();
+			tmpUdpPacketCollectionSizes.clear();
+		}
 	}
 }
 
@@ -142,7 +144,7 @@ bool Peer::_InternalHasQueuedSends() const
 	if (udpSendFrames.empty() == false) {
 		return true;
 	}
-	if (hasEstablishUdpEndpoint == false) {
+	if (hasPeerEstablishThisEndpoint == false) {
 		return true;
 	}
 	return icon7::uS::tcp::Peer::_InternalHasQueuedSends();
@@ -205,7 +207,7 @@ void Peer::_InternalOnPacketWithControllSequenceBackend(
 		break;
 	case 0x82:
 		if (isClient == false) {
-			hasEstablishUdpEndpoint = true;
+			hasPeerEstablishThisEndpoint = false;
 		} else {
 			// TODO: report error, client received what client should send
 		}
@@ -213,6 +215,40 @@ void Peer::_InternalOnPacketWithControllSequenceBackend(
 	default:
 		icon7::uS::tcp::Peer::_InternalOnPacketWithControllSequenceBackend(
 			buffer, headerSize);
+	}
+}
+
+void Peer::_InternalOnOpenFinish()
+{
+	hasPeerEstablishThisEndpoint = false;
+	hasRemoteAddress = false;
+	hasReceivingIdentity = false;
+	receivingIdentity =
+		((Host *)host)
+			->GenerateNewReceivingIdentityForPeer(
+				std::dynamic_pointer_cast<Peer>(shared_from_this()));
+	if (isClient) {
+		hasRemoteAddress = true;
+		if (SSL) {
+			std::vector<uint8_t> data;
+			data.resize(33);
+			data[0] = 0x81;
+			memcpy(data.data() + 1, sendingKey, 32);
+			SendLocalThread(std::move(data),
+							FLAG_RELIABLE | FLAGS_PROTOCOL_CONTROLL_SEQUENCE);
+		}
+	} else {
+		hasPeerEstablishThisEndpoint = true;
+
+		std::vector<uint8_t> data;
+		data.resize(33 + (SSL ? 32 : 0));
+		data[0] = 0x80;
+		memcpy(data.data() + 1, connectionIdentifier, 32);
+		if (SSL) {
+			memcpy(data.data() + 33, sendingKey, 32);
+		}
+		SendLocalThread(std::move(data),
+						FLAG_RELIABLE | FLAGS_PROTOCOL_CONTROLL_SEQUENCE);
 	}
 }
 } // namespace tcpudp
