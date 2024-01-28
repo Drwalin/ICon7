@@ -57,7 +57,7 @@ public:
 	{
 		uint16_t proto;
 		uint16_t port;
-		uint8_t ip[16]; // IPv$ or IPv6
+		uint8_t ip[16]; // IPv4 or IPv6
 		bool operator < (const IpAddress &other) const {
 			return memcmp(this, &other, sizeof(IpAddress)) < 0;
 		}
@@ -78,6 +78,8 @@ public:
 	void _InternalPerformSend();
 	
 	virtual void _Internal_on_open_Finish(std::shared_ptr<icon7::Peer> peer) override;
+	
+	uint32_t GenerateNewReceivingIdentityForPeer(std::shared_ptr<Peer> peer);
 
 protected:
 	static void _InternalOnReceiveUdpPacket(us_udp_socket_t *socket,
@@ -91,7 +93,8 @@ protected:
 	MakePeer(us_socket_t *socket) override;
 
 protected:
-	std::map<IpAddress, std::shared_ptr<Peer>> peerAddresses;
+	std::unordered_map<uint32_t, std::shared_ptr<Peer>> peerByReceivingIdentity;
+	uint32_t firstFreeReceivingIdentity;
 
 	us_udp_socket_t *udpSocket;
 	us_udp_packet_buffer_t *receivingBuffer;

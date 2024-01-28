@@ -59,25 +59,29 @@ protected:
 	void _InternalOnUdpPacket(void *data, uint32_t bytes);
 	virtual void _InternalOnPacketWithControllSequenceBackend(
 			std::vector<uint8_t> &buffer, uint32_t headerSize) override;
+	
+	void _InternalOnOpenFinish();
 
 	friend class Host;
 
 protected:
-	IPProto ipVersion;
-	Host::IpAddress ipAddress;
 	union {
 		struct sockaddr_in ip4;
-		struct sockaddr_in ip6;
+		struct sockaddr_in6 ip6;
 	};
 	std::multimap<uint32_t, SendFrameStruct> udpSendFrames;
 	FrameDecoder udpFrameDecoder;
 	
-	uint8_t connectionIdentifier[32];
+	uint32_t sendingIdentity; // received from peer
+	uint32_t receivingIdentity; // generatea from Host counter
+	uint32_t receivingNewestPacketId;
+	uint32_t sendingNewestPacketId;
 	uint8_t sendingKey[32];
 	uint8_t receivingKey[32];
 	
-	bool hasEstablishUdpEndpoint;
-	bool hasConnectionIdentifier;
+	bool hasPeerEstablishThisEndpoint;
+	bool hasRemoteAddress;
+	bool hasReceivingIdentity;
 	
 private:
 	std::vector<SendFrameStruct> tmpUdpPacketCollection; 

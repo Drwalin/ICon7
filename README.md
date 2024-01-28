@@ -159,23 +159,45 @@ Custom protocol for controll sequence:
 
 Vector call byte in controll sequence values:
 
-Vector call `0x80` is sent through tcp connection by server. Packet data:
-| offset | bytes | description                                                        |
-|--------|-------|--------------------------------------------------------------------|
-| 0      | 1     | Vector call of value `0x80`                                        |
-| 1      | 32    | random bytes sequence identifying this connection                  |
-| 33     | 32    | server encryption key (present only for SSL encrypted connections) |
+Vector call `0x80` is sent through tcp connection by server during handshake.
+Packet data:
+| offset | bytes | description                            |
+|--------|-------|----------------------------------------|
+| 0      | 1     | Vector call of value `0x80`            |
+| 1      | 4     | Server receiving identity              |
+|        |       | The following for SSL connections only |
+| 5      | 32    | Server encryption key                  |
 
-Vector call `0x81` is sent through tcp connection by client, only for SSL
-connections. Packet data:
-| offset | bytes | description                 |
-|--------|-------|-----------------------------|
-| 0      | 1     | Vector call of value `0x81` |
-| 1      | 32    | client encryption key       |
+Vector call `0x81` is sent through tcp connection by client during handshake.
+Packet data:
+| offset | bytes | description                            |
+|--------|-------|----------------------------------------|
+| 0      | 1     | Vector call of value `0x81`            |
+| 1      | 4     | Client receiving identity              |
+|        |       | The following for SSL connections only |
+| 5      | 32    | Client encryption key                  |
 
 Vector call `0x82` is sent as acknowledgement after receiving first udp packet
-from client by server. Packet data:
+from client by server. Can be sent by either tcp or udp (preferably by UDP to
+fully establish dublex routing in NAT routers). Packet data:
 | offset | bytes | description                 |
 |--------|-------|-----------------------------|
 | 0      | 1     | Vector call of value `0x82` |
+
+#### UDP protocol
+
+Packet data:
+| offset | bytes  | description                                      |
+|--------|--------|--------------------------------------------------|
+| 0      | 4      | Endpoint receiving identity                      |
+| 4      | 4      | Packet id in sequence                            |
+|        |        | The following for SSL connections only           |
+| 8      | 16 (?) | Packet MAC poly1305                              |
+| 24     | XXX    | Encrypted packet payload encrypted with chacha20 |
+|        |        | using Packet id in sequence as last 4 bytes of   |
+|        |        | nonce and endpoint receiving identity as AAD     |
+|        |        | For not encrypted connections                    |
+| 8      | XXX    | Unencrypted packet payload                       |
+
+
 
