@@ -16,6 +16,21 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <cstring>
+#include <cstdio>
+#include <cstdlib>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#endif
+
+#include "../uSockets/src/internal/networking/bsd.h"
+
 #include "../include/icon7/DNS.hpp"
 
 namespace icon7
@@ -23,7 +38,7 @@ namespace icon7
 
 AddressInfo::AddressInfo()
 {
-	addr = nullptr;
+	proto = IPinvalid;
 }
 
 AddressInfo::~AddressInfo()
@@ -33,14 +48,17 @@ AddressInfo::~AddressInfo()
 
 void AddressInfo::Clear()
 {
-	if (addr) {
-		free(addr);
-		addr = nullptr;
-	}
+	proto = IPinvalid;
+}
+
+struct sockaddr_storage *AddressInfo::Address()
+{
+	return (struct sockaddr_storage *)addressStorage;
 }
 	
-void AddressInfo::Populate(std::string addres, uint16_t port, IPProto proto)
+bool AddressInfo::Populate(const std::string address, const uint16_t port, const IPProto proto)
 {
+	Clear();
     struct addrinfo hints, *result;
     memset(&hints, 0, sizeof(struct addrinfo));
 
@@ -51,42 +69,54 @@ void AddressInfo::Populate(std::string addres, uint16_t port, IPProto proto)
 		hints.ai_family = AF_INET6;
 	}
 
-    char port_string[16];
-    snprintf(port_string, 16, "%d", port);
+    char portString[16];
+    snprintf(portString, 16, "%d", port);
 
-    if (getaddrinfo(host, port_string, &hints, &result)) {
-        return LIBUS_SOCKET_ERROR;
+    if (getaddrinfo(address.c_str(), portString, &hints, &result)) {
+		return false;
     }
 
-    LIBUS_SOCKET_DESCRIPTOR listenFd = LIBUS_SOCKET_ERROR;
-    struct addrinfo *listenAddr;
-    for (struct addrinfo *a = result; a && listenFd == LIBUS_SOCKET_ERROR; a = a->ai_next) {
-        if (a->ai_family == AF_INET6) {
-            listenFd = bsd_create_socket(a->ai_family, a->ai_socktype, a->ai_protocol);
-            listenAddr = a;
-        }
-    }
+    struct addrinfo *addr = nullptr;
+	if (proto == IPv6) {
+		for (struct addrinfo *a = result; a && addr==nullptr; a = a->ai_next) {
+			if (a->ai_family == AF_INET6) {
+				addr = a;
+				this->proto = proto;
+			}
+		}
+	} else if (proto == IPv4) {
+		for (struct addrinfo *a = result; a && addr==nullptr; a = a->ai_next) {
+			if (a->ai_family == AF_INET) {
+				addr = a;
+				this->proto = proto;
+			}
+		}
+	}
+	
+	if (proto == IPv4) {
+		memcpy(Address(), addr, ADDRESS4_STORAGE_SIZE);
+	} else if (proto == IPv6) {
+		memcpy(Address(), addr, ADDRESS6_STORAGE_SIZE);
+	}
 
-    for (struct addrinfo *a = result; a && listenFd == LIBUS_SOCKET_ERROR; a = a->ai_next) {
-        if (a->ai_family == AF_INET) {
-            listenFd = bsd_create_socket(a->ai_family, a->ai_socktype, a->ai_protocol);
-            listenAddr = a;
-        }
-    }
-
-    if (listenFd == LIBUS_SOCKET_ERROR) {
-        freeaddrinfo(result);
-        return LIBUS_SOCKET_ERROR;
-    }
+	freeaddrinfo(result);
+	
+	if (proto == IPinvalid) {
+		return false;
+	}
+	
+	return true;
 }
 
 bool AddressInfo::CopyAddressTo(void *ptr)
 {
-	if (addr) {
-		
-		
-		return true;
+	if (proto == IPinvalid) {
+		return false;
+	} else if (proto == IPv4) {
+		memcpy(ptr, Address(), ADDRESS4_STORAGE_SIZE);
+	} else if (proto == IPv6) {
+		memcpy(ptr, Address(), ADDRESS6_STORAGE_SIZE);
 	}
-	return false;
+	return true;
 }
 }

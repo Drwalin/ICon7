@@ -33,14 +33,27 @@ public:
 	AddressInfo();
 	~AddressInfo();
 	
-	void Populate(std::string addres, uint16_t port, IPProto proto);
+	inline const static size_t ADDRESS4_STORAGE_SIZE = 8;
+	inline const static size_t ADDRESS6_STORAGE_SIZE = 28;
+	inline const static size_t ADDRESS_STORAGE_SIZE = ADDRESS6_STORAGE_SIZE;
+	
+	bool Populate(const std::string address, const uint16_t port,
+				  const IPProto proto);
 	void Clear();
 	
 	bool CopyAddressTo(void *ptr);
 	
 private:
-	struct sockaddr_storage *addr;
+	
+	struct sockaddr_storage *Address();
+	
+	uint8_t addressStorage[ADDRESS_STORAGE_SIZE];
 	IPProto proto;
+};
+
+class DomainNameSystemResolution
+{
+public:
 };
 }
 
