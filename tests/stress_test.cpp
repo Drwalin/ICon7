@@ -10,8 +10,8 @@
 
 #include <icon7/RPCEnvironment.hpp>
 #include <icon7/Flags.hpp>
-#include <icon7/PeerUStcp.hpp>
-#include <icon7/HostUStcp.hpp>
+#include <icon7/PeerUStcpUdp.hpp>
+#include <icon7/HostUStcpUdp.hpp>
 
 icon7::RPCEnvironment rpc;
 
@@ -140,26 +140,42 @@ template <typename... Args> void Print(const char *fmt, Args... args)
 	fflush(stdout);
 }
 
-void Runner(icon7::Peer *peer)
+void Runner(icon7::Peer *_peer)
 {
-	std::shared_ptr<icon7::Peer> object_keeper = peer->shared_from_this();
+	std::shared_ptr<icon7::Peer> peer = _peer->shared_from_this();
 	while (peer->IsReadyToUse() == false) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 	std::vector<TestStruct> data;
 	uint32_t msgSent = 0;
 	for (uint32_t i = 0; i < ipc->countMessages; ++i) {
-		if (ipc->runTestFlag == 0)
+			if (peer->isClient) {
+				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
+			}
+		if (ipc->runTestFlag == 0) {
+			if (peer->isClient) {
+				DEBUG("BREAK CLIENT LOOP");
+			}
 			break;
+		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		for (uint32_t j = 0; j < ((processId == -1) ? 4 : 1); ++j) {
+			if (peer->isClient) {
+				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
+			}
 			uint32_t s = (processId == -1) ? GetRandomMessageSize() : 100;
 			data.resize(s / 21);
 			auto now = std::chrono::steady_clock::now();
 			double dt = std::chrono::duration<double>(now - originTime).count();
+			if (peer->isClient) {
+				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
+			}
 			icon7::Flags flag = ((processId >= 0) || ((msgSent % 16) == 0))
 									? icon7::FLAG_RELIABLE
-									: icon7::FLAG_UNRELIABLE;
+									: icon7::FLAG_RELIABLE;
+			if (peer->isClient) {
+				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
+			}
 			++msgSent;
 			uint64_t bytes = data.size() * 21 + 6;
 			if (processId >= 0) {
@@ -169,9 +185,21 @@ void Runner(icon7::Peer *peer)
 				ipc->counterSentByServer++;
 				ipc->serverSendBytes += bytes;
 			}
-			rpc.Send(peer, flag, "first", data, dt);
+			if (peer->isClient) {
+				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
+			}
+			rpc.Send(_peer, flag, "first", data, dt);
+			if (peer->isClient) {
+				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
+			}
 		}
+			if (peer->isClient) {
+				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
+			}
 	}
+			if (peer->isClient) {
+				DEBUG("OUT OF LOOP");
+			}
 	ipc->flags += 1;
 	ipc->connectionsDoneSending++;
 
@@ -316,7 +344,7 @@ void runTestSlave()
 		// 		icon7::Command com(icon7::commands::ExecuteFunctionPointer{[]()
 		// { 			host->ForEachPeer(+[](icon7::Peer *p) { auto stats
 		// =
-		// ((icon7::uS::tcp::Peer *)p)->GetRealTimeStats();
+		// ((icon7::uS::tcpudp::Peer *)p)->GetRealTimeStats();
 		// 				ipc->pendingReliable[processId] =
 		// stats.m_cbPendingReliable; ipc->unackedReliable[processId] =
 		// stats.m_cbSentUnackedReliable;
@@ -368,7 +396,7 @@ int main()
 
 	icon7::Initialize();
 
-	icon7::uS::tcp::Host *_host = new icon7::uS::tcp::Host();
+	icon7::uS::tcp::Host *_host = new icon7::uS::tcpudp::Host();
 	bool useSSL = true;
 	if (processId < 0) { // server
 		_host->Init(useSSL, "../cert/user.key", "../cert/user.crt", "", nullptr,

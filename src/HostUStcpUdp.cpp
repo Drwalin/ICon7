@@ -119,7 +119,7 @@ void Host::_InternalFinishSendingPacket(uint32_t bytesCount, void *address)
 		--firstFilledSendPacketId;
 	}
 	currentSendPacketId = -1;
-	if (lastFilledSendPacketId - firstFilledSendPacketId > 300) {
+	if (lastFilledSendPacketId - firstFilledSendPacketId > 50) {
 		_InternalPerformSend();
 	}
 }
@@ -140,48 +140,43 @@ void Host::_InternalPerformSend()
 
 void Host::_InternalOnReceiveUdpPacket(int receivedPacketsCount)
 {
-	IpAddress address;
 	for (int i = 0; i < receivedPacketsCount; ++i) {
-// 		memset(&address, 0, sizeof(IpAddress));
-// 		void *endpoint = us_udp_packet_buffer_peer(receivingBuffer, i);
-// 
-// 		struct sockaddr_storage *addr = (struct sockaddr_storage *)endpoint;
-// 		IPProto proto;
-// 		if (addr->ss_family == AF_INET) {
-// 			proto = IPv4;
-// 		} else if (addr->ss_family == AF_INET6) {
-// 			proto = IPv6;
-// 		} else {
-// 			// invalid packet received: dropping
-// 			continue;
-// 		}
-// 
-// 		if (proto == IPv4) {
-// 			address.proto = 4;
-// 			struct sockaddr_in ip = *(struct sockaddr_in *)addr;
-// 			address.port = ip.sin_port;
-// 			memcpy(address.ip, &ip.sin_addr, 4);
-// 		} else {
-// 			address.proto = 6;
-// 			struct sockaddr_in6 ip = *(struct sockaddr_in6 *)addr;
-// 			address.port = ip.sin6_port;
-// 			memcpy(address.ip, &ip.sin6_addr, 4);
-// 		}
-// 
-// 		void *payload =
-// 			(void *)us_udp_packet_buffer_payload(receivingBuffer, i);
-// 		int bytes = us_udp_packet_buffer_payload_length(receivingBuffer, i);
-// 
-// 		auto it = peerAddresses.find(address);
-// 		if (it == peerAddresses.end()) {
-// 			// TODO: try to add this address to the correct peer
-// 			if (bytes != 32) {
-// 				// TODO: invalid payload for unknown address, dropping packet
-// 				continue;
-// 			}
-// 		} else {
-// 			it->second->_InternalOnUdpPacket(payload, bytes);
-// 		}
+		void *endpoint = us_udp_packet_buffer_peer(receivingBuffer, i);
+
+		struct sockaddr_storage *addr = (struct sockaddr_storage *)endpoint;
+		IPProto proto;
+		if (addr->ss_family == AF_INET) {
+			proto = IPv4;
+		} else if (addr->ss_family == AF_INET6) {
+			proto = IPv6;
+		} else {
+			// invalid packet received: dropping
+			continue;
+		}
+		
+		uint8_t *payload =
+			(uint8_t *)us_udp_packet_buffer_payload(receivingBuffer, i);
+		int bytes = us_udp_packet_buffer_payload_length(receivingBuffer, i);
+		
+		uint32_t peerIdentity = 0;
+		memcpy(&peerIdentity, payload, 4);
+		
+		auto it = peerByReceivingIdentity.find(peerIdentity);
+		if (it == peerByReceivingIdentity.end()) {
+			// TODO: show error for invalid peer receiving identity
+		} else {
+			if (it->second->hasRemoteAddress == false) {
+				if (proto == IPv4) {
+					memcpy(&it->second->ip4, addr, sizeof(struct sockaddr_in));
+				} else {
+					memcpy(&it->second->ip4, addr, sizeof(struct sockaddr_in6));
+				}
+			}
+			if (bytes > 8) {
+				DEBUG("On udp packet");
+				it->second->_InternalOnUdpPacket(payload+4, bytes-4);
+			}
+		}
 	}
 }
 

@@ -79,9 +79,9 @@ protected:
 	uint8_t sendingKey[32];
 	uint8_t receivingKey[32];
 	
-	bool hasPeerEstablishThisEndpoint;
+	bool hasPeerThisAddress;
 	bool hasRemoteAddress;
-	bool hasReceivingIdentity;
+	bool hasSendingIdentity;
 	
 private:
 	std::vector<SendFrameStruct> tmpUdpPacketCollection; 

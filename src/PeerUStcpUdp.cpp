@@ -16,6 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <cstring>
+
 #include <algorithm>
 #include <memory>
 
@@ -42,8 +44,11 @@ Peer::Peer(uS::tcpudp::Host *host, us_socket_t *socket)
 	tmpUdpPacketCollectionSizes.reserve(32);
 	Random::Bytes(sendingKey, 32);
 	Random::Bytes(receivingKey, 32);
-	hasPeerEstablishThisEndpoint = false;
+	hasPeerThisAddress = false;
 	hasRemoteAddress = false;
+	hasSendingIdentity = false;
+	receivingNewestPacketId = 0;
+	sendingNewestPacketId = 0;
 }
 
 Peer::~Peer()
@@ -65,65 +70,79 @@ bool Peer::_InternalSend(SendFrameStruct &dataFrame, bool hasMore)
 
 void Peer::_InternalFlushQueuedSends()
 {
+	Host *host = (Host *)(this->host);
 	icon7::uS::tcp::Peer::_InternalFlushQueuedSends();
-	if (hasPeerEstablishThisEndpoint == false) {
-		// TODO: send udp packets with connection identity until receiving
-		// 		 controll sequence with vector call 0x82
-	} else {
-		if (hasRemoteAddress == false) {
-			if (udpSendFrames.size() > 50) {
-				// TODO: reconsider dropping all unreliable packets befor
-				// 		 establishing upd endpoint
-				udpSendFrames.clear();
+	if (hasPeerThisAddress == false) {
+		if (hasSendingIdentity) {
+			if (host->_InternalCanSendMorePackets()) {
+				// TODO: do it only once every 50 ms or so
+				uint8_t *packetPackingPtr =
+					(uint8_t *)host->_InternalGetNextPacketDataPointer();
+				memcpy(packetPackingPtr, &sendingIdentity, 4);
+				host->_InternalFinishSendingPacket(4, &ip4);
+				DEBUG("Sending initial udp packet");
 			}
-			return;
 		}
-		Host *host = (Host *)(this->host);
-		tmpUdpPacketCollection.clear();
-		tmpUdpPacketCollectionSizes.clear();
-		while (host->_InternalCanSendMorePackets() &&
-			   udpSendFrames.empty() == false) {
-			uint32_t totalSize = 0;
+	}
+	if (hasRemoteAddress == false) {
+		if (udpSendFrames.size() > 50) {
+			// TODO: reconsider dropping all unreliable packets befor
+			// 		 establishing upd endpoint
+			udpSendFrames.clear();
+		}
+		return;
+	}
+	tmpUdpPacketCollection.clear();
+	tmpUdpPacketCollectionSizes.clear();
+	while (host->_InternalCanSendMorePackets() &&
+		   udpSendFrames.empty() == false) {
+		uint32_t totalSize = 0;
 
-			for (auto it = udpSendFrames.rbegin(); it != udpSendFrames.rend();
-				 ++it) {
-				if (totalSize == 0 ||
-					((totalSize + it->first) <= maxUnreliablePacketSize)) {
-					totalSize += it->first;
-					tmpUdpPacketCollectionSizes.push_back(totalSize);
-					if (totalSize >= maxUnreliablePacketSize) {
-						break;
-					}
+		for (auto it = udpSendFrames.rbegin(); it != udpSendFrames.rend();
+			 ++it) {
+			if (totalSize == 0 ||
+				((totalSize + it->first) <= maxUnreliablePacketSize)) {
+				totalSize += it->first;
+				tmpUdpPacketCollectionSizes.push_back(totalSize);
+				if (totalSize >= maxUnreliablePacketSize) {
+					break;
 				}
 			}
-
-			// TODO: adjust it for encryption
-			uint8_t *packetPackingPtr =
-				(uint8_t *)host->_InternalGetNextPacketDataPointer();
-
-			for (auto it : tmpUdpPacketCollectionSizes) {
-				auto p = udpSendFrames.find(it);
-				// no check if p != .end() becaues in
-				// tmpUdpPacketCollectionSizes should be only valid keys
-				auto &f = p->second;
-				memcpy(packetPackingPtr, f.header, f.headerSize);
-				packetPackingPtr += f.headerSize;
-				memcpy(packetPackingPtr, f.dataWithoutHeader.data(),
-					   f.dataWithoutHeader.size());
-				packetPackingPtr += f.dataWithoutHeader.size();
-				udpSendFrames.erase(it);
-			}
-
-			if (SSL) {
-				// TODO: encrypt SSL, adjust totalSize
-				// totalSize += encryption_overhead;
-			}
-
-			host->_InternalFinishSendingPacket(totalSize, &ip4);
-
-			tmpUdpPacketCollection.clear();
-			tmpUdpPacketCollectionSizes.clear();
 		}
+
+		// TODO: adjust it for encryption
+		uint8_t *const _packetPackingPtr =
+			(uint8_t *)host->_InternalGetNextPacketDataPointer();
+		uint8_t *packetPackingPtr = _packetPackingPtr;
+
+		memcpy(packetPackingPtr, &sendingIdentity, 4);
+		packetPackingPtr += 4;
+		memcpy(packetPackingPtr, &sendingNewestPacketId, 4);
+		++sendingNewestPacketId;
+		packetPackingPtr += 4;
+
+		for (auto it : tmpUdpPacketCollectionSizes) {
+			auto p = udpSendFrames.find(it);
+			// no check if p != .end() becaues in
+			// tmpUdpPacketCollectionSizes should be only valid keys
+			auto &f = p->second;
+			memcpy(packetPackingPtr, f.header, f.headerSize);
+			packetPackingPtr += f.headerSize;
+			memcpy(packetPackingPtr, f.dataWithoutHeader.data(),
+				   f.dataWithoutHeader.size());
+			packetPackingPtr += f.dataWithoutHeader.size();
+			udpSendFrames.erase(it);
+		}
+
+		if (SSL) {
+			// TODO: in place encryption, add sequence number, add MAC,
+			// adjust totalSize: totalSize += encryption_overhead;
+		}
+
+		host->_InternalFinishSendingPacket(totalSize, &ip4);
+
+		tmpUdpPacketCollection.clear();
+		tmpUdpPacketCollectionSizes.clear();
 	}
 }
 
@@ -144,7 +163,7 @@ bool Peer::_InternalHasQueuedSends() const
 	if (udpSendFrames.empty() == false) {
 		return true;
 	}
-	if (hasPeerEstablishThisEndpoint == false) {
+	if (hasPeerThisAddress == false) {
 		return true;
 	}
 	return icon7::uS::tcp::Peer::_InternalHasQueuedSends();
@@ -152,19 +171,47 @@ bool Peer::_InternalHasQueuedSends() const
 
 void Peer::_InternalOnUdpPacket(void *data, uint32_t bytes)
 {
+	bitscpp::ByteReader<true> reader((uint8_t *)data, 0, bytes);
+
+	uint32_t packetId = 0;
+	reader.op(packetId);
+
+	if (receivingNewestPacketId >= packetId) {
+		if (((receivingNewestPacketId & 0x40000000) == 0x40000000) &&
+			((packetId & 0x40000000) == 0)) {
+			// TODO: restarting receivingNewestPacketId
+		} else {
+			return;
+		}
+	} else if (packetId-receivingNewestPacketId > 0x10000000) {
+		// dropping this packet: assuming that the greater value of packetId is
+		// in before rounding around
+		return;
+	}
+	
+	if (packetId < receivingNewestPacketId) {
+		// TODO: increment hidden nonce
+	}
+	
 	if (SSL) {
 		// TODO: decrypt SSL
+		// if decrypt fails ignore packet
+		// revert incrementation of hidden nonce
 	}
 
-	udpFrameDecoder.Restart();
-	udpFrameDecoder.PushData(
-		(uint8_t *)data, bytes,
-		[](std::vector<uint8_t> &buffer, uint32_t headerSize, void *_peer) {
-			Peer *peer = (Peer *)_peer;
-			peer->host->GetRpcEnvironment()->OnReceive(peer, buffer, headerSize,
-													   FLAG_UNRELIABLE);
-		},
-		this);
+	{
+		receivingNewestPacketId = packetId;
+		udpFrameDecoder.Restart();
+		udpFrameDecoder.PushData(
+			(uint8_t *)data, bytes,
+			_Internal_static_OnPacket,
+// 			[](std::vector<uint8_t> &buffer, uint32_t headerSize, void *_peer) {
+// 				Peer *peer = (Peer *)_peer;
+// 				peer->host->GetRpcEnvironment()->OnReceive(
+// 					peer, buffer, headerSize, FLAG_UNRELIABLE);
+// 			},
+			this);
+	}
 }
 
 void Peer::_InternalOnPacketWithControllSequenceBackend(
@@ -175,42 +222,18 @@ void Peer::_InternalOnPacketWithControllSequenceBackend(
 	reader.op(vectorCall);
 	switch (vectorCall) {
 	case 0x80:
-		if (isClient) {
-			reader.op(connectionIdentifier, 32);
-			hasConnectionIdentifier = true;
-			if (SSL) {
-				if (reader.has_bytes_to_read(32)) {
-					reader.op(receivingKey, 32);
-				} else {
-					// TODO: report error in establishing decryption key
-				}
-			}
-		} else {
-			// TODO: report error, server received what server should send
+		if (buffer.size() < 5 + (SSL ? 32 : 0)) {
+			// TODO: error, invalid packet size
+			DEBUG("Invalid 0x80 packet size");
 		}
+		reader.op((uint8_t *)&sendingIdentity, 4);
+		if (SSL) {
+			reader.op(receivingKey, 32);
+		}
+		hasSendingIdentity = true;
 		break;
 	case 0x81:
-		if (isClient == false) {
-			if (SSL) {
-				if (reader.has_bytes_to_read(32)) {
-					reader.op(receivingKey, 32);
-				} else {
-					// TODO: report error in establishing decryption key
-				}
-			} else {
-				// TODO: report this vector call is used only for SSL encrypted
-				// connections
-			}
-		} else {
-			// TODO: report error, client received what client should send
-		}
-		break;
-	case 0x82:
-		if (isClient == false) {
-			hasPeerEstablishThisEndpoint = false;
-		} else {
-			// TODO: report error, client received what client should send
-		}
+		hasPeerThisAddress = true;
 		break;
 	default:
 		icon7::uS::tcp::Peer::_InternalOnPacketWithControllSequenceBackend(
@@ -220,37 +243,29 @@ void Peer::_InternalOnPacketWithControllSequenceBackend(
 
 void Peer::_InternalOnOpenFinish()
 {
-	hasPeerEstablishThisEndpoint = false;
+	hasPeerThisAddress = false;
 	hasRemoteAddress = false;
-	hasReceivingIdentity = false;
+	hasSendingIdentity = false;
 	receivingIdentity =
 		((Host *)host)
 			->GenerateNewReceivingIdentityForPeer(
 				std::dynamic_pointer_cast<Peer>(shared_from_this()));
 	if (isClient) {
 		hasRemoteAddress = true;
-		if (SSL) {
-			std::vector<uint8_t> data;
-			data.resize(33);
-			data[0] = 0x81;
-			memcpy(data.data() + 1, sendingKey, 32);
-			SendLocalThread(std::move(data),
-							FLAG_RELIABLE | FLAGS_PROTOCOL_CONTROLL_SEQUENCE);
-		}
 	} else {
-		hasPeerEstablishThisEndpoint = true;
-
-		std::vector<uint8_t> data;
-		data.resize(33 + (SSL ? 32 : 0));
-		data[0] = 0x80;
-		memcpy(data.data() + 1, connectionIdentifier, 32);
-		if (SSL) {
-			memcpy(data.data() + 33, sendingKey, 32);
-		}
-		SendLocalThread(std::move(data),
-						FLAG_RELIABLE | FLAGS_PROTOCOL_CONTROLL_SEQUENCE);
+		hasPeerThisAddress = true;
 	}
+	std::vector<uint8_t> data;
+	data.resize(5 + (SSL ? 32 : 0));
+	data[0] = 0x80;
+	memcpy(data.data() + 1, &receivingIdentity, 4);
+	if (SSL) {
+		memcpy(data.data() + 5, sendingKey, 32);
+	}
+	SendLocalThread(std::move(data),
+					FLAG_RELIABLE | FLAGS_PROTOCOL_CONTROLL_SEQUENCE);
 }
+
 } // namespace tcpudp
 } // namespace uS
 } // namespace icon7

@@ -62,7 +62,10 @@ bool Peer::_InternalSend(SendFrameStruct &f, bool hasMore)
 	return true;
 }
 
-void Peer::_InternalDisconnect() { us_socket_shutdown(SSL, socket); }
+void Peer::_InternalDisconnect() {
+	DEBUG("Disconnect!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+	us_socket_shutdown(SSL, socket);
+}
 
 void Peer::_InternalClearInternalDataOnClose()
 {
@@ -70,6 +73,7 @@ void Peer::_InternalClearInternalDataOnClose()
 	socket = nullptr;
 	SSL = 0;
 }
+
 } // namespace tcp
 } // namespace uS
 } // namespace icon7

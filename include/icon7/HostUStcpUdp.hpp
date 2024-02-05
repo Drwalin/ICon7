@@ -52,16 +52,6 @@ class Host : public icon7::uS::tcp::Host
 public:
 	Host();
 	virtual ~Host();
-
-	struct IpAddress
-	{
-		uint16_t proto;
-		uint16_t port;
-		uint8_t ip[16]; // IPv4 or IPv6
-		bool operator < (const IpAddress &other) const {
-			return memcmp(this, &other, sizeof(IpAddress)) < 0;
-		}
-	};
 	
 	virtual void _InternalDestroy() override;
 
