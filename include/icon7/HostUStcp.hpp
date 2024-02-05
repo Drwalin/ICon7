@@ -98,6 +98,8 @@ protected:
 	virtual std::shared_ptr<icon7::uS::tcp::Peer> MakePeer(us_socket_t *socket);
 
 	friend class Peer;
+	
+	static void _InternalOnTimerWakup(us_timer_t *timer);
 
 protected:
 	int SSL;
@@ -106,6 +108,8 @@ protected:
 
 	us_socket_context_t *socketContext;
 	std::unordered_set<us_listen_socket_t *> listenSockets;
+	
+	us_timer_t *timerWakeup;
 };
 } // namespace tcp
 } // namespace uS

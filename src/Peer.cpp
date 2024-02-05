@@ -49,13 +49,28 @@ Peer::~Peer()
 
 void Peer::Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
 {
+	if (isClient) {
+		DEBUG("SEND");
+	}
 	if (IsDisconnecting()) {
 		// TODO: inform about dropping packets
 		return;
 	}
+	if (isClient) {
+		DEBUG("");
+	}
 	sendingQueueSize++;
+	if (isClient) {
+		DEBUG("");
+	}
 	sendQueue->enqueue(SendFrameStruct(std::move(dataWithoutHeader), flags));
+	if (isClient) {
+		DEBUG("");
+	}
 	host->InsertPeerToFlush(this);
+	if (isClient) {
+		DEBUG("SEND END");
+	}
 }
 void Peer::SendLocalThread(std::vector<uint8_t> &&dataWithoutHeader,
 		Flags flags)
@@ -67,6 +82,7 @@ void Peer::SendLocalThread(std::vector<uint8_t> &&dataWithoutHeader,
 
 void Peer::Disconnect()
 {
+	DEBUG("Disconnect!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 	peerFlags |= BIT_DISCONNECTING;
 	Command command{commands::ExecuteDisconnect{}};
 	commands::ExecuteDisconnect &com =
@@ -92,8 +108,8 @@ void Peer::_InternalOnPacket(std::vector<uint8_t> &buffer, uint32_t headerSize)
 		DEBUG("Error: protocol doesn't allow for 0 sized packets.");
 		return;
 	}
-	if (FramingProtocol::GetPacketFlags(buffer.data(), 0) &
-		FLAGS_PROTOCOL_CONTROLL_SEQUENCE) {
+	if ((FramingProtocol::GetPacketFlags(buffer.data(), 0) &
+		FLAGS_PROTOCOL_CONTROLL_SEQUENCE) == FLAGS_PROTOCOL_CONTROLL_SEQUENCE) {
 		_InternalOnPacketWithControllSequence(buffer, headerSize);
 	} else {
 		host->GetRpcEnvironment()->OnReceive(this, buffer, headerSize,
@@ -177,4 +193,5 @@ void Peer::_InternalPopQueuedSendsFromAsync()
 }
 
 void Peer::_InternalClearInternalDataOnClose() {}
+
 } // namespace icon7

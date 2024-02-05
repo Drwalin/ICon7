@@ -83,6 +83,8 @@ public:
 	Host *const host;
 	bool isClient;
 
+	void SetReadyToUse();
+
 protected:
 	virtual void _InternalFlushQueuedSends();
 	virtual void _InternalPopQueuedSendsFromAsync();
@@ -108,8 +110,6 @@ protected:
 
 protected:
 	Peer(Host *host);
-
-	void SetReadyToUse();
 
 	inline const static uint32_t BIT_READY = 1;
 	inline const static uint32_t BIT_DISCONNECTING = 2;

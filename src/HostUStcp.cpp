@@ -18,6 +18,7 @@
 
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/PeerUStcp.hpp"
+#include "../include/icon7/HostUStcpUdp.hpp"
 
 #include "../include/icon7/HostUStcp.hpp"
 
@@ -38,8 +39,13 @@ Host::~Host() {}
 
 void Host::_InternalDestroy()
 {
+	DEBUG("Disconnect!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+	us_timer_close(timerWakeup);
+	timerWakeup = nullptr;
+	
 	this->EnqueueCommand(commands::ExecuteOnHost{
 		this, nullptr, [](icon7::Host *_host, void *) {
+	DEBUG("Disconnect!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 			Host *host = (Host *)_host;
 			// close all sockets
 			us_socket_context_close(host->SSL, host->socketContext);
@@ -48,8 +54,9 @@ void Host::_InternalDestroy()
 	icon7::Host::_InternalDestroy();
 
 	us_socket_context_free(SSL, socketContext);
-	us_loop_free(loop);
 	socketContext = nullptr;
+	
+	us_loop_free(loop);
 	loop = nullptr;
 }
 
@@ -65,7 +72,16 @@ bool Host::Init(bool useSSL, const char *key_file_name,
 	if (InitLoopAndContext(options) == false) {
 		return false;
 	}
+	timerWakeup = us_create_timer(loop, true, sizeof(void*));
+	*(Host**)us_timer_ext(timerWakeup) = this;
+	us_timer_set(timerWakeup, _InternalOnTimerWakup, 50, 50);
 	return true;
+}
+
+void Host::_InternalOnTimerWakup(us_timer_t *timer)
+{
+	Host *host = *(Host**)us_timer_ext(timer);
+	host->_InternalSingleLoopIteration();
 }
 
 template <bool _SSL> void Host::SetUSocketContextCallbacks()
@@ -192,7 +208,7 @@ us_socket_t *Host::_Internal_on_open(struct us_socket_t *socket, int isClient,
 	}
 	
 	peer->isClient = isClient;
-
+	
 	host->_Internal_on_open_Finish(peer);
 
 	return socket;

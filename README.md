@@ -159,30 +159,21 @@ Custom protocol for controll sequence:
 
 Vector call byte in controll sequence values:
 
-Vector call `0x80` is sent through tcp connection by server during handshake.
-Packet data:
+Vector call `0x80` is sent through tcp connection to the other peer during
+handshake. Packet data:
 | offset | bytes | description                            |
 |--------|-------|----------------------------------------|
 | 0      | 1     | Vector call of value `0x80`            |
-| 1      | 4     | Server receiving identity              |
+| 1      | 4     | This peer receiving identity           |
 |        |       | The following for SSL connections only |
-| 5      | 32    | Server encryption key                  |
+| 5      | 32    | This peer encryption key               |
 
-Vector call `0x81` is sent through tcp connection by client during handshake.
-Packet data:
-| offset | bytes | description                            |
-|--------|-------|----------------------------------------|
-| 0      | 1     | Vector call of value `0x81`            |
-| 1      | 4     | Client receiving identity              |
-|        |       | The following for SSL connections only |
-| 5      | 32    | Client encryption key                  |
-
-Vector call `0x82` is sent as acknowledgement after receiving first udp packet
+Vector call `0x81` is sent as acknowledgement after receiving first udp packet
 from client by server. Can be sent by either tcp or udp (preferably by UDP to
 fully establish dublex routing in NAT routers). Packet data:
 | offset | bytes | description                 |
 |--------|-------|-----------------------------|
-| 0      | 1     | Vector call of value `0x82` |
+| 0      | 1     | Vector call of value `0x81` |
 
 #### UDP protocol
 
@@ -192,10 +183,10 @@ Packet data:
 | 0      | 4      | Endpoint receiving identity                      |
 | 4      | 4      | Packet id in sequence                            |
 |        |        | The following for SSL connections only           |
-| 8      | 16 (?) | Packet MAC poly1305                              |
-| 24     | XXX    | Encrypted packet payload encrypted with chacha20 |
+| 8      | XXX    | Encrypted packet payload encrypted with chacha20 |
 |        |        | using Packet id in sequence as last 4 bytes of   |
 |        |        | nonce and endpoint receiving identity as AAD     |
+| XXX+8  | 16 (?) | Packet MAC poly1305                              |
 |        |        | For not encrypted connections                    |
 | 8      | XXX    | Unencrypted packet payload                       |
 
