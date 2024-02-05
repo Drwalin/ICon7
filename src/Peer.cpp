@@ -49,28 +49,13 @@ Peer::~Peer()
 
 void Peer::Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
 {
-	if (isClient) {
-		DEBUG("SEND");
-	}
 	if (IsDisconnecting()) {
 		// TODO: inform about dropping packets
 		return;
 	}
-	if (isClient) {
-		DEBUG("");
-	}
 	sendingQueueSize++;
-	if (isClient) {
-		DEBUG("");
-	}
 	sendQueue->enqueue(SendFrameStruct(std::move(dataWithoutHeader), flags));
-	if (isClient) {
-		DEBUG("");
-	}
 	host->InsertPeerToFlush(this);
-	if (isClient) {
-		DEBUG("SEND END");
-	}
 }
 void Peer::SendLocalThread(std::vector<uint8_t> &&dataWithoutHeader,
 		Flags flags)
@@ -163,7 +148,9 @@ void Peer::_InternalOnLongTimeout() { _InternalDisconnect(); }
 
 bool Peer::_InternalHasQueuedSends() const { return sendingQueueSize != 0; }
 
-void Peer::SetReadyToUse() { peerFlags |= BIT_READY; }
+void Peer::SetReadyToUse() {
+	peerFlags |= BIT_READY;
+}
 
 void Peer::_InternalFlushQueuedSends()
 {

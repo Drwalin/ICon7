@@ -85,7 +85,7 @@ void Host::_InternalSingleLoopIteration()
 
 bool Host::_InternalCanSendMorePackets()
 {
-	return (lastFilledSendPacketId - firstFilledSendPacketId) < 1024;
+	return (lastFilledSendPacketId - firstFilledSendPacketId) < 1000;
 }
 
 void *Host::_InternalGetNextPacketDataPointer()
@@ -130,6 +130,7 @@ void Host::_InternalPerformSend()
 		return;
 	}
 
+	DEBUG("Send udp ################################################");
 	int sentPackets = us_udp_socket_send_range(udpSocket, sendingBuffer,
 											   firstFilledSendPacketId,
 											   lastFilledSendPacketId);
@@ -172,10 +173,7 @@ void Host::_InternalOnReceiveUdpPacket(int receivedPacketsCount)
 					memcpy(&it->second->ip4, addr, sizeof(struct sockaddr_in6));
 				}
 			}
-			if (bytes > 8) {
-				DEBUG("On udp packet");
-				it->second->_InternalOnUdpPacket(payload+4, bytes-4);
-			}
+			it->second->_InternalOnUdpPacket(payload+4, bytes-4);
 		}
 	}
 }

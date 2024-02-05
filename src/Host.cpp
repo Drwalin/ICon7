@@ -287,10 +287,8 @@ void Host::_InternalSingleLoopIteration()
 	std::vector<std::shared_ptr<Peer>> toRemoveFromQueue;
 	toRemoveFromQueue.reserve(64);
 	for (auto p : peersToFlush) {
-		if (p->IsReadyToUse()) {
-			p->_InternalOnWritable();
-			toRemoveFromQueue.emplace_back(p);
-		}
+		p->_InternalOnWritable();
+		toRemoveFromQueue.emplace_back(p);
 	}
 	for (auto &p : toRemoveFromQueue) {
 		if (p->_InternalHasQueuedSends() == false) {
