@@ -22,6 +22,7 @@ const uint16_t serverPort = 4000;
 extern "C" int processId;
 int processId = -1;
 
+
 class Mutex
 {
 public:
@@ -149,32 +150,32 @@ void Runner(icon7::Peer *_peer)
 	std::vector<TestStruct> data;
 	uint32_t msgSent = 0;
 	for (uint32_t i = 0; i < ipc->countMessages; ++i) {
-			if (peer->isClient) {
-				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
-			}
+		if (processId == 0) {
+			DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
+		}
 		if (ipc->runTestFlag == 0) {
-			if (peer->isClient) {
+			if (processId == 0) {
 				DEBUG("BREAK CLIENT LOOP");
 			}
 			break;
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		for (uint32_t j = 0; j < ((processId == -1) ? 4 : 1); ++j) {
-			if (peer->isClient) {
+			if (processId == 0) {
 				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
 			}
 			uint32_t s = (processId == -1) ? GetRandomMessageSize() : 100;
 			data.resize(s / 21);
 			auto now = std::chrono::steady_clock::now();
 			double dt = std::chrono::duration<double>(now - originTime).count();
-			if (peer->isClient) {
-				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
+			if (processId == 0) {
+// 				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
 			}
 			icon7::Flags flag = ((processId >= 0) || ((msgSent % 16) == 0))
 									? icon7::FLAG_RELIABLE
 									: icon7::FLAG_RELIABLE;
-			if (peer->isClient) {
-				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
+			if (processId == 0) {
+// 				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
 			}
 			++msgSent;
 			uint64_t bytes = data.size() * 21 + 6;
@@ -185,21 +186,21 @@ void Runner(icon7::Peer *_peer)
 				ipc->counterSentByServer++;
 				ipc->serverSendBytes += bytes;
 			}
-			if (peer->isClient) {
-				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
+			if (processId == 0) {
+// 				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
 			}
 			rpc.Send(_peer, flag, "first", data, dt);
-			if (peer->isClient) {
+			if (processId == 0) {
 				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
 			}
 		}
-			if (peer->isClient) {
-				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
-			}
+		if (processId == 0) {
+			DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
+		}
 	}
-			if (peer->isClient) {
-				DEBUG("OUT OF LOOP");
-			}
+	if (processId == 0) {
+		DEBUG("OUT OF LOOP");
+	}
 	ipc->flags += 1;
 	ipc->connectionsDoneSending++;
 
@@ -391,6 +392,7 @@ int main()
 			}
 		}
 	}
+	
 
 	originTime = std::chrono::steady_clock::now();
 

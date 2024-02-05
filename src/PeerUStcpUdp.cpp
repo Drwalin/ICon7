@@ -72,6 +72,12 @@ void Peer::_InternalFlushQueuedSends()
 {
 	Host *host = (Host *)(this->host);
 	icon7::uS::tcp::Peer::_InternalFlushQueuedSends();
+	
+	DEBUG("%s %s %s",
+			hasPeerThisAddress?"hasPeerThisAddress":"peerHasNoThis",
+			hasSendingIdentity?"hasSendingIdentity":"doesNotHaveSendingIdentity",
+			host->_InternalCanSendMorePackets()?"CanSendMore":"NoSpaceAvailableToSend");
+	
 	if (hasPeerThisAddress == false) {
 		if (hasSendingIdentity) {
 			if (host->_InternalCanSendMorePackets()) {
@@ -80,10 +86,18 @@ void Peer::_InternalFlushQueuedSends()
 					(uint8_t *)host->_InternalGetNextPacketDataPointer();
 				memcpy(packetPackingPtr, &sendingIdentity, 4);
 				host->_InternalFinishSendingPacket(4, &ip4);
-				DEBUG("Sending initial udp packet");
+				DEBUG("Sending initial udp packet ||||||||||||||||||||||||||||||||");
+				DEBUG(" first, last: %i %i", host->firstFilledSendPacketId, host->lastFilledSendPacketId);
+			} else {
+// 				DEBUG("333333333333333333333333333333333333333");
 			}
+		} else {
+			DEBUG("2222222222222222222222222222222222222");
 		}
+	} else {
+		DEBUG("111111111111111111111111111111111111111");
 	}
+	DEBUG(" first, last: %i %i", host->firstFilledSendPacketId, host->lastFilledSendPacketId);
 	if (hasRemoteAddress == false) {
 		if (udpSendFrames.size() > 50) {
 			// TODO: reconsider dropping all unreliable packets befor
@@ -171,7 +185,20 @@ bool Peer::_InternalHasQueuedSends() const
 
 void Peer::_InternalOnUdpPacket(void *data, uint32_t bytes)
 {
+	DEBUG(" . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .");
 	bitscpp::ByteReader<true> reader((uint8_t *)data, 0, bytes);
+	
+	if (bytes == 0) {
+		hasRemoteAddress = true;
+		std::vector<uint8_t> data;
+		data.resize(1);
+		data[0] = 0x81;
+		if (SSL) {
+			memcpy(data.data() + 5, sendingKey, 32);
+		}
+		SendLocalThread(std::move(data),
+						FLAG_UNRELIABLE | FLAGS_PROTOCOL_CONTROLL_SEQUENCE);
+	}
 
 	uint32_t packetId = 0;
 	reader.op(packetId);

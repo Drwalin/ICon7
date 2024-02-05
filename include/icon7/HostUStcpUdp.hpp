@@ -70,6 +70,8 @@ public:
 	virtual void _Internal_on_open_Finish(std::shared_ptr<icon7::Peer> peer) override;
 	
 	uint32_t GenerateNewReceivingIdentityForPeer(std::shared_ptr<Peer> peer);
+	
+	friend class Peer;
 
 protected:
 	static void _InternalOnReceiveUdpPacket(us_udp_socket_t *socket,
