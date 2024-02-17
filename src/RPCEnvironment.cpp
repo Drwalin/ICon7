@@ -70,6 +70,7 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader, Flags flags)
 				mtd->Call(peer, reader, flags, returnId);
 			}
 		} else {
+			DEBUG("function not found: `%s`", name.c_str());
 		}
 	} break;
 	case FLAGS_CALL_RETURN_FEEDBACK: {

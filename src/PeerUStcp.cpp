@@ -63,7 +63,6 @@ bool Peer::_InternalSend(SendFrameStruct &f, bool hasMore)
 }
 
 void Peer::_InternalDisconnect() {
-	DEBUG("Disconnect!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 	us_socket_shutdown(SSL, socket);
 }
 

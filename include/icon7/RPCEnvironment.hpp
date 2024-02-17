@@ -50,6 +50,15 @@ public:
 	 * offset
 	 */
 	void OnReceive(Peer *peer, ByteReader &reader, Flags flags);
+	
+	template <typename Fun>
+	void RegisterMessage(const std::string &name, std::function<Fun> fun,
+						 CommandExecutionQueue *executionQueue = nullptr)
+	{
+		auto func = new MessageConverterSpecStdFunction(fun);
+		func->executionQueue = executionQueue;
+		registeredMessages[name] = func;
+	}
 
 	template <typename Fun>
 	void RegisterMessage(const std::string &name, Fun &&fun,
