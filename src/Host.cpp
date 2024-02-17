@@ -91,7 +91,6 @@ void Host::WaitStopRunning()
 
 void Host::_InternalDestroy()
 {
-	DEBUG("Disconnect!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 	DisconnectAllAsync();
 	StopListening();
 	QueueStopRunning();
@@ -110,14 +109,12 @@ void Host::_InternalDestroy()
 
 void Host::DisconnectAllAsync()
 {
-	DEBUG("Disconnect!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 	this->EnqueueCommand(commands::ExecuteOnHost{
 		this, nullptr, [](Host *host, void *) { host->DisconnectAll(); }});
 }
 
 void Host::DisconnectAll()
 {
-	DEBUG("Disconnect!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 	for (auto &p : peers) {
 		p->Disconnect();
 	}

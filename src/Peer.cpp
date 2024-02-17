@@ -67,7 +67,6 @@ void Peer::SendLocalThread(std::vector<uint8_t> &&dataWithoutHeader,
 
 void Peer::Disconnect()
 {
-	DEBUG("Disconnect!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 	peerFlags |= BIT_DISCONNECTING;
 	Command command{commands::ExecuteDisconnect{}};
 	commands::ExecuteDisconnect &com =

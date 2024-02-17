@@ -53,7 +53,7 @@ public:
 						uint32_t returnId, std::index_sequence<SeqArgs...>)
 	{
 		Tret ret = onReceive(std::get<SeqArgs>(args)...);
-		if (returnId) {
+		if (returnId && ((flags&6)==FLAGS_CALL)) {
 			std::vector<uint8_t> buffer;
 			{
 				/*
@@ -66,6 +66,8 @@ public:
 			}
 			peer->Send(std::move(buffer), ((flags | Flags(6)) ^ Flags(6)) |
 											  FLAGS_CALL_RETURN_FEEDBACK);
+		} else if (returnId) {
+			DEBUG("It should never happen -> it's a bug, where MessegeConverter receives non 0 returnId for non returning RPC send.");
 		}
 	}
 };
@@ -78,7 +80,7 @@ public:
 						uint32_t returnId, std::index_sequence<SeqArgs...>)
 	{
 		onReceive(std::get<SeqArgs>(args)...);
-		if (returnId) {
+		if (returnId && ((flags&6)==FLAGS_CALL)) {
 			std::vector<uint8_t> buffer;
 			{
 				/*
@@ -90,6 +92,8 @@ public:
 			}
 			peer->Send(std::move(buffer), ((flags | Flags(6)) ^ Flags(6)) |
 											  FLAGS_CALL_RETURN_FEEDBACK);
+		} else if (returnId) {
+			DEBUG("It should never happen -> it's a bug, where MessegeConverter receives non 0 returnId for non returning RPC send.");
 		}
 	}
 };
@@ -130,6 +134,44 @@ private:
 
 private:
 	Tret (*const onReceive)(Targs...);
+};
+
+template <typename Tret, typename... Targs>
+class MessageConverterSpecStdFunction : public MessageConverter
+{
+public:
+	using TupleType = std::tuple<typename std::remove_const<
+		typename std::remove_reference<Targs>::type>::type...>;
+
+	MessageConverterSpecStdFunction(std::function<Tret(Targs... args)> onReceive)
+		: onReceive(onReceive)
+	{
+	}
+
+	virtual ~MessageConverterSpecStdFunction() = default;
+
+	virtual void Call(Peer *peer, ByteReader &reader, Flags flags,
+					  uint32_t returnId) override
+	{
+		auto seq = std::index_sequence_for<Targs...>{};
+		_InternalCall(peer, flags, reader, returnId, seq);
+	}
+
+private:
+	template <size_t... SeqArgs>
+	void _InternalCall(Peer *peer, Flags flags, ByteReader &reader,
+					   uint32_t returnId, std::index_sequence<SeqArgs...> seq)
+	{
+		TupleType args;
+		(PeerFlagsArgumentsReader::ReadType(peer, flags, reader,
+											std::get<SeqArgs>(args)),
+		 ...);
+		MessageReturnExecutor<Tret>::Execute(onReceive, args, peer, flags,
+											 returnId, seq);
+	}
+
+private:
+	std::function<Tret(Targs... args)> onReceive;
 };
 
 } // namespace icon7
