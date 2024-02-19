@@ -53,7 +53,7 @@ public:
 						uint32_t returnId, std::index_sequence<SeqArgs...>)
 	{
 		Tret ret = onReceive(std::get<SeqArgs>(args)...);
-		if (returnId && ((flags&6)==FLAGS_CALL)) {
+		if (returnId && ((flags & 6) == FLAGS_CALL)) {
 			std::vector<uint8_t> buffer;
 			{
 				/*
@@ -67,7 +67,9 @@ public:
 			peer->Send(std::move(buffer), ((flags | Flags(6)) ^ Flags(6)) |
 											  FLAGS_CALL_RETURN_FEEDBACK);
 		} else if (returnId) {
-			DEBUG("It should never happen -> it's a bug, where MessegeConverter receives non 0 returnId for non returning RPC send.");
+			DEBUG(
+				"It should never happen -> it's a bug, where MessegeConverter "
+				"receives non 0 returnId for non returning RPC send.");
 		}
 	}
 };
@@ -80,7 +82,7 @@ public:
 						uint32_t returnId, std::index_sequence<SeqArgs...>)
 	{
 		onReceive(std::get<SeqArgs>(args)...);
-		if (returnId && ((flags&6)==FLAGS_CALL)) {
+		if (returnId && ((flags & 6) == FLAGS_CALL)) {
 			std::vector<uint8_t> buffer;
 			{
 				/*
@@ -93,7 +95,9 @@ public:
 			peer->Send(std::move(buffer), ((flags | Flags(6)) ^ Flags(6)) |
 											  FLAGS_CALL_RETURN_FEEDBACK);
 		} else if (returnId) {
-			DEBUG("It should never happen -> it's a bug, where MessegeConverter receives non 0 returnId for non returning RPC send.");
+			DEBUG(
+				"It should never happen -> it's a bug, where MessegeConverter "
+				"receives non 0 returnId for non returning RPC send.");
 		}
 	}
 };
@@ -143,7 +147,8 @@ public:
 	using TupleType = std::tuple<typename std::remove_const<
 		typename std::remove_reference<Targs>::type>::type...>;
 
-	MessageConverterSpecStdFunction(std::function<Tret(Targs... args)> onReceive)
+	MessageConverterSpecStdFunction(
+		std::function<Tret(Targs... args)> onReceive)
 		: onReceive(onReceive)
 	{
 	}
@@ -172,6 +177,49 @@ private:
 
 private:
 	std::function<Tret(Targs... args)> onReceive;
+};
+
+template <typename T, typename Tret, typename... Targs>
+class MessageConverterSpecMethodOfObject : public MessageConverter
+{
+public:
+	using TupleType = std::tuple<typename std::remove_const<
+		typename std::remove_reference<Targs>::type>::type...>;
+
+	MessageConverterSpecMethodOfObject(T *object,
+									   Tret (T::*onReceive)(Targs... args))
+		: object(object), onReceive(onReceive)
+	{
+	}
+
+	virtual ~MessageConverterSpecMethodOfObject() = default;
+
+	virtual void Call(Peer *peer, ByteReader &reader, Flags flags,
+					  uint32_t returnId) override
+	{
+		auto seq = std::index_sequence_for<Targs...>{};
+		_InternalCall(peer, flags, reader, returnId, seq);
+	}
+
+private:
+	template <size_t... SeqArgs>
+	void _InternalCall(Peer *peer, Flags flags, ByteReader &reader,
+					   uint32_t returnId, std::index_sequence<SeqArgs...> seq)
+	{
+		TupleType args;
+		(PeerFlagsArgumentsReader::ReadType(peer, flags, reader,
+											std::get<SeqArgs>(args)),
+		 ...);
+		MessageReturnExecutor<Tret>::Execute(
+			[this](Targs... args) -> Tret {
+				return (object->*onReceive)(args...);
+			},
+			args, peer, flags, returnId, seq);
+	}
+
+private:
+	T *object;
+	Tret (T::*onReceive)(Targs... args);
 };
 
 } // namespace icon7

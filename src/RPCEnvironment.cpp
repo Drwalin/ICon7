@@ -132,4 +132,20 @@ void RPCEnvironment::CheckForTimeoutFunctionCalls(uint32_t maxChecks)
 		t.ExecuteTimeout();
 	}
 }
+
+void RPCEnvironment::RemoveRegisteredMessage(const std::string &name)
+{
+	auto it = registeredMessages.find(name);
+	if (it == registeredMessages.end()) {
+		return;
+	}
+	delete it->second;
+	registeredMessages.erase(it);
+}
+
+void RPCEnvironment::RegisterAnyMessage(const std::string &name,
+										MessageConverter *messageConverter)
+{
+	registeredMessages[name] = messageConverter;
+}
 } // namespace icon7
