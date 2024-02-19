@@ -50,14 +50,14 @@ public:
 	 * offset
 	 */
 	void OnReceive(Peer *peer, ByteReader &reader, Flags flags);
-	
+
 	template <typename Fun>
 	void RegisterMessage(const std::string &name, std::function<Fun> fun,
 						 CommandExecutionQueue *executionQueue = nullptr)
 	{
 		auto func = new MessageConverterSpecStdFunction(fun);
 		func->executionQueue = executionQueue;
-		registeredMessages[name] = func;
+		RegisterAnyMessage(name, func);
 	}
 
 	template <typename Fun>
@@ -67,8 +67,20 @@ public:
 		auto f = ConvertLambdaToFunctionPtr(fun);
 		auto func = new MessageConverterSpec(f);
 		func->executionQueue = executionQueue;
-		registeredMessages[name] = func;
+		RegisterAnyMessage(name, func);
 	}
+
+	template <typename T, typename Fun>
+	void RegisterObjectMessage(const std::string &name, T *object, Fun &&fun,
+							   CommandExecutionQueue *executionQueue = nullptr)
+	{
+		auto func = new MessageConverterSpecMethodOfObject(object, fun);
+		func->executionQueue = executionQueue;
+		RegisterAnyMessage(name, func);
+	}
+
+	void RegisterAnyMessage(const std::string &name,
+							MessageConverter *messageConverter);
 
 	template <typename... Targs>
 	void Send(Peer *peer, Flags flags, const std::string &name,
@@ -123,6 +135,8 @@ public:
 	}
 
 	void CheckForTimeoutFunctionCalls(uint32_t maxChecks = 10);
+
+	void RemoveRegisteredMessage(const std::string &name);
 
 protected:
 	std::unordered_map<std::string, MessageConverter *> registeredMessages;
