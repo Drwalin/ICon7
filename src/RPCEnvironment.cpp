@@ -57,7 +57,8 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader, Flags flags)
 		auto it = registeredMessages.find(name);
 		if (registeredMessages.end() != it) {
 			auto mtd = it->second;
-			if (mtd->executionQueue) {
+			auto queue = mtd->ExecuteGetQueue(peer, reader, flags);
+			if (queue) {
 				Command command{commands::ExecuteRPC(std::move(reader))};
 				commands::ExecuteRPC &com =
 					std::get<commands::ExecuteRPC>(command.cmd);
@@ -65,7 +66,7 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader, Flags flags)
 				com.flags = flags;
 				com.returnId = returnId;
 				com.messageConverter = mtd;
-				mtd->executionQueue->EnqueueCommand(std::move(command));
+				queue->EnqueueCommand(std::move(command));
 			} else {
 				mtd->Call(peer, reader, flags, returnId);
 			}
@@ -141,11 +142,5 @@ void RPCEnvironment::RemoveRegisteredMessage(const std::string &name)
 	}
 	delete it->second;
 	registeredMessages.erase(it);
-}
-
-void RPCEnvironment::RegisterAnyMessage(const std::string &name,
-										MessageConverter *messageConverter)
-{
-	registeredMessages[name] = messageConverter;
 }
 } // namespace icon7

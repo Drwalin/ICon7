@@ -37,12 +37,33 @@ class CommandExecutionQueue;
 class MessageConverter
 {
 public:
+	MessageConverter()
+	{
+		getExecutionQueue = nullptr;
+		_executionQueue = nullptr;
+	}
 	virtual ~MessageConverter() = default;
 
 	virtual void Call(Peer *peer, ByteReader &reader, Flags flags,
 					  uint32_t returnId) = 0;
 
-	CommandExecutionQueue *executionQueue;
+	inline CommandExecutionQueue *
+	ExecuteGetQueue(Peer *peer, ByteReader &reader, Flags flags)
+	{
+		if (_executionQueue) {
+			return _executionQueue;
+		}
+		if (getExecutionQueue) {
+			return getExecutionQueue(this, peer, reader, flags);
+		}
+		return nullptr;
+	}
+
+	CommandExecutionQueue *(*getExecutionQueue)(
+		MessageConverter *messageConverter, Peer *peer, ByteReader &reader,
+		Flags flags);
+
+	CommandExecutionQueue *_executionQueue;
 };
 
 template <typename Tret> class MessageReturnExecutor
