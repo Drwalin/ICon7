@@ -52,35 +52,55 @@ public:
 	void OnReceive(Peer *peer, ByteReader &reader, Flags flags);
 
 	template <typename Fun>
-	void RegisterMessage(const std::string &name, std::function<Fun> fun,
-						 CommandExecutionQueue *executionQueue = nullptr)
+	MessageConverter *
+	RegisterMessage(const std::string &name, std::function<Fun> fun,
+					CommandExecutionQueue *executionQueue = nullptr,
+					CommandExecutionQueue *(*getExecutionQueue)(
+						MessageConverter *messageConverter, Peer *peer,
+						ByteReader &reader, Flags flags) = nullptr)
 	{
 		auto func = new MessageConverterSpecStdFunction(fun);
-		func->executionQueue = executionQueue;
-		RegisterAnyMessage(name, func);
+		func->_executionQueue = executionQueue;
+		func->getExecutionQueue = getExecutionQueue;
+		return RegisterAnyMessage(name, func);
 	}
 
 	template <typename Fun>
-	void RegisterMessage(const std::string &name, Fun &&fun,
-						 CommandExecutionQueue *executionQueue = nullptr)
+	MessageConverter *
+	RegisterMessage(const std::string &name, Fun &&fun,
+					CommandExecutionQueue *executionQueue = nullptr,
+					CommandExecutionQueue *(*getExecutionQueue)(
+						MessageConverter *messageConverter, Peer *peer,
+						ByteReader &reader, Flags flags) = nullptr)
 	{
 		auto f = ConvertLambdaToFunctionPtr(fun);
 		auto func = new MessageConverterSpec(f);
-		func->executionQueue = executionQueue;
-		RegisterAnyMessage(name, func);
+		func->_executionQueue = executionQueue;
+		func->getExecutionQueue = getExecutionQueue;
+		return RegisterAnyMessage(name, func);
 	}
 
 	template <typename T, typename Fun>
-	void RegisterObjectMessage(const std::string &name, T *object, Fun &&fun,
-							   CommandExecutionQueue *executionQueue = nullptr)
+	MessageConverter *
+	RegisterObjectMessage(const std::string &name, T *object, Fun &&fun,
+						  CommandExecutionQueue *executionQueue = nullptr,
+						  CommandExecutionQueue *(*getExecutionQueue)(
+							  MessageConverter *messageConverter, Peer *peer,
+							  ByteReader &reader, Flags flags) = nullptr)
 	{
 		auto func = new MessageConverterSpecMethodOfObject(object, fun);
-		func->executionQueue = executionQueue;
-		RegisterAnyMessage(name, func);
+		func->_executionQueue = executionQueue;
+		func->getExecutionQueue = getExecutionQueue;
+		return RegisterAnyMessage(name, func);
 	}
 
-	void RegisterAnyMessage(const std::string &name,
-							MessageConverter *messageConverter);
+	inline MessageConverter *
+	RegisterAnyMessage(const std::string &name,
+					   MessageConverter *messageConverter)
+	{
+		registeredMessages[name] = messageConverter;
+		return messageConverter;
+	}
 
 	template <typename... Targs>
 	void Send(Peer *peer, Flags flags, const std::string &name,
