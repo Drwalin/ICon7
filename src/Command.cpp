@@ -69,6 +69,8 @@ void ExecuteDisconnect::Execute()
 }
 
 void ExecuteFunctionPointer::Execute() { function(); }
+
+void ExecuteFunction::Execute() { function(); }
 } // namespace commands
 
 using namespace commands;
