@@ -24,6 +24,7 @@
 #include <variant>
 #include <memory>
 #include <vector>
+#include <functional>
 
 #include "Flags.hpp"
 #include "ByteReader.hpp"
@@ -204,10 +205,23 @@ public:
 class ExecuteFunctionPointer final
 {
 public:
+	ExecuteFunctionPointer() = default;
 	ExecuteFunctionPointer(ExecuteFunctionPointer &&) = default;
 	ExecuteFunctionPointer &operator=(ExecuteFunctionPointer &&) = default;
 
 	void (*function)();
+
+	void Execute();
+};
+
+class ExecuteFunction final
+{
+public:
+	ExecuteFunction() = default;
+	ExecuteFunction(ExecuteFunction &&) = default;
+	ExecuteFunction &operator=(ExecuteFunction &&) = default;
+
+	std::function<void()> function;
 
 	void Execute();
 };
@@ -231,7 +245,7 @@ public:
 				 commands::ExecuteReturnRC, commands::ExecuteBooleanOnHost,
 				 commands::ExecuteConnect, commands::ExecuteListen,
 				 commands::ExecuteDisconnect, commands::ExecuteFunctionPointer,
-				 commands::ExecuteOnHost>
+				 commands::ExecuteOnHost, commands::ExecuteFunction>
 		cmd;
 
 	void Execute();
@@ -276,6 +290,10 @@ public:
 	}
 	Command(commands::ExecuteFunctionPointer &&executeFunctionPointer)
 		: cmd(std::move(executeFunctionPointer))
+	{
+	}
+	Command(commands::ExecuteFunction &&executeFunction)
+		: cmd(std::move(executeFunction))
 	{
 	}
 };
