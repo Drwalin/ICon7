@@ -32,38 +32,6 @@
 
 namespace icon7
 {
-void Debug(const char *file, int line, const char *function, const char *fmt,
-		   ...)
-{
-	static std::atomic<int> globID = 1;
-	thread_local static int id = globID++;
-
-	std::string funcName = function;
-	funcName = std::regex_replace(funcName, std::regex("\\[[^\\[\\]]+\\]"), "");
-	funcName = std::regex_replace(funcName,
-								  std::regex(" ?(static|virtual|const) ?"), "");
-	funcName = std::regex_replace(funcName,
-								  std::regex(" ?(static|virtual|const) ?"), "");
-	funcName = std::regex_replace(funcName,
-								  std::regex(" ?(static|virtual|const) ?"), "");
-	funcName =
-		std::regex_replace(funcName, std::regex("\\([^\\(\\)]+\\)"), "()");
-	funcName = std::regex_replace(
-		funcName, std::regex(".*[: >]([a-zA-Z0-9_]*::[a-z0-9A-Z_]*)+\\(.*"),
-		"$1");
-	funcName += "()";
-
-	va_list va;
-	va_start(va, fmt);
-	static std::mutex mutex;
-	std::lock_guard lock(mutex);
-	fprintf(stdout, "%s:%i\t\t%s\t\t [ %2i ] \t ", file, line, funcName.c_str(),
-			id);
-	vfprintf(stdout, fmt, va);
-	fprintf(stdout, "\n");
-	fflush(stdout);
-}
-
 Host::Host()
 {
 	userData = 0;
