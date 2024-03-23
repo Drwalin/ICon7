@@ -23,19 +23,14 @@
 #include <future>
 #include <unordered_set>
 
+#include "Debug.hpp"
 #include "Flags.hpp"
 #include "ByteReader.hpp"
 #include "Command.hpp"
 #include "CommandExecutionQueue.hpp"
 
-#define DEBUG(...)                                                             \
-	icon7::Debug(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__)
-
 namespace icon7
 {
-void Debug(const char *file, int line, const char *function, const char *fmt,
-		   ...);
-
 class Peer;
 class RPCEnvironment;
 
