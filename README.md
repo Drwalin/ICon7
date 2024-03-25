@@ -87,7 +87,7 @@ yy - determines type of RPC message:
 - 00 - function/procedure call without feedback
 - 01 - function/procedure call where callee awaits returned value
            (or signal of execution finished in case of `void` return type)
-- 10 - return feedback
+- 10 - return feedback (from callee to caller)
 - 11 - Controll sequence. See Controll packet structure.
     Then first body byte values between 0x00-0x7F are
            reserved for future use; it's values between 0x80-0xFF are to be used
