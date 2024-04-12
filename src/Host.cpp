@@ -113,10 +113,14 @@ std::future<std::shared_ptr<Peer>> Host::ConnectPromise(std::string address,
 	onConnected.function = [](auto peer, auto data, auto userPointer) {
 		std::promise<std::shared_ptr<Peer>> *promise =
 			(std::promise<std::shared_ptr<Peer>> *)(userPointer);
-		promise->set_value(peer->shared_from_this());
+		if (peer != nullptr) {
+			promise->set_value(peer->shared_from_this());
+		} else {
+			promise->set_value(nullptr);
+		}
 		delete promise;
 	};
-	auto future = promise->get_future();
+	std::future<std::shared_ptr<Peer>> future = promise->get_future();
 	Connect(address, port, std::move(onConnected), nullptr);
 	return future;
 }
