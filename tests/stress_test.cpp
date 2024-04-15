@@ -150,9 +150,6 @@ void Runner(icon7::Peer *_peer)
 	std::vector<TestStruct> data;
 	uint32_t msgSent = 0;
 	for (uint32_t i = 0; i < ipc->countMessages; ++i) {
-		if (processId == 0) {
-			DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
-		}
 		if (ipc->runTestFlag == 0) {
 			if (processId == 0) {
 				DEBUG("BREAK CLIENT LOOP");
@@ -161,22 +158,13 @@ void Runner(icon7::Peer *_peer)
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		for (uint32_t j = 0; j < ((processId == -1) ? 4 : 1); ++j) {
-			if (processId == 0) {
-				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
-			}
 			uint32_t s = (processId == -1) ? GetRandomMessageSize() : 100;
 			data.resize(s / 21);
 			auto now = std::chrono::steady_clock::now();
 			double dt = std::chrono::duration<double>(now - originTime).count();
-			if (processId == 0) {
-// 				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
-			}
 			icon7::Flags flag = ((processId >= 0) || ((msgSent % 16) == 0))
 									? icon7::FLAG_RELIABLE
 									: icon7::FLAG_RELIABLE;
-			if (processId == 0) {
-// 				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
-			}
 			++msgSent;
 			uint64_t bytes = data.size() * 21 + 6;
 			if (processId >= 0) {
@@ -186,15 +174,9 @@ void Runner(icon7::Peer *_peer)
 				ipc->counterSentByServer++;
 				ipc->serverSendBytes += bytes;
 			}
-			if (processId == 0) {
-// 				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
-			}
 			rpc.Send(_peer, flag, "first", data, dt);
-			if (processId == 0) {
-				DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
-			}
 		}
-		if (processId == 0) {
+		if (processId == 0 && i%12100 == 0) {
 			DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
 		}
 	}
@@ -398,7 +380,7 @@ int main()
 
 	icon7::Initialize();
 
-	icon7::uS::tcp::Host *_host = new icon7::uS::tcpudp::Host();
+	icon7::uS::tcp::Host *_host = new icon7::uS::tcp::Host();
 	bool useSSL = true;
 	if (processId < 0) { // server
 		_host->Init(useSSL, "../cert/user.key", "../cert/user.crt", "", nullptr,

@@ -48,11 +48,13 @@ int main(int argc, char **argv)
 	host->SetRpcEnvironment(&rpc);
 	host->RunAsync();
 
-	icon7::Peer *peer = host->ConnectPromise(argv[1], port).get().get();
+	std::shared_ptr<icon7::Peer> peer = host->ConnectPromise(argv[1], port).get();
+	
 
 	printf("To exit write: quit\n");
 
 	while (true) {
+		printf("[%s]:", peer->IsReadyToUse()?"ready":"not_ready");
 		std::string str;
 		std::getline(std::cin, str);
 		if (str.substr(0, 4) == "quit" && str.size() <= 6) {
@@ -62,16 +64,16 @@ int main(int argc, char **argv)
 			host->WaitStopRunning();
 			break;
 		} else if (str.substr(0, 5) == "nick ") {
-			rpc.Send(peer, icon7::FLAG_RELIABLE, "SetNickname",
+			rpc.Send(peer.get(), icon7::FLAG_RELIABLE, "SetNickname",
 					 str.substr(5, -1));
 		} else if (str.substr(0, 4) == "msg ") {
 			auto end = str.find(' ', 5);
 			std::string recipient = str.substr(4, end - 4);
 			printf("Sending msg to `%s`\n", recipient.c_str());
-			rpc.Send(peer, icon7::FLAG_RELIABLE, "Msg", recipient,
+			rpc.Send(peer.get(), icon7::FLAG_RELIABLE, "Msg", recipient,
 					 str.substr(end + 1));
 		} else {
-			rpc.Send(peer, icon7::FLAG_RELIABLE, "Broadcast", str);
+			rpc.Send(peer.get(), icon7::FLAG_RELIABLE, "Broadcast", str);
 		}
 	}
 

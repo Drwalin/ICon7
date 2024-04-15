@@ -18,7 +18,6 @@
 
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/PeerUStcp.hpp"
-#include "../include/icon7/HostUStcpUdp.hpp"
 
 #include "../include/icon7/HostUStcp.hpp"
 
@@ -39,13 +38,8 @@ Host::~Host() {}
 
 void Host::_InternalDestroy()
 {
-	DEBUG("Disconnect!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-	us_timer_close(timerWakeup);
-	timerWakeup = nullptr;
-	
 	this->EnqueueCommand(commands::ExecuteOnHost{
 		this, nullptr, [](icon7::Host *_host, void *) {
-	DEBUG("Disconnect!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 			Host *host = (Host *)_host;
 			// close all sockets
 			us_socket_context_close(host->SSL, host->socketContext);
@@ -55,6 +49,9 @@ void Host::_InternalDestroy()
 
 	us_socket_context_free(SSL, socketContext);
 	socketContext = nullptr;
+	
+	us_timer_close(timerWakeup);
+	timerWakeup = nullptr;
 	
 	us_loop_free(loop);
 	loop = nullptr;
@@ -108,14 +105,17 @@ bool Host::InitLoopAndContext(us_socket_context_options_t options)
 	loop = us_create_loop(nullptr, _Internal_wakeup_cb, _Internal_pre_cb,
 						  _Internal_post_cb, sizeof(Host *));
 	if (loop == nullptr) {
+		DEBUG("FAILED TO CREATE LOOP");
 		return false;
 	}
-	*(Host **)us_loop_ext(loop) = this;
+	*HostStoreFromUsLoop(loop) = this;
 
 	socketContext =
 		us_create_socket_context(SSL, loop, sizeof(Host *), options);
 	if (socketContext == nullptr) {
+		DEBUG("FAILED TO CREATE HOST");
 		us_loop_free(loop);
+		loop = nullptr;
 		return false;
 	}
 	*(Host **)us_socket_context_ext(SSL, socketContext) = this;
@@ -125,8 +125,8 @@ bool Host::InitLoopAndContext(us_socket_context_options_t options)
 	} else {
 		SetUSocketContextCallbacks<false>();
 	}
-
-	return loop != nullptr;
+	
+	return true;
 }
 
 void Host::_InternalListen(IPProto ipProto, uint16_t port,
@@ -155,19 +155,19 @@ void Host::SingleLoopIteration()
 
 void Host::_Internal_wakeup_cb(struct us_loop_t *loop)
 {
-	auto host = (*(Host **)us_loop_ext(loop));
+	Host *host = HostFromUsLoop(loop);
 	host->_InternalSingleLoopIteration();
 }
 
 void Host::_Internal_pre_cb(struct us_loop_t *loop)
 {
-	auto host = (*(Host **)us_loop_ext(loop));
+	Host *host = HostFromUsLoop(loop);
 	host->_InternalSingleLoopIteration();
 }
 
 void Host::_Internal_post_cb(struct us_loop_t *loop)
 {
-	auto host = (*(Host **)us_loop_ext(loop));
+	Host *host = HostFromUsLoop(loop);
 	host->_InternalSingleLoopIteration();
 }
 
@@ -195,7 +195,7 @@ us_socket_t *Host::_Internal_on_open(struct us_socket_t *socket, int isClient,
 {
 	us_socket_context_t *context = us_socket_context(SSL, socket);
 	us_loop_t *loop = us_socket_context_loop(SSL, context);
-	Host *host = *(Host **)us_loop_ext(loop);
+	Host *host = HostFromUsLoop(loop);
 
 	std::shared_ptr<icon7::Peer> peer;
 
@@ -300,6 +300,16 @@ void Host::StopListening()
 std::shared_ptr<Peer> Host::MakePeer(us_socket_t *socket)
 {
 	return std::make_shared<uS::tcp::Peer>(this, socket);
+}
+
+Host *Host::HostFromUsLoop(us_loop_t *loop)
+{
+	return *HostStoreFromUsLoop(loop);
+}
+
+Host **Host::HostStoreFromUsLoop(us_loop_t *loop)
+{
+	return (Host **)us_loop_ext(loop);
 }
 
 } // namespace tcp

@@ -19,8 +19,6 @@
 #ifndef ICON7_PEER_HPP
 #define ICON7_PEER_HPP
 
-#include <cinttypes>
-
 #include <vector>
 #include <atomic>
 #include <memory>
@@ -31,8 +29,6 @@
 #endif
 
 #include "Flags.hpp"
-#include "ByteReader.hpp"
-#include "ByteWriter.hpp"
 #include "Command.hpp"
 #include "FrameDecoder.hpp"
 #include "SendFrameStruct.hpp"

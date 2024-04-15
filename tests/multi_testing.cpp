@@ -2,7 +2,6 @@
 #include <cstdio>
 
 #include <future>
-#include <iostream>
 #include <chrono>
 #include <thread>
 
@@ -13,9 +12,19 @@
 #include <icon7/PeerUStcp.hpp>
 #include <icon7/HostUStcp.hpp>
 
-int Sum(int a, int b) { return a + b; }
+std::atomic<int> sent = 0, received = 0, returned = 0;
 
-int Mul(int a, int b) { return a * b; }
+int Sum(int a, int b)
+{
+	received++;
+	return a + b;
+}
+
+int Mul(int a, int b)
+{
+	received++;
+	return a * b;
+}
 
 int main()
 {
@@ -24,6 +33,7 @@ int main()
 	icon7::Initialize();
 
 	for (int i = 0; i < 10; ++i) {
+		sent = received = returned = 0;
 		DEBUG("Iteration: %i", i);
 		icon7::RPCEnvironment rpc;
 		rpc.RegisterMessage("sum", Sum);
@@ -55,22 +65,30 @@ int main()
 			icon7::Peer *peer = f.get().get();
 
 			rpc.Send(peer, icon7::FLAG_RELIABLE, "sum", 3, 23);
+			sent++;
 
 			rpc.Call(peer, icon7::FLAG_RELIABLE,
 					 icon7::OnReturnCallback::Make<uint32_t>(
 						 [](icon7::Peer *peer, icon7::Flags flags,
-							uint32_t result) -> void {},
+							uint32_t result) -> void { returned++; },
 						 [](icon7::Peer *peer) -> void {
 							 printf(" Multiplication timeout\n");
 						 },
 						 10000, peer),
 					 "mul", 5, 13);
+			sent++;
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
 		hosta->_InternalDestroy();
 		hostb->_InternalDestroy();
+
+		if (sent != received || returned != sent / 2) {
+			DEBUG("FAILED: sent/received = %i/%i ; returned/called = %i/%i",
+				  sent.load(), received.load(), returned.load(),
+				  sent.load() / 2);
+		}
 
 		delete hosta;
 		delete hostb;
