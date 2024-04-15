@@ -165,6 +165,7 @@ public:
 	ExecuteListen(ExecuteListen &&) = default;
 	ExecuteListen &operator=(ExecuteListen &&) = default;
 
+	std::string address;
 	IPProto ipProto;
 	Host *host;
 	uint16_t port;

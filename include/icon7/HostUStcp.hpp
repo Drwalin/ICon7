@@ -64,7 +64,7 @@ protected:
 
 	virtual void
 	_InternalConnect(commands::ExecuteConnect &connectCommand) override;
-	virtual void _InternalListen(IPProto ipProto, uint16_t port,
+	virtual void _InternalListen(const std::string &address,IPProto ipProto, uint16_t port,
 								 commands::ExecuteBooleanOnHost &com) override;
 
 	static void _Internal_wakeup_cb(struct us_loop_t *loop);

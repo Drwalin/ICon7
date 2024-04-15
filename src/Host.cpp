@@ -154,7 +154,7 @@ void Host::_Internal_on_close_Finish(std::shared_ptr<Peer> peer)
 	peer->peerFlags |= Peer::BIT_CLOSED;
 }
 
-std::future<bool> Host::ListenOnPort(uint16_t port, IPProto ipProto)
+std::future<bool> Host::ListenOnPort(const std::string &address, uint16_t port, IPProto ipProto)
 {
 	std::promise<bool> *promise = new std::promise<bool>();
 	commands::ExecuteBooleanOnHost callback;
@@ -166,15 +166,16 @@ std::future<bool> Host::ListenOnPort(uint16_t port, IPProto ipProto)
 		delete promise;
 	};
 	auto future = promise->get_future();
-	ListenOnPort(port, ipProto, std::move(callback), nullptr);
+	ListenOnPort(address, port, ipProto, std::move(callback), nullptr);
 	return future;
 }
 
-void Host::ListenOnPort(uint16_t port, IPProto ipProto,
+void Host::ListenOnPort(const std::string &address, uint16_t port, IPProto ipProto,
 						commands::ExecuteBooleanOnHost &&callback,
 						CommandExecutionQueue *queue)
 {
 	commands::ExecuteListen com;
+	com.address = address;
 	com.host = this;
 	com.ipProto = ipProto;
 	com.port = port;

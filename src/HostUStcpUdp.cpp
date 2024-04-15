@@ -47,12 +47,15 @@ Host::~Host() {}
 
 void Host::_InternalDestroy() { icon7::uS::tcp::Host::_InternalDestroy(); }
 
-void Host::_InternalListen(IPProto ipProto, uint16_t port,
+void Host::_InternalListen(const std::string &address, IPProto ipProto, uint16_t port,
 						   commands::ExecuteBooleanOnHost &com)
 {
 	const char *proto = "127.0.0.1";
 	if (ipProto == IPv6) {
 		proto = "::1";
+	}
+	if (address.size() != 0) {
+		proto = address.c_str();
 	}
 	sendingBuffer = us_create_udp_packet_buffer();
 	receivingBuffer = us_create_udp_packet_buffer();
@@ -64,7 +67,7 @@ void Host::_InternalListen(IPProto ipProto, uint16_t port,
 		return;
 	}
 
-	icon7::uS::tcp::Host::_InternalListen(ipProto, port, com);
+	icon7::uS::tcp::Host::_InternalListen(address, ipProto, port, com);
 
 	if (com.result == false) {
 		us_close_and_free_udp_socket(udpSocket, 0);

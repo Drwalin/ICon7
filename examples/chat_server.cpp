@@ -78,8 +78,6 @@ int main(int argc, char **argv)
 	icon7::uS::tcp::Host *_host = new icon7::uS::tcp::Host();
 	_host->Init();
 	icon7::Host *host = _host;
-	auto listeningFuture = host->ListenOnPort(port, icon7::IPv4);
-
 	host->SetOnDisconnect([](icon7::Peer *peer) {
 		if (peer->userPointer != nullptr) {
 			std::string *oldName = (std::string *)(peer->userPointer);
@@ -91,12 +89,22 @@ int main(int argc, char **argv)
 	host->SetRpcEnvironment(&rpc);
 	host->RunAsync();
 	
-	listeningFuture.wait_for(std::chrono::seconds(2));
-	if (listeningFuture.get()) {
-		printf("Listening on port: %i\n", port);
-	} else {
-		printf("Failed to listen on port: %i\n", port);
-	}
+	auto Listen = [host, port](std::string addr)->bool
+	{
+		auto listeningFuture = host->ListenOnPort(addr, port, icon7::IPv4);
+		listeningFuture.wait_for(std::chrono::seconds(2));
+		if (listeningFuture.get()) {
+			printf("Listening on: %s [%i]\n", addr.c_str(), port);
+			return true;
+		} else {
+			printf("Failed to listen on: %s [%i]\n", addr.c_str(), port);
+			return false;
+		}
+	};
+	Listen("");
+	Listen("localhost");
+	Listen("127.0.0.1");
+	Listen("::1");
 
 	printf("To exit write: quit\n");
 
