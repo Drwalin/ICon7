@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "../include/icon7/Debug.hpp"
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/PeerUStcp.hpp"
 
@@ -129,15 +130,20 @@ bool Host::InitLoopAndContext(us_socket_context_options_t options)
 	return true;
 }
 
-void Host::_InternalListen(IPProto ipProto, uint16_t port,
+void Host::_InternalListen(const std::string &address,IPProto ipProto, uint16_t port,
 						   commands::ExecuteBooleanOnHost &com)
 {
 	us_listen_socket_t *socket = nullptr;
-	if (ipProto == IPv4) {
-		socket = us_socket_context_listen(SSL, socketContext, "127.0.0.1", port,
-										  0, sizeof(Host *));
+	if (address.size() == 0) {
+		if (ipProto == IPv4) {
+			socket = us_socket_context_listen(SSL, socketContext, "127.0.0.1", port,
+											  0, sizeof(Host *));
+		} else {
+			socket = us_socket_context_listen(SSL, socketContext, "::1", port, 0,
+											  sizeof(Host *));
+		}
 	} else {
-		socket = us_socket_context_listen(SSL, socketContext, "::1", port, 0,
+		socket = us_socket_context_listen(SSL, socketContext, address.c_str(), port, 0,
 										  sizeof(Host *));
 	}
 	if (socket) {

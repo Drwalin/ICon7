@@ -25,7 +25,6 @@
 
 #include "Debug.hpp"
 #include "Flags.hpp"
-#include "ByteReader.hpp"
 #include "Command.hpp"
 #include "CommandExecutionQueue.hpp"
 
@@ -49,8 +48,8 @@ public:
 	virtual void _InternalDestroy();
 	void DisconnectAllAsync();
 
-	virtual std::future<bool> ListenOnPort(uint16_t port, IPProto ipProto);
-	void ListenOnPort(uint16_t port, IPProto ipProto,
+	virtual std::future<bool> ListenOnPort(const std::string &address, uint16_t port, IPProto ipProto);
+	void ListenOnPort(const std::string &address, uint16_t port, IPProto ipProto,
 					  commands::ExecuteBooleanOnHost &&callback,
 					  CommandExecutionQueue *queue = nullptr);
 
@@ -93,7 +92,8 @@ public: // thread unsafe, safe only in hosts loop thread
 
 	void _InternalInsertPeerToFlush(Peer *peer);
 	virtual void _InternalConnect(commands::ExecuteConnect &connectCommand) = 0;
-	virtual void _InternalListen(IPProto ipProto, uint16_t port,
+	virtual void _InternalListen(const std::string &address,
+			IPProto ipProto, uint16_t port,
 								 commands::ExecuteBooleanOnHost &com) = 0;
 	void _InternalConnect_Finish(commands::ExecuteConnect &connectCommand);
 	virtual void _Internal_on_open_Finish(std::shared_ptr<Peer> peer);

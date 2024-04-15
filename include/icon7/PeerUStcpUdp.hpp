@@ -19,6 +19,8 @@
 #ifndef ICON7_PEER_US_TCPUDP_HPP
 #define ICON7_PEER_US_TCPUDP_HPP
 
+#include <map>
+
 #include "SendFrameStruct.hpp"
 #include "HostUStcpUdp.hpp"
 

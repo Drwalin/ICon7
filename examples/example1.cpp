@@ -1,10 +1,7 @@
 #include "icon7/Command.hpp"
 #include <cstdio>
 
-#include <future>
-#include <iostream>
 #include <chrono>
-#include <memory>
 #include <thread>
 
 #include <icon7/Peer.hpp>
@@ -46,7 +43,7 @@ int main()
 		com.function = [](auto host, bool v, void *) {
 			printf(" %s\n", v ? "Listening" : "Fail to listen");
 		};
-		hosta->ListenOnPort(port, icon7::IPv4, std::move(com), nullptr);
+		hosta->ListenOnPort("127.0.0.1", port, icon7::IPv4, std::move(com), nullptr);
 	}
 
 	icon7::uS::tcp::Host *hostb = new icon7::uS::tcp::Host();

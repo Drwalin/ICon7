@@ -20,8 +20,6 @@
 #define ICON7_HOST_US_TCPUDP_HPP
 
 #include <unordered_map>
-#include <map>
-#include <array>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -55,7 +53,7 @@ public:
 	
 	virtual void _InternalDestroy() override;
 
-	virtual void _InternalListen(IPProto ipProto, uint16_t port,
+	virtual void _InternalListen(const std::string &address,IPProto ipProto, uint16_t port,
 								 commands::ExecuteBooleanOnHost &com) override;
 
 	virtual void _InternalSingleLoopIteration() override;

@@ -389,7 +389,7 @@ int main()
 					"ECDHE-ECDSA-AES128-GCM-SHA256:"
 					"ECDHE-ECDSA-CHACHA20-POLY1305:"
 					"DHE-RSA-AES256-GCM-SHA384:");
-		_host->ListenOnPort(serverPort, icon7::IPv4);
+		_host->ListenOnPort("127.0.0.1", serverPort, icon7::IPv4);
 	} else { // client
 		_host->Init(useSSL);
 	}
