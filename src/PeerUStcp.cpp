@@ -16,11 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <cstring>
-
-#include <thread>
-
-#include "../include/icon7/RPCEnvironment.hpp"
 #include "../include/icon7/HostUStcp.hpp"
 #include "../include/icon7/Command.hpp"
 

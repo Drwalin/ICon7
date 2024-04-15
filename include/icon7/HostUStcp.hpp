@@ -100,6 +100,9 @@ protected:
 	friend class Peer;
 	
 	static void _InternalOnTimerWakup(us_timer_t *timer);
+	
+	static Host *HostFromUsLoop(us_loop_t *loop);
+	static Host **HostStoreFromUsLoop(us_loop_t *loop);
 
 protected:
 	int SSL;

@@ -16,14 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <cstring>
-
 #define ICON7_INCLUDE_CONCURRENT_QUEUE_CPP
 
 #include "../include/icon7/Host.hpp"
 #include "../include/icon7/RPCEnvironment.hpp"
 #include "../include/icon7/Command.hpp"
-#include "../include/icon7/CommandExecutionQueue.hpp"
 #include "../include/icon7/FramingProtocol.hpp"
 
 #include "../include/icon7/Peer.hpp"
@@ -50,6 +47,7 @@ Peer::~Peer()
 void Peer::Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
 {
 	if (IsDisconnecting()) {
+		DEBUG("TRY SEND IN DISCONNECTING PEER, dropping packet");
 		// TODO: inform about dropping packets
 		return;
 	}

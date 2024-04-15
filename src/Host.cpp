@@ -16,13 +16,9 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <cstdarg>
-
 #include <chrono>
 #include <thread>
 #include <vector>
-#include <mutex>
-#include <regex>
 
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/Peer.hpp"
