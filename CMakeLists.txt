@@ -13,6 +13,16 @@ option(ICON7_BUILD_TEST "Build tests" ON)
 
 add_subdirectory(bitscpp)
 
+if(DEFINED ICON7_LOG_IGNORE_COMMON_PATH)
+else()
+	add_compile_definitions(ICON7_LOG_IGNORE_COMMON_PATH="${PROJECT_SOURCE_DIR}")
+endif()
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+	add_compile_definitions(ICON7_LOG_DEFAULT_LOG_LEVEL=icon7::log::INFO)
+else()
+	add_compile_definitions(ICON7_LOG_DEFAULT_LOG_LEVEL=icon7::log::IGNORE)
+endif()
+
 include_directories(include/)
 include_directories(uSockets/src/)
 include_directories(bitscpp/include/)
