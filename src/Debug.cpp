@@ -18,12 +18,12 @@
 
 #include <cstdarg>
 
-#include <chrono>
 #include <mutex>
 #include <regex>
 #include <atomic>
 
 #include "../include/icon7/Debug.hpp"
+#include "../include/icon7/Time.hpp"
 
 namespace icon7
 {
@@ -32,7 +32,8 @@ namespace log
 #ifndef ICON7_LOG_IGNORE_COMMON_PATH
 #define ICON7_LOG_IGNORE_COMMON_PATH ""
 #endif
-inline const static std::string IGNORE_COMMON_PATH = ICON7_LOG_IGNORE_COMMON_PATH;
+inline const static std::string IGNORE_COMMON_PATH =
+	ICON7_LOG_IGNORE_COMMON_PATH;
 
 #ifndef ICON7_LOG_DEFAULT_LOG_LEVEL
 #define ICON7_LOG_DEFAULT_LOG_LEVEL icon7::log::IGNORE
@@ -44,15 +45,9 @@ static thread_local LogLevel threadLocalLogLevel = IGNORE;
 #else
 #endif
 
-LogLevel GetGlobalLogLevel()
-{
-	return globalLogLevel;
-}
+LogLevel GetGlobalLogLevel() { return globalLogLevel; }
 
-void SetGlobalLogLevel(LogLevel level)
-{
-	globalLogLevel = level;
-}
+void SetGlobalLogLevel(LogLevel level) { globalLogLevel = level; }
 
 LogLevel GetThreadLocalLogLevel()
 {
@@ -81,8 +76,6 @@ void RemoveThreadLocalLogLevel()
 #endif
 }
 
-
-
 bool IsLogLevelApplicable(LogLevel level)
 {
 #ifndef ICON7_LOG_IGNORE_THREAD_LOCAL_LOG_LEVEL
@@ -94,23 +87,27 @@ bool IsLogLevelApplicable(LogLevel level)
 	return level <= globalLogLevel;
 }
 
-
-
-
-const char *LogLevelToName(LogLevel level) {
+const char *LogLevelToName(LogLevel level)
+{
 	static char ar[256][4];
 	switch (level) {
-		case FATAL: return "FATAL";
-		case ERROR: return "ERROR";
-		case WARN: return "WARN";
-		case INFO: return "INFO";
-		case DEBUG: return "DEBUG";
-		case TRACE: return "TRACE";
-		default:
-			sprintf(ar[level], "%u", (int)level);
-			return ar[level];
+	case FATAL:
+		return "FATAL";
+	case ERROR:
+		return "ERROR";
+	case WARN:
+		return "WARN";
+	case INFO:
+		return "INFO";
+	case DEBUG:
+		return "DEBUG";
+	case TRACE:
+		return "TRACE";
+	default:
+		sprintf(ar[level], "%u", (int)level);
+		return ar[level];
 	}
-	return "[UNDEFINED]";
+	return "UNDEF";
 }
 
 std::string CorrectFilePath(std::string path)
@@ -121,9 +118,10 @@ std::string CorrectFilePath(std::string path)
 			path.replace(pos, IGNORE_COMMON_PATH.size(), "");
 		}
 	}
-	const static std::regex findParentPathRegex("\\.\\./[^/\\\\]*[^./\\\\][^/\\\\]/");
+	const static std::regex findParentPathRegex(
+		"\\.\\./[^/\\\\]*[^./\\\\][^/\\\\]/");
 	const static std::regex findThisPathRegex("/\\./");
-	for (int i=0; i<100; ++i) {
+	for (int i = 0; i < 100; ++i) {
 		auto oldSize = path.size();
 		path = std::regex_replace(path, findParentPathRegex, "");
 		path = std::regex_replace(path, findThisPathRegex, "/");
@@ -134,13 +132,22 @@ std::string CorrectFilePath(std::string path)
 	return path;
 }
 
-void Log(LogLevel logLevel, bool printDate, bool printTime, const char *file,
-		int line, const char *function, const char *fmt, ...)
+static bool enablePrintingDateTime = false;
+
+void GlobalDisablePrintingDateTime(bool disableDateTime)
 {
+	enablePrintingDateTime = !disableDateTime;
+}
+
+void Log(LogLevel logLevel, bool printDate, bool printTime, const char *file,
+		 int line, const char *function, const char *fmt, ...)
+{
+	printDate |= enablePrintingDateTime;
+	printTime |= enablePrintingDateTime;
 	if (IsLogLevelApplicable(logLevel) == false) {
 		return;
 	}
-	
+
 	static std::atomic<int> globID = 1;
 	thread_local static int id = globID++;
 
@@ -158,21 +165,32 @@ void Log(LogLevel logLevel, bool printDate, bool printTime, const char *file,
 		funcName, std::regex(".*[: >]([a-zA-Z0-9_]*::[a-z0-9A-Z_]*)+\\(.*"),
 		"$1");
 	funcName += "()";
-	
+
 	std::string filePath = CorrectFilePath(file);
-	
-	
-	
+
+	std::string date, time;
+	if (printDate || printTime) {
+		icon7::time::GetCurrentDateTimeStrings(date, time, 5);
+	}
+	if (!printDate) {
+		date = "";
+	}
+	if (!printTime) {
+		time = "";
+	}
 
 	va_list va;
 	va_start(va, fmt);
 	static std::mutex mutex;
 	std::lock_guard lock(mutex);
-	fprintf(stdout, "[%s]: %s:%i\t\t%s\t\t [ %2i ] \t ", LogLevelToName(logLevel), filePath.c_str(), line, funcName.c_str(),
-			id);
+	fprintf(stdout, "[%s]%s%s%s%s: %s:%i\t%s\t [ %2i ] \t ",
+			LogLevelToName(logLevel),
+			(printDate?" ":""), date.c_str(),
+			(printTime?" ":""), time.c_str(),
+			filePath.c_str(), line, funcName.c_str(), id);
 	vfprintf(stdout, fmt, va);
 	fprintf(stdout, "\n");
 	fflush(stdout);
 }
-}
-}
+} // namespace log
+} // namespace icon7
