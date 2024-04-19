@@ -20,12 +20,38 @@
 #define ICON7_DEBUG_HPP
 
 #define DEBUG(...)                                                             \
-	icon7::Debug(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__)
+	icon7::log::Log(icon7::log::DEBUG, false, false, __FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__)
 
 namespace icon7
 {
-void Debug(const char *file, int line, const char *function, const char *fmt,
-		   ...);
+namespace log
+{
+enum LogLevel : unsigned char
+{
+	FATAL = 1,
+	ERROR = 2,
+	WARN = 3,
+	INFO = 4,
+	DEBUG = 5,
+	TRACE = 6,
+	
+	IGNORE = 127
+};
+
+const char *LogLevelToName(LogLevel level);
+
+LogLevel GetGlobalLogLevel();
+void SetGlobalLogLevel(LogLevel level);
+
+LogLevel GetThreadLocalLogLevel();
+bool SetThreadLocalLogLevel(LogLevel level);
+void RemoveThreadLocalLogLevel();
+
+bool IsLogLevelApplicable(LogLevel level);
+
+void Log(LogLevel logLevel, bool printDate, bool printTime, const char *file, int line,
+		const char *function, const char *fmt, ...);
+}
 }
 
 #endif
