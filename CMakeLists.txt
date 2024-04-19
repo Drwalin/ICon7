@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 project(ICon7)
 cmake_policy(SET CMP0115 OLD)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -13,10 +13,6 @@ option(ICON7_BUILD_TEST "Build tests" ON)
 
 add_subdirectory(bitscpp)
 
-if(DEFINED ICON7_LOG_IGNORE_COMMON_PATH)
-else()
-	add_compile_definitions(ICON7_LOG_IGNORE_COMMON_PATH="${PROJECT_SOURCE_DIR}")
-endif()
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
 	add_compile_definitions(ICON7_LOG_DEFAULT_LOG_LEVEL=icon7::log::INFO)
 else()
@@ -53,6 +49,10 @@ add_library(icon7 STATIC
 	${source_files}
 )
 target_link_libraries(icon7 uSockets)
+
+if (NOT DEFINED ICON7_IGNORE_COMMON_LOG_PATH)
+target_compile_definitions(icon7 PUBLIC ICON7_LOG_IGNORE_COMMON_PATH="${PROJECT_SOURCE_DIR}")
+endif()
 
 if(ICON7_BUILD_TEST)
 	add_executable(stress_test

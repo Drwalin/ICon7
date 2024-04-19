@@ -47,7 +47,13 @@ namespace commands
 class ExecuteOnPeerNoArgs final
 {
 public:
+	ExecuteOnPeerNoArgs() = default;
 	ExecuteOnPeerNoArgs(ExecuteOnPeerNoArgs &&) = default;
+	ExecuteOnPeerNoArgs(std::shared_ptr<Peer> peer,
+						void (*function)(Peer *peer))
+		: peer(peer), function(function)
+	{
+	}
 	ExecuteOnPeerNoArgs &operator=(ExecuteOnPeerNoArgs &&) = default;
 
 	std::shared_ptr<Peer> peer;
@@ -77,6 +83,10 @@ class ExecuteAddPeerToFlush final
 public:
 	ExecuteAddPeerToFlush() = default;
 	ExecuteAddPeerToFlush(ExecuteAddPeerToFlush &&) = default;
+	ExecuteAddPeerToFlush(std::shared_ptr<Peer> peer, Host *host)
+		: peer(peer), host(host)
+	{
+	}
 	ExecuteAddPeerToFlush &operator=(ExecuteAddPeerToFlush &&) = default;
 
 	std::shared_ptr<Peer> peer;
@@ -88,14 +98,13 @@ public:
 class ExecuteRPC final
 {
 public:
-	ExecuteRPC &operator=(ExecuteRPC &&) = default;
-
 	ExecuteRPC(ByteReader &&reader) : reader(std::move(reader)) {}
 	ExecuteRPC(ExecuteRPC &&o)
 		: peer(std::move(o.peer)), reader(std::move(o.reader)),
 		  messageConverter(std::move(o.messageConverter)), flags(o.flags)
 	{
 	}
+	ExecuteRPC &operator=(ExecuteRPC &&) = default;
 
 	std::shared_ptr<Peer> peer;
 	ByteReader reader;
@@ -109,14 +118,13 @@ public:
 class ExecuteReturnRC final
 {
 public:
-	ExecuteReturnRC &operator=(ExecuteReturnRC &&) = default;
-
 	ExecuteReturnRC(ByteReader &&reader) : reader(std::move(reader)) {}
 	ExecuteReturnRC(ExecuteReturnRC &&o)
 		: peer(std::move(o.peer)), reader(std::move(o.reader)),
 		  function(std::move(o.function)), flags(o.flags)
 	{
 	}
+	ExecuteReturnRC &operator=(ExecuteReturnRC &&) = default;
 
 	std::shared_ptr<Peer> peer;
 	void *funcPtr;
@@ -132,6 +140,12 @@ class ExecuteBooleanOnHost final
 public:
 	ExecuteBooleanOnHost() = default;
 	ExecuteBooleanOnHost(ExecuteBooleanOnHost &&) = default;
+	ExecuteBooleanOnHost(Host *host, void *userPointer, bool result,
+						 void (*function)(Host *, bool, void *))
+		: host(host), userPointer(userPointer), result(result),
+		  function(function)
+	{
+	}
 	ExecuteBooleanOnHost &operator=(ExecuteBooleanOnHost &&) = default;
 
 	Host *host;
@@ -148,6 +162,11 @@ class ExecuteOnHost final
 public:
 	ExecuteOnHost() = default;
 	ExecuteOnHost(ExecuteOnHost &&) = default;
+	ExecuteOnHost(Host *host, void *userPointer,
+				  void (*function)(Host *, void *))
+		: host(host), userPointer(userPointer), function(function)
+	{
+	}
 	ExecuteOnHost &operator=(ExecuteOnHost &&) = default;
 
 	Host *host;
@@ -179,6 +198,7 @@ public:
 class ExecuteConnect final
 {
 public:
+	ExecuteConnect() = default;
 	ExecuteConnect(ExecuteConnect &&) = default;
 	ExecuteConnect &operator=(ExecuteConnect &&) = default;
 
@@ -195,6 +215,7 @@ public:
 class ExecuteDisconnect final
 {
 public:
+	ExecuteDisconnect() = default;
 	ExecuteDisconnect(ExecuteDisconnect &&) = default;
 	ExecuteDisconnect &operator=(ExecuteDisconnect &&) = default;
 
@@ -208,6 +229,7 @@ class ExecuteFunctionPointer final
 public:
 	ExecuteFunctionPointer() = default;
 	ExecuteFunctionPointer(ExecuteFunctionPointer &&) = default;
+	ExecuteFunctionPointer(void (*function)()) : function(function) {}
 	ExecuteFunctionPointer &operator=(ExecuteFunctionPointer &&) = default;
 
 	void (*function)();
@@ -220,6 +242,7 @@ class ExecuteFunction final
 public:
 	ExecuteFunction() = default;
 	ExecuteFunction(ExecuteFunction &&) = default;
+	ExecuteFunction(std::function<void()> function) : function(function) {}
 	ExecuteFunction &operator=(ExecuteFunction &&) = default;
 
 	std::function<void()> function;

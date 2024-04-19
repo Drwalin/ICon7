@@ -89,7 +89,7 @@ struct TestStruct {
 	uint8_t ry, rx;
 	TestStruct()
 	{
-		static volatile uint64_t s = 0;
+		static uint64_t s = 0;
 		id = ++s;
 		x = ++s;
 		y = ++s;
