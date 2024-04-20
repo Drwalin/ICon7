@@ -22,8 +22,9 @@
 #include <regex>
 #include <atomic>
 
-#include "../include/icon7/Debug.hpp"
 #include "../include/icon7/Time.hpp"
+
+#include "../include/icon7/Debug.hpp"
 
 namespace icon7
 {
@@ -96,15 +97,15 @@ const char *LogLevelToName(LogLevel level)
 	case ERROR:
 		return "ERROR";
 	case WARN:
-		return "WARN";
+		return "WARN ";
 	case INFO:
-		return "INFO";
+		return "INFO ";
 	case DEBUG:
 		return "DEBUG";
 	case TRACE:
 		return "TRACE";
 	default:
-		sprintf(ar[level], "%u", (int)level);
+		sprintf(ar[level], "%5u", (int)level);
 		return ar[level];
 	}
 	return "UNDEF";
@@ -112,11 +113,9 @@ const char *LogLevelToName(LogLevel level)
 
 std::string CorrectFilePath(std::string path)
 {
-	if (path.size() > 1) {
-		auto pos = path.find(IGNORE_COMMON_PATH);
-		if (pos == 0) {
-			path.replace(pos, IGNORE_COMMON_PATH.size(), "");
-		}
+	auto pos = path.find(IGNORE_COMMON_PATH);
+	if (pos == 0) {
+		path.replace(pos, IGNORE_COMMON_PATH.size(), "");
 	}
 	const static std::regex findParentPathRegex(
 		"\\.\\./[^/\\\\]*[^./\\\\][^/\\\\]/");
@@ -129,21 +128,25 @@ std::string CorrectFilePath(std::string path)
 			break;
 		}
 	}
+	if (pos == 0 && path.size() > 0) {
+		if (path[0] == '/' || path[0] == '\\') {
+			path.erase(path.begin());
+		}
+	}
 	return path;
 }
 
-static bool enablePrintingDateTime = false;
+static bool enablePrintingTime = false;
 
-void GlobalDisablePrintingDateTime(bool disableDateTime)
+void GlobalDisablePrintingTime(bool disableTime)
 {
-	enablePrintingDateTime = !disableDateTime;
+	enablePrintingTime = !disableTime;
 }
 
-void Log(LogLevel logLevel, bool printDate, bool printTime, const char *file,
+void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
 		 int line, const char *function, const char *fmt, ...)
 {
-	printDate |= enablePrintingDateTime;
-	printTime |= enablePrintingDateTime;
+	printTime |= enablePrintingTime;
 	if (IsLogLevelApplicable(logLevel) == false) {
 		return;
 	}
@@ -166,28 +169,29 @@ void Log(LogLevel logLevel, bool printDate, bool printTime, const char *file,
 		"$1");
 	funcName += "()";
 
-	std::string filePath = CorrectFilePath(file);
+	std::string filePath = file!=nullptr ? CorrectFilePath(file) : "";
 
 	std::string date, time;
-	if (printDate || printTime) {
+	if (printTime) {
 		icon7::time::GetCurrentDateTimeStrings(date, time, 5);
-	}
-	if (!printDate) {
-		date = "";
-	}
-	if (!printTime) {
+	} else {
 		time = "";
+		date = "";
 	}
 
 	va_list va;
 	va_start(va, fmt);
 	static std::mutex mutex;
 	std::lock_guard lock(mutex);
-	fprintf(stdout, "[%s]%s%s%s%s: %s:%i\t%s\t [ %2i ] \t ",
+	
+	fprintf(stdout, "%s %s%s%s%s ",
 			LogLevelToName(logLevel),
-			(printDate?" ":""), date.c_str(),
-			(printTime?" ":""), time.c_str(),
-			filePath.c_str(), line, funcName.c_str(), id);
+			(printTime?" ":""), date.c_str(),
+			(printTime?"_":""), time.c_str());
+	if (file != nullptr) {
+		fprintf(stdout, "%s:%i\t", filePath.c_str(), line);
+	}
+	fprintf(stdout, "%s\t [%3i] \t ", funcName.c_str(), id);
 	vfprintf(stdout, fmt, va);
 	fprintf(stdout, "\n");
 	fflush(stdout);
