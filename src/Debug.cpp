@@ -204,9 +204,9 @@ void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
 		return;
 	}
 	
-	std::string date, time;
+	std::string timestamp;
 	if (printTime) {
-		icon7::time::GetCurrentDateTimeStrings(date, time, 5);
+		timestamp = icon7::time::GetCurrentTimestampString(6);
 	}
 
 	std::string funcName = GetPrettyFunctionName(function);
@@ -222,7 +222,7 @@ void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
 	
 	if (printTime) {
 		offset = strlen(buf);
-		snprintf(buf+offset, BYTES-offset, "%s+%s ", date.c_str(), time.c_str());
+		snprintf(buf+offset, BYTES-offset, "%s ", timestamp.c_str());
 	}
 	
 	if (file != nullptr) {
@@ -238,9 +238,22 @@ void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
 	snprintf(buf+offset, BYTES-offset, "\n");
 	offset = strlen(buf);
 	
+	{
+		const uint64_t t = icon7::time::GetTimestamp();
+		const std::string s = icon7::time::TimestampToString2(t, 9);
+		printf("timestamp = %lu   ===   %s\n", t, s.c_str());
+		const uint64_t t2 = icon7::time::StringToTimestamp(s);
+		int64_t diff = t2-t;
+		if (t != t2) {
+			printf("DUPA, timestampy nie równe: diff = %f s         < %s\n", diff/1000000000.0, s.c_str());
+		}
+	}
+	
 	std::lock_guard lock(mutex);
 	fwrite(buf, 1, offset, stdout);
 	fflush(stdout);
+	
+	exit(0);
 }
 } // namespace log
 } // namespace icon7
