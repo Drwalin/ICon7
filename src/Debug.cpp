@@ -17,9 +17,12 @@
  */
 
 #include <cstdarg>
+#include <cstdio>
+#include <cstring>
 
 #include <mutex>
 #include <regex>
+#include <unordered_map>
 #include <atomic>
 
 #include "../include/icon7/Time.hpp"
@@ -117,17 +120,36 @@ std::string CorrectFilePath(std::string path)
 	if (pos == 0) {
 		path.replace(pos, IGNORE_COMMON_PATH.size(), "");
 	}
-	const static std::regex findParentPathRegex(
-		"\\.\\./[^/\\\\]*[^./\\\\][^/\\\\]/");
-	const static std::regex findThisPathRegex("/\\./");
-	for (int i = 0; i < 100; ++i) {
-		auto oldSize = path.size();
-		path = std::regex_replace(path, findParentPathRegex, "");
-		path = std::regex_replace(path, findThisPathRegex, "/");
-		if (oldSize == path.size()) {
+	while (true) {
+		auto pos = path.find("\\");
+		if (pos == std::string::npos) {
 			break;
 		}
+		path.replace(pos, 1, "/");
 	}
+	while (true) {
+		auto pos = path.find("//");
+		if (pos == std::string::npos) {
+			break;
+		}
+		path.replace(pos, 2, "/");
+	}
+	
+	auto oldSize = path.size()+1;
+	while (oldSize != path.size()) {
+		oldSize = path.size();
+		
+		auto pos = path.find("../");
+		if (pos != std::string::npos) {
+			if (pos == 0 || path[pos-1] == '/') {
+				auto pos2 = path.find('/', pos+3);
+				if (pos2 != std::string::npos) {
+					path.replace(pos, pos2-pos, "");
+				}
+			}
+		}
+	}
+	
 	if (pos == 0 && path.size() > 0) {
 		if (path[0] == '/' || path[0] == '\\') {
 			path.erase(path.begin());
@@ -143,17 +165,14 @@ void GlobalDisablePrintingTime(bool disableTime)
 	enablePrintingTime = !disableTime;
 }
 
-void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
-		 int line, const char *function, const char *fmt, ...)
-{
-	printTime |= enablePrintingTime;
-	if (IsLogLevelApplicable(logLevel) == false) {
-		return;
+
+std::string GetPrettyFunctionName(const std::string function) {
+	thread_local std::unordered_map<std::string, std::string> names;
+	auto it = names.find(function);
+	if (it != names.end()) {
+		return it->second;
 	}
-
-	static std::atomic<int> globID = 1;
-	thread_local static int id = globID++;
-
+	
 	std::string funcName = function;
 	funcName = std::regex_replace(funcName, std::regex("\\[[^\\[\\]]+\\]"), "");
 	funcName = std::regex_replace(funcName,
@@ -168,32 +187,59 @@ void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
 		funcName, std::regex(".*[: >]([a-zA-Z0-9_]*::[a-z0-9A-Z_]*)+\\(.*"),
 		"$1");
 	funcName += "()";
+	names[function] = funcName;
+	return funcName;
+}
 
-	std::string filePath = file!=nullptr ? CorrectFilePath(file) : "";
 
+static std::atomic<int> globID = 1;
+static thread_local int threadId = globID++;
+static std::mutex mutex;
+
+void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
+		 int line, const char *function, const char *fmt, ...)
+{
+	printTime |= enablePrintingTime;
+	if (IsLogLevelApplicable(logLevel) == false) {
+		return;
+	}
+	
 	std::string date, time;
 	if (printTime) {
 		icon7::time::GetCurrentDateTimeStrings(date, time, 5);
-	} else {
-		time = "";
-		date = "";
 	}
+
+	std::string funcName = GetPrettyFunctionName(function);
 
 	va_list va;
 	va_start(va, fmt);
-	static std::mutex mutex;
-	std::lock_guard lock(mutex);
 	
-	fprintf(stdout, "%s %s%s%s%s ",
-			LogLevelToName(logLevel),
-			(printTime?" ":""), date.c_str(),
-			(printTime?"_":""), time.c_str());
-	if (file != nullptr) {
-		fprintf(stdout, "%s:%i\t", filePath.c_str(), line);
+	constexpr int BYTES = 16*1024;
+	char buf[BYTES];
+	int offset = 0;
+	
+	snprintf(buf+offset, BYTES-offset, "%s ", LogLevelToName(logLevel));
+	
+	if (printTime) {
+		offset = strlen(buf);
+		snprintf(buf+offset, BYTES-offset, "%s+%s ", date.c_str(), time.c_str());
 	}
-	fprintf(stdout, "%s\t [%3i] \t ", funcName.c_str(), id);
-	vfprintf(stdout, fmt, va);
-	fprintf(stdout, "\n");
+	
+	if (file != nullptr) {
+		std::string filePath = file!=nullptr ? CorrectFilePath(file) : "";
+		offset = strlen(buf);
+		snprintf(buf+offset, BYTES-offset, "%s:%i\t", filePath.c_str(), line);
+	}
+	offset = strlen(buf);
+	snprintf(buf+offset, BYTES-offset, "%s\t [%3i] \t ", funcName.c_str(), threadId);
+	offset = strlen(buf);
+	vsnprintf(buf+offset, BYTES-offset, fmt, va);
+	offset = strlen(buf);
+	snprintf(buf+offset, BYTES-offset, "\n");
+	offset = strlen(buf);
+	
+	std::lock_guard lock(mutex);
+	fwrite(buf, 1, offset, stdout);
 	fflush(stdout);
 }
 } // namespace log

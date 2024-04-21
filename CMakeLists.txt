@@ -13,12 +13,6 @@ option(ICON7_BUILD_TEST "Build tests" ON)
 
 add_subdirectory(bitscpp)
 
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-	add_compile_definitions(ICON7_LOG_DEFAULT_LOG_LEVEL=icon7::log::INFO)
-else()
-	add_compile_definitions(ICON7_LOG_DEFAULT_LOG_LEVEL=icon7::log::IGNORE)
-endif()
-
 include_directories(include/)
 include_directories(uSockets/src/)
 include_directories(bitscpp/include/)
@@ -52,6 +46,13 @@ target_link_libraries(icon7 uSockets)
 
 if (NOT DEFINED ICON7_IGNORE_COMMON_LOG_PATH)
 target_compile_definitions(icon7 PUBLIC ICON7_LOG_IGNORE_COMMON_PATH="${PROJECT_SOURCE_DIR}")
+endif()
+if(NOT DEFINED ICON7_LOG_DEFAULT_LOG_LEVEL)
+	if(CMAKE_BUILD_TYPE STREQUAL "Release")
+		target_compile_definitions(icon7 PUBLIC ICON7_LOG_DEFAULT_LOG_LEVEL=INFO)
+	else()
+		target_compile_definitions(icon7 PUBLIC ICON7_LOG_DEFAULT_LOG_LEVEL=IGNORE)
+	endif()
 endif()
 
 if(ICON7_BUILD_TEST)
