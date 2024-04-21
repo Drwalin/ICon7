@@ -29,9 +29,10 @@ namespace time
 {
 uint64_t GetTimestamp();
 std::string TimestampToString(uint64_t timestamp, int subsecondsDigits);
-std::string TimestampToString2(uint64_t timestamp, int subsecondsDigits);
 std::string GetCurrentTimestampString(int subsecondsDigits);
-uint64_t StringToTimestamp(const std::string &str);
+uint64_t StringToTimestamp(std::string str);
+void YMDFromTimestamp(uint64_t timestamp, int &day, int &month, int &year);
+uint64_t TimestampFromYMD(int day, int month, int year);
 }
 
 }

@@ -134,22 +134,22 @@ std::string CorrectFilePath(std::string path)
 		}
 		path.replace(pos, 2, "/");
 	}
-	
-	auto oldSize = path.size()+1;
+
+	auto oldSize = path.size() + 1;
 	while (oldSize != path.size()) {
 		oldSize = path.size();
-		
+
 		auto pos = path.find("../");
 		if (pos != std::string::npos) {
-			if (pos == 0 || path[pos-1] == '/') {
-				auto pos2 = path.find('/', pos+3);
+			if (pos == 0 || path[pos - 1] == '/') {
+				auto pos2 = path.find('/', pos + 3);
 				if (pos2 != std::string::npos) {
-					path.replace(pos, pos2-pos, "");
+					path.replace(pos, pos2 - pos, "");
 				}
 			}
 		}
 	}
-	
+
 	if (pos == 0 && path.size() > 0) {
 		if (path[0] == '/' || path[0] == '\\') {
 			path.erase(path.begin());
@@ -165,14 +165,14 @@ void GlobalDisablePrintingTime(bool disableTime)
 	enablePrintingTime = !disableTime;
 }
 
-
-std::string GetPrettyFunctionName(const std::string function) {
+std::string GetPrettyFunctionName(const std::string function)
+{
 	thread_local std::unordered_map<std::string, std::string> names;
 	auto it = names.find(function);
 	if (it != names.end()) {
 		return it->second;
 	}
-	
+
 	std::string funcName = function;
 	funcName = std::regex_replace(funcName, std::regex("\\[[^\\[\\]]+\\]"), "");
 	funcName = std::regex_replace(funcName,
@@ -191,7 +191,6 @@ std::string GetPrettyFunctionName(const std::string function) {
 	return funcName;
 }
 
-
 static std::atomic<int> globID = 1;
 static thread_local int threadId = globID++;
 static std::mutex mutex;
@@ -203,57 +202,46 @@ void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
 	if (IsLogLevelApplicable(logLevel) == false) {
 		return;
 	}
-	
+
 	std::string timestamp;
 	if (printTime) {
-		timestamp = icon7::time::GetCurrentTimestampString(6);
+		timestamp = icon7::time::GetCurrentTimestampString(9);
 	}
 
 	std::string funcName = GetPrettyFunctionName(function);
 
 	va_list va;
 	va_start(va, fmt);
-	
-	constexpr int BYTES = 16*1024;
+
+	constexpr int BYTES = 16 * 1024;
 	char buf[BYTES];
 	int offset = 0;
-	
-	snprintf(buf+offset, BYTES-offset, "%s ", LogLevelToName(logLevel));
-	
+
+	snprintf(buf + offset, BYTES - offset, "%s ", LogLevelToName(logLevel));
+
 	if (printTime) {
 		offset = strlen(buf);
-		snprintf(buf+offset, BYTES-offset, "%s ", timestamp.c_str());
+		snprintf(buf + offset, BYTES - offset, "%s ", timestamp.c_str());
 	}
-	
+
 	if (file != nullptr) {
-		std::string filePath = file!=nullptr ? CorrectFilePath(file) : "";
+		std::string filePath = file != nullptr ? CorrectFilePath(file) : "";
 		offset = strlen(buf);
-		snprintf(buf+offset, BYTES-offset, "%s:%i\t", filePath.c_str(), line);
+		snprintf(buf + offset, BYTES - offset, "%s:%i\t", filePath.c_str(),
+				 line);
 	}
 	offset = strlen(buf);
-	snprintf(buf+offset, BYTES-offset, "%s\t [%3i] \t ", funcName.c_str(), threadId);
+	snprintf(buf + offset, BYTES - offset, "%s\t [%3i] \t ", funcName.c_str(),
+			 threadId);
 	offset = strlen(buf);
-	vsnprintf(buf+offset, BYTES-offset, fmt, va);
+	vsnprintf(buf + offset, BYTES - offset, fmt, va);
 	offset = strlen(buf);
-	snprintf(buf+offset, BYTES-offset, "\n");
+	snprintf(buf + offset, BYTES - offset, "\n");
 	offset = strlen(buf);
-	
-	{
-		const uint64_t t = icon7::time::GetTimestamp();
-		const std::string s = icon7::time::TimestampToString2(t, 9);
-		printf("timestamp = %lu   ===   %s\n", t, s.c_str());
-		const uint64_t t2 = icon7::time::StringToTimestamp(s);
-		int64_t diff = t2-t;
-		if (t != t2) {
-			printf("DUPA, timestampy nie równe: diff = %f s         < %s\n", diff/1000000000.0, s.c_str());
-		}
-	}
-	
+
 	std::lock_guard lock(mutex);
 	fwrite(buf, 1, offset, stdout);
 	fflush(stdout);
-	
-	exit(0);
 }
 } // namespace log
 } // namespace icon7
