@@ -35,11 +35,10 @@ struct DayTimeBegin {
 	const std::chrono::system_clock::time_point date;
 	const std::chrono::steady_clock::time_point time;
 };
-static DayTimeBegin timeOriginHolder;
+static DayTimeBegin glob;
 void GetCurrentDateTimeStrings(std::string &sdate, std::string &stime,
 						int subsecondDigits)
 {
-	static DayTimeBegin glob;
 	
 	auto now = std::chrono::steady_clock::now();
 

@@ -33,41 +33,72 @@
 #define LOG_F(LEVEL, ...) LOG_FULL(LEVEL, false, true, __VA_ARGS__)
 #define LOG_TF(LEVEL, ...) LOG_FULL(LEVEL, true, true, __VA_ARGS__)
 
-#define LOG_FATAL(...) LOG_FULL(FATAL, true, true, __VA_ARGS__)
-#define LOG_FATAL_(...) LOG_FULL(FATAL, false, false, __VA_ARGS__)
-#define LOG_FATAL_T(...) LOG_FULL(FATAL, true, false, __VA_ARGS__)
-#define LOG_FATAL_F(...) LOG_FULL(FATAL, false, true, __VA_ARGS__)
-#define LOG_FATAL_TF(...) LOG_FULL(FATAL, true, true, __VA_ARGS__)
+#define LOG_FATAL_ARGS(USE_TIME, USE_FILE, ...)                                \
+	LOG_FULL(FATAL, USE_TIME, USE_FILE, __VA_ARGS__)
+#define LOG_FATAL(...) LOG_FATAL_ARGS(true, true, __VA_ARGS__)
+#define LOG_FATAL_(...) LOG_FATAL_ARGS(false, false, __VA_ARGS__)
+#define LOG_FATAL_T(...) LOG_FATAL_ARGS(true, false, __VA_ARGS__)
+#define LOG_FATAL_F(...) LOG_FATAL_ARGS(false, true, __VA_ARGS__)
+#define LOG_FATAL_TF(...) LOG_FATAL_ARGS(true, true, __VA_ARGS__)
 
-#define LOG_ERROR(...) LOG_FULL(ERROR, true, true, __VA_ARGS__)
-#define LOG_ERROR_(...) LOG_FULL(ERROR, false, false, __VA_ARGS__)
-#define LOG_ERROR_T(...) LOG_FULL(ERROR, true, false, __VA_ARGS__)
-#define LOG_ERROR_F(...) LOG_FULL(ERROR, false, true, __VA_ARGS__)
-#define LOG_ERROR_TF(...) LOG_FULL(ERROR, true, true, __VA_ARGS__)
+#define LOG_ERROR_ARGS(USE_TIME, USE_FILE, ...)                                \
+	LOG_FULL(ERROR, USE_TIME, USE_FILE, __VA_ARGS__)
+#define LOG_ERROR(...) LOG_ERROR_ARGS(true, true, __VA_ARGS__)
+#define LOG_ERROR_(...) LOG_ERROR_ARGS(false, false, __VA_ARGS__)
+#define LOG_ERROR_T(...) LOG_ERROR_ARGS(true, false, __VA_ARGS__)
+#define LOG_ERROR_F(...) LOG_ERROR_ARGS(false, true, __VA_ARGS__)
+#define LOG_ERROR_TF(...) LOG_ERROR_ARGS(true, true, __VA_ARGS__)
 
-#define LOG_WARN(...) LOG_FULL(WARN, true, true, __VA_ARGS__)
-#define LOG_WARN_(...) LOG_FULL(WARN, false, false, __VA_ARGS__)
-#define LOG_WARN_T(...) LOG_FULL(WARN, true, false, __VA_ARGS__)
-#define LOG_WARN_F(...) LOG_FULL(WARN, false, true, __VA_ARGS__)
-#define LOG_WARN_TF(...) LOG_FULL(WARN, true, true, __VA_ARGS__)
+#ifndef ICON7_DISABLE_LOG_LEVEL_WARN
+# define LOG_WARN_ARGS(USE_TIME, USE_FILE, ...)                                 \
+	LOG_FULL(WARN, USE_TIME, USE_FILE, __VA_ARGS__)
+#else
+# define ICON7_DISABLE_LOG_LEVEL_INFO
+# define LOG_WARN_ARGS(USE_TIME, USE_FILE, ...)
+#endif
+#define LOG_WARN(...) LOG_WARN_ARGS(true, true, __VA_ARGS__)
+#define LOG_WARN_(...) LOG_WARN_ARGS(false, false, __VA_ARGS__)
+#define LOG_WARN_T(...) LOG_WARN_ARGS(true, false, __VA_ARGS__)
+#define LOG_WARN_F(...) LOG_WARN_ARGS(false, true, __VA_ARGS__)
+#define LOG_WARN_TF(...) LOG_WARN_ARGS(true, true, __VA_ARGS__)
 
-#define LOG_INFO(...) LOG_FULL(INFO, true, true, __VA_ARGS__)
-#define LOG_INFO_(...) LOG_FULL(INFO, false, false, __VA_ARGS__)
-#define LOG_INFO_T(...) LOG_FULL(INFO, true, false, __VA_ARGS__)
-#define LOG_INFO_F(...) LOG_FULL(INFO, false, true, __VA_ARGS__)
-#define LOG_INFO_TF(...) LOG_FULL(INFO, true, true, __VA_ARGS__)
+#ifndef ICON7_DISABLE_LOG_LEVEL_INFO
+# define LOG_INFO_ARGS(USE_TIME, USE_FILE, ...)                                 \
+	LOG_FULL(INFO, USE_TIME, USE_FILE, __VA_ARGS__)
+#else
+# define ICON7_DISABLE_LOG_LEVEL_DEBUG
+# define LOG_INFO_ARGS(USE_TIME, USE_FILE, ...)
+#endif
+#define LOG_INFO(...) LOG_INFO_ARGS(true, true, __VA_ARGS__)
+#define LOG_INFO_(...) LOG_INFO_ARGS(false, false, __VA_ARGS__)
+#define LOG_INFO_T(...) LOG_INFO_ARGS(true, false, __VA_ARGS__)
+#define LOG_INFO_F(...) LOG_INFO_ARGS(false, true, __VA_ARGS__)
+#define LOG_INFO_TF(...) LOG_INFO_ARGS(true, true, __VA_ARGS__)
 
-#define LOG_DEBUG(...) LOG_FULL(DEBUG, true, true, __VA_ARGS__)
-#define LOG_DEBUG_(...) LOG_FULL(DEBUG, false, false, __VA_ARGS__)
-#define LOG_DEBUG_T(...) LOG_FULL(DEBUG, true, false, __VA_ARGS__)
-#define LOG_DEBUG_F(...) LOG_FULL(DEBUG, false, true, __VA_ARGS__)
-#define LOG_DEBUG_TF(...) LOG_FULL(DEBUG, true, true, __VA_ARGS__)
+#ifndef ICON7_DISABLE_LOG_LEVEL_DEBUG
+# define LOG_DEBUG_ARGS(USE_TIME, USE_FILE, ...)                                \
+	LOG_FULL(DEBUG, USE_TIME, USE_FILE, __VA_ARGS__)
+#else
+# define ICON7_DISABLE_LOG_LEVEL_TRACE
+# define LOG_DEBUG_ARGS(USE_TIME, USE_FILE, ...)
+#endif
+#define LOG_DEBUG(...) LOG_DEBUG_ARGS(true, true, __VA_ARGS__)
+#define LOG_DEBUG_(...) LOG_DEBUG_ARGS(false, false, __VA_ARGS__)
+#define LOG_DEBUG_T(...) LOG_DEBUG_ARGS(true, false, __VA_ARGS__)
+#define LOG_DEBUG_F(...) LOG_DEBUG_ARGS(false, true, __VA_ARGS__)
+#define LOG_DEBUG_TF(...) LOG_DEBUG_ARGS(true, true, __VA_ARGS__)
 
-#define LOG_TRACE(...) LOG_FULL(TRACE, true, true, __VA_ARGS__)
-#define LOG_TRACE_(...) LOG_FULL(TRACE, false, false, __VA_ARGS__)
-#define LOG_TRACE_T(...) LOG_FULL(TRACE, true, false, __VA_ARGS__)
-#define LOG_TRACE_F(...) LOG_FULL(TRACE, false, true, __VA_ARGS__)
-#define LOG_TRACE_TF(...) LOG_FULL(TRACE, true, true, __VA_ARGS__)
+#ifndef ICON7_DISABLE_LOG_LEVEL_TRACE
+# define LOG_TRACE_ARGS(USE_TIME, USE_FILE, ...)                                \
+	LOG_FULL(TRACE, USE_TIME, USE_FILE, __VA_ARGS__)
+#else
+# define LOG_TRACE_ARGS(USE_TIME, USE_FILE, ...)
+#endif
+#define LOG_TRACE(...) LOG_TRACE_ARGS(true, true, __VA_ARGS__)
+#define LOG_TRACE_(...) LOG_TRACE_ARGS(false, false, __VA_ARGS__)
+#define LOG_TRACE_T(...) LOG_TRACE_ARGS(true, false, __VA_ARGS__)
+#define LOG_TRACE_F(...) LOG_TRACE_ARGS(false, true, __VA_ARGS__)
+#define LOG_TRACE_TF(...) LOG_TRACE_ARGS(true, true, __VA_ARGS__)
 
 namespace icon7
 {
