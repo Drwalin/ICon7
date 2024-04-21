@@ -88,7 +88,7 @@ public:
 			peer->Send(std::move(buffer), ((flags | Flags(6)) ^ Flags(6)) |
 											  FLAGS_CALL_RETURN_FEEDBACK);
 		} else if (returnId) {
-			DEBUG(
+			LOG_WARN(
 				"It should never happen -> it's a bug, where MessegeConverter "
 				"receives non 0 returnId for non returning RPC send.");
 		}
@@ -116,7 +116,7 @@ public:
 			peer->Send(std::move(buffer), ((flags | Flags(6)) ^ Flags(6)) |
 											  FLAGS_CALL_RETURN_FEEDBACK);
 		} else if (returnId) {
-			DEBUG(
+			LOG_WARN(
 				"It should never happen -> it's a bug, where MessegeConverter "
 				"receives non 0 returnId for non returning RPC send.");
 		}

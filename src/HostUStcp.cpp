@@ -106,7 +106,7 @@ bool Host::InitLoopAndContext(us_socket_context_options_t options)
 	loop = us_create_loop(nullptr, _Internal_wakeup_cb, _Internal_pre_cb,
 						  _Internal_post_cb, sizeof(Host *));
 	if (loop == nullptr) {
-		DEBUG("FAILED TO CREATE LOOP");
+		LOG_ERROR("FAILED TO CREATE LOOP");
 		return false;
 	}
 	*HostStoreFromUsLoop(loop) = this;
@@ -114,7 +114,7 @@ bool Host::InitLoopAndContext(us_socket_context_options_t options)
 	socketContext =
 		us_create_socket_context(SSL, loop, sizeof(Host *), options);
 	if (socketContext == nullptr) {
-		DEBUG("FAILED TO CREATE HOST");
+		LOG_ERROR("FAILED TO CREATE HOST");
 		us_loop_free(loop);
 		loop = nullptr;
 		return false;

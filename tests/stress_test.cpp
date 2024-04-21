@@ -152,7 +152,7 @@ void Runner(icon7::Peer *_peer)
 	for (uint32_t i = 0; i < ipc->countMessages; ++i) {
 		if (ipc->runTestFlag == 0) {
 			if (processId == 0) {
-				DEBUG("BREAK CLIENT LOOP");
+				LOG_INFO("BREAK CLIENT LOOP");
 			}
 			break;
 		}
@@ -177,11 +177,11 @@ void Runner(icon7::Peer *_peer)
 			rpc.Send(_peer, flag, "first", data, dt);
 		}
 		if (processId == 0 && i%12100 == 0) {
-			DEBUG("Sending: %i/%i", i, (int)ipc->countMessages);
+			LOG_INFO("Sending: %i/%i", i, (int)ipc->countMessages);
 		}
 	}
 	if (processId == 0) {
-		DEBUG("OUT OF LOOP");
+		LOG_INFO("OUT OF LOOP");
 	}
 	ipc->flags += 1;
 	ipc->connectionsDoneSending++;
@@ -343,7 +343,7 @@ void runTestSlave()
 
 int main()
 {
-	DEBUG("");
+	LOG_INFO("");
 	const std::vector<uint32_t> messagesCount = {64 * 1024,	  2 * 1024,
 												 16 * 1024,	  256 * 1024,
 												 1024 * 1024, 8 * 1024 * 1024};

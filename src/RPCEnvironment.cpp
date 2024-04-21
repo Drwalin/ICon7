@@ -71,7 +71,7 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader, Flags flags)
 				mtd->Call(peer, reader, flags, returnId);
 			}
 		} else {
-			DEBUG("function not found: `%s`", name.c_str());
+			LOG_WARN("function not found: `%s`", name.c_str());
 		}
 	} break;
 	case FLAGS_CALL_RETURN_FEEDBACK: {
@@ -91,13 +91,13 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader, Flags flags)
 		if (found) {
 			callback.Execute(peer, flags, reader);
 		} else {
-			DEBUG("Remote function call returned value but OnReturnedCallback "
+			LOG_WARN("Remote function call returned value but OnReturnedCallback "
 				  "already expired. returnId = %u/%u",
 				  id, this->returnCallCallbackIdGenerator);
 		}
 	} break;
 	default:
-		DEBUG("Received packet with UNUSED RPC type bits set.");
+		LOG_WARN("Received packet with UNUSED RPC type bits set.");
 	}
 }
 

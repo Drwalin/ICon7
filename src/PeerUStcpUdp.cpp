@@ -73,7 +73,7 @@ void Peer::_InternalFlushQueuedSends()
 	Host *host = (Host *)(this->host);
 	icon7::uS::tcp::Peer::_InternalFlushQueuedSends();
 	
-	DEBUG("%s %s %s",
+	LOG_DEBUG("%s %s %s",
 			hasPeerThisAddress?"hasPeerThisAddress":"peerHasNoThis",
 			hasSendingIdentity?"hasSendingIdentity":"doesNotHaveSendingIdentity",
 			host->_InternalCanSendMorePackets()?"CanSendMore":"NoSpaceAvailableToSend");
@@ -86,18 +86,18 @@ void Peer::_InternalFlushQueuedSends()
 					(uint8_t *)host->_InternalGetNextPacketDataPointer();
 				memcpy(packetPackingPtr, &sendingIdentity, 4);
 				host->_InternalFinishSendingPacket(4, &ip4);
-				DEBUG("Sending initial udp packet ||||||||||||||||||||||||||||||||");
-				DEBUG(" first, last: %i %i", host->firstFilledSendPacketId, host->lastFilledSendPacketId);
+				LOG_DEBUG("Sending initial udp packet ||||||||||||||||||||||||||||||||");
+				LOG_DEBUG(" first, last: %i %i", host->firstFilledSendPacketId, host->lastFilledSendPacketId);
 			} else {
-// 				DEBUG("333333333333333333333333333333333333333");
+// 				LOG_DEBUG("333333333333333333333333333333333333333");
 			}
 		} else {
-			DEBUG("2222222222222222222222222222222222222");
+			LOG_DEBUG("2222222222222222222222222222222222222");
 		}
 	} else {
-		DEBUG("111111111111111111111111111111111111111");
+		LOG_DEBUG("111111111111111111111111111111111111111");
 	}
-	DEBUG(" first, last: %i %i", host->firstFilledSendPacketId, host->lastFilledSendPacketId);
+	LOG_DEBUG(" first, last: %i %i", host->firstFilledSendPacketId, host->lastFilledSendPacketId);
 	if (hasRemoteAddress == false) {
 		if (udpSendFrames.size() > 50) {
 			// TODO: reconsider dropping all unreliable packets befor
@@ -185,7 +185,7 @@ bool Peer::_InternalHasQueuedSends() const
 
 void Peer::_InternalOnUdpPacket(void *data, uint32_t bytes)
 {
-	DEBUG(" . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .");
+	LOG_DEBUG(" . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .");
 	bitscpp::ByteReader<true> reader((uint8_t *)data, 0, bytes);
 	
 	if (bytes == 0) {
@@ -251,7 +251,7 @@ void Peer::_InternalOnPacketWithControllSequenceBackend(
 	case 0x80:
 		if (buffer.size() < 5 + (SSL ? 32 : 0)) {
 			// TODO: error, invalid packet size
-			DEBUG("Invalid 0x80 packet size");
+			LOG_ERROR("Invalid 0x80 packet size");
 		}
 		reader.op((uint8_t *)&sendingIdentity, 4);
 		if (SSL) {

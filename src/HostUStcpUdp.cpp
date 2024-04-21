@@ -133,7 +133,7 @@ void Host::_InternalPerformSend()
 		return;
 	}
 
-	DEBUG("Send udp ################################################");
+	LOG_DEBUG("Send udp ################################################");
 	int sentPackets = us_udp_socket_send_range(udpSocket, sendingBuffer,
 											   firstFilledSendPacketId,
 											   lastFilledSendPacketId);

@@ -34,7 +34,7 @@ int main()
 
 	for (int i = 0; i < 10; ++i) {
 		sent = received = returned = 0;
-		DEBUG("Iteration: %i", i);
+		LOG_INFO("Iteration: %i", i);
 		icon7::RPCEnvironment rpc;
 		rpc.RegisterMessage("sum", Sum);
 		rpc.RegisterMessage("mul", Mul);
@@ -85,7 +85,7 @@ int main()
 		hostb->_InternalDestroy();
 
 		if (sent != received || returned != sent / 2) {
-			DEBUG("FAILED: sent/received = %i/%i ; returned/called = %i/%i",
+			LOG_INFO("FAILED: sent/received = %i/%i ; returned/called = %i/%i",
 				  sent.load(), received.load(), returned.load(),
 				  sent.load() / 2);
 		}
