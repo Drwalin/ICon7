@@ -19,15 +19,21 @@
 #ifndef ICON7_TIME_HPP
 #define ICON7_TIME_HPP
 
+#include <cstdint>
+
 #include <string>
 
 namespace icon7
 {
 namespace time
 {
-void GetCurrentDateTimeStrings(std::string &sdate, std::string &stime,
-						int subsecondDigits);
+uint64_t GetTimestamp();
+std::string TimestampToString(uint64_t timestamp, int subsecondsDigits);
+std::string TimestampToString2(uint64_t timestamp, int subsecondsDigits);
+std::string GetCurrentTimestampString(int subsecondsDigits);
+uint64_t StringToTimestamp(const std::string &str);
 }
+
 }
 
 #endif
