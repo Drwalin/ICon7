@@ -47,7 +47,7 @@ Peer::~Peer()
 void Peer::Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
 {
 	if (IsDisconnecting()) {
-		DEBUG("TRY SEND IN DISCONNECTING PEER, dropping packet");
+		LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
 		// TODO: inform about dropping packets
 		return;
 	}
@@ -87,7 +87,7 @@ void Peer::_Internal_static_OnPacket(std::vector<uint8_t> &buffer,
 void Peer::_InternalOnPacket(std::vector<uint8_t> &buffer, uint32_t headerSize)
 {
 	if (buffer.size() == headerSize) {
-		DEBUG("Error: protocol doesn't allow for 0 sized packets.");
+		LOG_ERROR("Protocol doesn't allow for 0 sized packets.");
 		return;
 	}
 	if ((FramingProtocol::GetPacketFlags(buffer.data(), 0) &
@@ -106,7 +106,7 @@ void Peer::_InternalOnPacketWithControllSequence(std::vector<uint8_t> &buffer,
 	if (vectorCall <= 0x7F) {
 		// TODO: decode here future controll sequences
 		uint32_t vectorCall = buffer[headerSize];
-		DEBUG("Received packet with undefined controll sequence: 0x%X",
+		LOG_WARN("Received packet with undefined controll sequence: 0x%X",
 			  vectorCall);
 	} else {
 		_InternalOnPacketWithControllSequenceBackend(buffer, headerSize);
@@ -117,7 +117,7 @@ void Peer::_InternalOnPacketWithControllSequenceBackend(
 	std::vector<uint8_t> &buffer, uint32_t headerSize)
 {
 	uint32_t vectorCall = buffer[headerSize];
-	DEBUG("Unhandled packet with controll sequence by backend. Vector call "
+	LOG_WARN("Unhandled packet with controll sequence by backend. Vector call "
 		  "value: 0x%X",
 		  vectorCall);
 }

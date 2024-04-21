@@ -29,7 +29,7 @@ bool OnReturnCallback::IsExpired(
 void OnReturnCallback::Execute(Peer *peer, Flags flags, ByteReader &reader)
 {
 	if (peer != this->peer.get()) {
-		DEBUG("OnReturnedCallback executed by different peer than the request "
+		LOG_WARN("OnReturnedCallback executed by different peer than the request "
 			  "was sent to");
 	}
 
