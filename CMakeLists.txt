@@ -6,10 +6,14 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+	set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+else()
+endif()
 
-option(ICON7_BUILD_EXAMPLES "Build examples" ON)
-option(ICON7_BUILD_TEST "Build tests" ON)
+option(ICON7_BUILD_EXAMPLES "Build icon7 examples" ON)
+option(ICON7_BUILD_TEST "Build icon7 tests" ON)
 
 add_subdirectory(bitscpp)
 
@@ -70,4 +74,3 @@ endif()
 if(ICON7_BUILD_EXAMPLES)
 	add_subdirectory(examples)
 endif()
-
