@@ -19,7 +19,7 @@
 #ifndef ICON7_HOST_US_TCP_HPP
 #define ICON7_HOST_US_TCP_HPP
 
-#include "../uSockets/src/libusockets.h"
+#include "../../uSockets/src/libusockets.h"
 
 #include "Host.hpp"
 
