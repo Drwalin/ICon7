@@ -58,7 +58,7 @@ bool Peer::_InternalSend(SendFrameStruct &f, bool hasMore)
 }
 
 void Peer::_InternalDisconnect() {
-	us_socket_shutdown(SSL, socket);
+	us_socket_close(SSL, socket, 0, nullptr);
 }
 
 void Peer::_InternalClearInternalDataOnClose()
