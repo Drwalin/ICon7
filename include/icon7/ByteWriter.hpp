@@ -19,7 +19,7 @@
 #ifndef ICON7_BYTE_WRITER_HPP
 #define ICON7_BYTE_WRITER_HPP
 
-#include "../../bitscpp/include/bitscpp/ByteWriterExtensions.hpp"
+#include "../../bitscpp/include/bitscpp/ByteWriter.hpp"
 
 namespace icon7
 {
