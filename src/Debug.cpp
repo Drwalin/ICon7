@@ -29,6 +29,15 @@
 
 #include "../include/icon7/Debug.hpp"
 
+#ifdef __unix__
+# include <sys/syscall.h>
+# ifdef SYS_gettid
+#  define gettid() syscall(SYS_gettid)
+# else
+#  define gettid() 0
+# endif
+#endif
+
 namespace icon7
 {
 namespace log
@@ -191,8 +200,21 @@ std::string GetPrettyFunctionName(const std::string function)
 	return funcName;
 }
 
-static std::atomic<int> globID = 1;
-static thread_local int threadId = globID++;
+#ifdef __unix__
+# ifdef SYS_gettid
+static uint64_t GenThreadId()
+{
+	return syscall(SYS_gettid);
+}
+# else
+static uint64_t GenThreadId()
+{
+	static std::atomic<uint64_t> globID = 1;
+	return globID++;
+}
+# endif
+#endif
+static thread_local uint64_t threadId = GenThreadId();
 static std::mutex mutex;
 
 void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
@@ -231,7 +253,7 @@ void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
 				 line);
 	}
 	offset = strlen(buf);
-	snprintf(buf + offset, BYTES - offset, "%s\t [%3i] \t ", funcName.c_str(),
+	snprintf(buf + offset, BYTES - offset, "%s\t [%3lu] \t ", funcName.c_str(),
 			 threadId);
 	offset = strlen(buf);
 	vsnprintf(buf + offset, BYTES - offset, fmt, va);
