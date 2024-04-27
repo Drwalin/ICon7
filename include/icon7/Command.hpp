@@ -19,8 +19,6 @@
 #ifndef ICON7_COMMAND_HPP
 #define ICON7_COMMAND_HPP
 
-#include <cinttypes>
-
 #include <variant>
 #include <memory>
 #include <vector>
@@ -28,7 +26,6 @@
 
 #include "Flags.hpp"
 #include "ByteReader.hpp"
-#include "ByteWriter.hpp"
 
 namespace icon7
 {

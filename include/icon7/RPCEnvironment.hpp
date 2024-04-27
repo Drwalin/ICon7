@@ -22,9 +22,8 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <chrono>
 
-#include <bitscpp/ByteWriterExtensions.hpp>
+#include <bitscpp/ByteWriter.hpp>
 
 #include "Util.hpp"
 #include "Flags.hpp"
@@ -107,14 +106,8 @@ public:
 			  const Targs &...args)
 	{
 		std::vector<uint8_t> buffer;
-		{
-			/*
-			 * need this block, because writer resizes to correct size
-			 * underlying buffer inside destructor
-			 */
-			bitscpp::ByteWriter writer(buffer);
-			SerializeSend(writer, flags, name, args...);
-		}
+		bitscpp::ByteWriter writer(buffer);
+		SerializeSend(writer, flags, name, args...);
 		peer->Send(std::move(buffer), flags);
 	}
 
@@ -141,16 +134,10 @@ public:
 			returningCallbacks[returnCallbackId] = std::move(callback);
 		}
 		std::vector<uint8_t> buffer;
-		{
-			/*
-			 * need this block, because writer resizes to correct size
-			 * underlying buffer inside destructor
-			 */
-			bitscpp::ByteWriter writer(buffer);
-			writer.op(returnCallbackId);
-			writer.op(name);
-			(writer.op(args), ...);
-		}
+		bitscpp::ByteWriter writer(buffer);
+		writer.op(returnCallbackId);
+		writer.op(name);
+		(writer.op(args), ...);
 		peer->Send(std::move(buffer), flags | FLAGS_CALL);
 	}
 

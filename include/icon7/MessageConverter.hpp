@@ -21,7 +21,7 @@
 
 #include <tuple>
 
-#include <bitscpp/ByteWriterExtensions.hpp>
+#include <bitscpp/ByteWriter.hpp>
 
 #include "ByteReader.hpp"
 #include "PeerFlagsArgumentsReader.hpp"
@@ -76,15 +76,9 @@ public:
 		Tret ret = onReceive(std::get<SeqArgs>(args)...);
 		if (returnId && ((flags & 6) == FLAGS_CALL)) {
 			std::vector<uint8_t> buffer;
-			{
-				/*
-				 * need this block, because writer resizes to correct size
-				 * underlying buffer inside destructor
-				 */
-				bitscpp::ByteWriter writer(buffer);
-				writer.op(returnId);
-				writer.op(ret);
-			}
+			bitscpp::ByteWriter writer(buffer);
+			writer.op(returnId);
+			writer.op(ret);
 			peer->Send(std::move(buffer), ((flags | Flags(6)) ^ Flags(6)) |
 											  FLAGS_CALL_RETURN_FEEDBACK);
 		} else if (returnId) {
@@ -105,14 +99,8 @@ public:
 		onReceive(std::get<SeqArgs>(args)...);
 		if (returnId && ((flags & 6) == FLAGS_CALL)) {
 			std::vector<uint8_t> buffer;
-			{
-				/*
-				 * need this block, because writer resizes to correct size
-				 * underlying buffer inside destructor
-				 */
-				bitscpp::ByteWriter writer(buffer);
-				writer.op(returnId);
-			}
+			bitscpp::ByteWriter writer(buffer);
+			writer.op(returnId);
 			peer->Send(std::move(buffer), ((flags | Flags(6)) ^ Flags(6)) |
 											  FLAGS_CALL_RETURN_FEEDBACK);
 		} else if (returnId) {
