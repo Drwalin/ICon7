@@ -76,7 +76,7 @@ public:
 		Tret ret = onReceive(std::get<SeqArgs>(args)...);
 		if (returnId && ((flags & 6) == FLAGS_CALL)) {
 			std::vector<uint8_t> buffer;
-			bitscpp::ByteWriter writer(buffer);
+			bitscpp::ByteWriter<std::vector<uint8_t>> writer(buffer);
 			writer.op(returnId);
 			writer.op(ret);
 			peer->Send(std::move(buffer), ((flags | Flags(6)) ^ Flags(6)) |
@@ -99,7 +99,7 @@ public:
 		onReceive(std::get<SeqArgs>(args)...);
 		if (returnId && ((flags & 6) == FLAGS_CALL)) {
 			std::vector<uint8_t> buffer;
-			bitscpp::ByteWriter writer(buffer);
+			bitscpp::ByteWriter<std::vector<uint8_t>> writer(buffer);
 			writer.op(returnId);
 			peer->Send(std::move(buffer), ((flags | Flags(6)) ^ Flags(6)) |
 											  FLAGS_CALL_RETURN_FEEDBACK);

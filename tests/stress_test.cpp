@@ -104,7 +104,7 @@ struct TestStruct {
 
 namespace bitscpp
 {
-inline bitscpp::ByteWriter &op(bitscpp::ByteWriter &s, const TestStruct &v)
+inline bitscpp::ByteWriter<std::vector<uint8_t>> &op(bitscpp::ByteWriter<std::vector<uint8_t>> &s, const TestStruct &v)
 {
 	s.op(v.id);
 	s.op(v.x);

@@ -23,7 +23,7 @@
 
 namespace icon7
 {
-class ByteWriter : public bitscpp::ByteWriter
+class ByteWriter : public bitscpp::ByteWriter<std::vector<uint8_t>>
 {
 public:
 	std::vector<uint8_t> _data;
@@ -32,7 +32,7 @@ public:
 	~ByteWriter();
 
 	ByteWriter(ByteWriter &&o)
-		: bitscpp::ByteWriter(_data), _data(std::move(o._data))
+		: bitscpp::ByteWriter<std::vector<uint8_t>>(&_data), _data(std::move(o._data))
 	{
 	}
 

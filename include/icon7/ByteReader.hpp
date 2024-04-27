@@ -30,9 +30,8 @@ public:
 
 public:
 	ByteReader(std::vector<uint8_t> &data, uint32_t offset)
-		: bitscpp::ByteReader<true>(nullptr, offset, data.size()), _data(data)
+		: bitscpp::ByteReader<true>(data.data(), offset, data.size()), _data(data)
 	{
-		buffer = _data.data();
 	}
 
 	ByteReader(std::vector<uint8_t> &&data, uint32_t offset)
@@ -44,7 +43,7 @@ public:
 	~ByteReader() = default;
 
 	ByteReader(ByteReader &&o)
-		: bitscpp::ByteReader<true>(o.buffer, o.offset, o.size),
+		: bitscpp::ByteReader<true>(o._buffer, o.get_offset(), o._size),
 		  _data(std::move(o._data))
 	{
 		errorReading_bufferToSmall = o.errorReading_bufferToSmall;
@@ -57,7 +56,7 @@ public:
 		return *this;
 	}
 
-	inline uint8_t const *data() { return buffer; }
+	inline uint8_t const *data() { return _buffer; }
 
 	ByteReader(ByteReader &) = delete;
 	ByteReader(const ByteReader &) = delete;
