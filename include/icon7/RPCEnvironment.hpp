@@ -106,13 +106,13 @@ public:
 			  const Targs &...args)
 	{
 		std::vector<uint8_t> buffer;
-		bitscpp::ByteWriter writer(buffer);
+		bitscpp::ByteWriter<std::vector<uint8_t>> writer(buffer);
 		SerializeSend(writer, flags, name, args...);
 		peer->Send(std::move(buffer), flags);
 	}
 
 	template <typename... Targs>
-	static void SerializeSend(bitscpp::ByteWriter &writer, Flags &flags,
+	static void SerializeSend(bitscpp::ByteWriter<std::vector<uint8_t>> &writer, Flags &flags,
 							  const std::string &name, const Targs &...args)
 	{
 		writer.op(name);
@@ -134,7 +134,7 @@ public:
 			returningCallbacks[returnCallbackId] = std::move(callback);
 		}
 		std::vector<uint8_t> buffer;
-		bitscpp::ByteWriter writer(buffer);
+		bitscpp::ByteWriter<std::vector<uint8_t>> writer(buffer);
 		writer.op(returnCallbackId);
 		writer.op(name);
 		(writer.op(args), ...);
