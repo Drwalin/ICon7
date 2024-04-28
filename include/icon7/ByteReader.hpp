@@ -29,6 +29,8 @@ public:
 	std::vector<uint8_t> _data;
 
 public:
+	ByteReader() : bitscpp::ByteReader<true>(nullptr, 0, 0) {}
+
 	ByteReader(std::vector<uint8_t> &data, uint32_t offset)
 		: bitscpp::ByteReader<true>(data.data(), offset, data.size()),
 		  _data(data)

@@ -46,11 +46,7 @@ int main()
 		hosta->RunAsync();
 
 		{
-			auto com = icon7::CommandHandle<
-				icon7::commands::ExecuteBooleanOnHost>::Create();
-			com->function = [](auto host, bool v, void *) {};
-			hosta->ListenOnPort("127.0.0.1", port, icon7::IPv4, std::move(com),
-								nullptr);
+			hosta->ListenOnPort("127.0.0.1", port, icon7::IPv4, {}, nullptr);
 		}
 
 		icon7::uS::tcp::Host *hostb = new icon7::uS::tcp::Host();

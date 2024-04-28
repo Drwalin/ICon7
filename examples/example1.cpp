@@ -39,11 +39,17 @@ int main()
 	hosta->RunAsync();
 
 	{
-		auto com = icon7::CommandHandle<
-			icon7::commands::ExecuteBooleanOnHost>::Create();
-		com->function = [](auto host, bool v, void *) {
-			printf(" %s\n", v ? "Listening" : "Fail to listen");
+		class CommandPrintStatus : public icon7::commands::ExecuteBooleanOnHost
+		{
+		public:
+			CommandPrintStatus() = default;
+			~CommandPrintStatus() = default;
+			virtual void Execute() override
+			{
+				printf(" %s\n", result ? "Listening" : "Fail to listen");
+			}
 		};
+		auto com = icon7::CommandHandle<CommandPrintStatus>::Create();
 		hosta->ListenOnPort("127.0.0.1", port, icon7::IPv4, std::move(com),
 							nullptr);
 	}
@@ -54,11 +60,14 @@ int main()
 	hostb->RunAsync();
 
 	{
-		auto com =
-			icon7::CommandHandle<icon7::commands::ExecuteOnPeer>::Create();
-		com->function = [](icon7::Peer *peer, auto x, void *) {
-			peer->Disconnect();
+		class CommandPrintStatus : public icon7::commands::ExecuteOnPeer
+		{
+		public:
+			CommandPrintStatus() = default;
+			~CommandPrintStatus() = default;
+			virtual void Execute() override { peer->Disconnect(); }
 		};
+		auto com = icon7::CommandHandle<CommandPrintStatus>::Create();
 		hostb->Connect("127.0.0.1", port, std::move(com), nullptr);
 	}
 

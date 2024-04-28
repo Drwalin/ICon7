@@ -24,6 +24,103 @@
 
 namespace icon7
 {
+
+class ExecuteReturnCallbackBase : public commands::ExecuteOnPeer
+{
+public:
+	ExecuteReturnCallbackBase() = default;
+	virtual ~ExecuteReturnCallbackBase() = default;
+
+	ByteReader reader;
+	Flags flags = 0;
+	bool timedOut = false;
+};
+
+template <typename Tret>
+class ExecuteReturnCallback : public ExecuteReturnCallbackBase
+{
+public:
+	ExecuteReturnCallback() = default;
+	virtual ~ExecuteReturnCallback() = default;
+
+	virtual void Execute() override final
+	{
+		if (timedOut) {
+			ExecuteTimeout();
+		} else {
+			Tret v;
+			reader.op(v);
+			ExecuteOnReturn(v);
+		}
+	}
+	virtual void ExecuteOnReturn(Tret &v) = 0;
+	virtual void ExecuteTimeout() = 0;
+};
+
+template <> class ExecuteReturnCallback<void> : public ExecuteReturnCallbackBase
+{
+public:
+	ExecuteReturnCallback() = default;
+	virtual ~ExecuteReturnCallback() = default;
+
+	virtual void Execute() override final
+	{
+		if (timedOut) {
+			ExecuteTimeout();
+		} else {
+			ExecuteOnReturn();
+		}
+	}
+	virtual void ExecuteOnReturn() = 0;
+	virtual void ExecuteTimeout() = 0;
+};
+
+template <typename Tret>
+class ExecuteReturnCallbackStdfunction final
+	: public ExecuteReturnCallback<Tret>
+{
+public:
+	ExecuteReturnCallbackStdfunction() = default;
+	virtual ~ExecuteReturnCallbackStdfunction() = default;
+
+	std::function<void(Peer *, Flags, Tret &)> onReturned;
+	std::function<void(Peer *)> onTimeout;
+
+	virtual void ExecuteOnReturn(Tret &v) override
+	{
+		onReturned(this->peer.get(), this->flags, v);
+	}
+
+	virtual void ExecuteTimeout() override
+	{
+		if (onTimeout)
+			onTimeout(this->peer.get());
+	}
+};
+
+template <>
+class ExecuteReturnCallbackStdfunction<void> final
+	: public ExecuteReturnCallback<void>
+{
+public:
+	ExecuteReturnCallbackStdfunction() = default;
+	virtual ~ExecuteReturnCallbackStdfunction() = default;
+
+	std::function<void(Peer *, Flags)> onReturned;
+	std::function<void(Peer *)> onTimeout;
+
+	virtual void ExecuteOnReturn() override
+	{
+		onReturned(this->peer.get(), this->flags);
+	}
+
+	virtual void ExecuteTimeout() override
+	{
+		if (onTimeout)
+			onTimeout(this->peer.get());
+	}
+};
+
 class OnReturnCallback
 {
 public:
@@ -45,66 +142,48 @@ public:
 	void Execute(Peer *peer, Flags flags, ByteReader &reader);
 	void ExecuteTimeout();
 
-	template <typename Tret, typename Tfunc>
+private:
+public:
+	template <typename Tret, typename Tfunc, typename Ttimeout>
 	static OnReturnCallback
-	Make(Tfunc &&_onReturnedValue, void (*onTimeout)(Peer *),
-		 uint32_t timeoutMilliseconds, Peer *peer,
-		 CommandExecutionQueue *executionQueue = nullptr)
+	Make(Tfunc &&onReturned, Ttimeout &&onTimeout, uint32_t timeoutMilliseconds,
+		 Peer *peer, CommandExecutionQueue *executionQueue = nullptr)
 	{
 		OnReturnCallback ret;
-		OnReturnCallback *self = &ret;
-
-		self->onTimeout = onTimeout;
-		self->executionQueue = executionQueue;
-		self->onReturned = (void *)ConvertLambdaToFunctionPtr(_onReturnedValue);
-		self->timeoutTimePoint =
-			std::chrono::steady_clock::now() +
-			(std::chrono::milliseconds(timeoutMilliseconds));
-		self->peer = peer->shared_from_this();
-		self->_internalOnReturnedValue = [](Peer *peer, Flags flags,
-											ByteReader &reader,
-											void *func) -> void {
-			typename std::remove_const<
-				typename std::remove_reference<Tret>::type>::type ret;
-			reader.op(ret);
-			((void (*)(Peer *, Flags, Tret))func)(peer, flags, ret);
-		};
-
+		auto cb =
+			CommandHandle<ExecuteReturnCallbackStdfunction<Tret>>::Create();
+		cb->onReturned = std::move(onReturned);
+		cb->onTimeout = std::move(onTimeout);
+		ret.callback = std::move(cb);
+		ret.executionQueue = executionQueue;
+		ret.timeoutTimePoint = std::chrono::steady_clock::now() +
+							   (std::chrono::milliseconds(timeoutMilliseconds));
+		ret.callback->peer = peer->shared_from_this();
 		return ret;
 	}
 
-	template <typename Tfunc>
+	template <typename Tfunc, typename Ttimeout>
 	static OnReturnCallback
-	Make(Tfunc &&_onReturnedValue, void (*onTimeout)(Peer *),
-		 uint32_t timeoutMilliseconds, Peer *peer,
-		 CommandExecutionQueue *executionQueue = nullptr)
+	Make(Tfunc &&onReturned, Ttimeout &&onTimeout, uint32_t timeoutMilliseconds,
+		 Peer *peer, CommandExecutionQueue *executionQueue = nullptr)
 	{
 		OnReturnCallback ret;
-		OnReturnCallback *self = &ret;
-
-		self->onTimeout = onTimeout;
-		self->executionQueue = executionQueue;
-		self->onReturned = (void *)ConvertLambdaToFunctionPtr(_onReturnedValue);
-		self->timeoutTimePoint =
-			std::chrono::steady_clock::now() +
-			(std::chrono::milliseconds(timeoutMilliseconds));
-		self->peer = peer->shared_from_this();
-		self->_internalOnReturnedValue = [](Peer *peer, Flags flags,
-											ByteReader &reader,
-											void *func) -> void {
-			((void (*)(Peer *, Flags))func)(peer, flags);
-		};
-
+		auto cb =
+			CommandHandle<ExecuteReturnCallbackStdfunction<void>>::Create();
+		cb->onReturned = std::move(onReturned);
+		cb->onTimeout = std::move(onTimeout);
+		ret.callback = std::move(cb);
+		ret.executionQueue = executionQueue;
+		ret.timeoutTimePoint = std::chrono::steady_clock::now() +
+							   (std::chrono::milliseconds(timeoutMilliseconds));
+		ret.callback->peer = peer->shared_from_this();
 		return ret;
 	}
 
 public:
-	void (*_internalOnReturnedValue)(Peer *, Flags, ByteReader &, void *func);
-	void (*onTimeout)(Peer *);
+	CommandHandle<ExecuteReturnCallbackBase> callback;
 	CommandExecutionQueue *executionQueue;
 	std::chrono::time_point<std::chrono::steady_clock> timeoutTimePoint;
-	std::shared_ptr<Peer> peer;
-	void *onReturned;
 };
 } // namespace icon7
 

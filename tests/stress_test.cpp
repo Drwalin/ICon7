@@ -236,21 +236,6 @@ void ReportPrint(const uint32_t messages, const uint32_t clientsNum)
 		(double)(ipc->counterReceivedByClient + ipc->counterReceivedByServer) /
 			(double)(ipc->counterSentByServer + ipc->counterSentByClients);
 	Print("    Packet loss = %f %%\n", packetLoss * 100.0);
-
-	// host->ForEachPeer([](icon7::Peer *peer) {
-	// 	auto stats = peer->GetRealTimeStats();
-	// 	Print("          pending reliable = %i\n",
-	// 		  stats.m_cbPendingReliable);
-	// 	Print("          sent unacked reliable = %i\n",
-	// 		  stats.m_cbSentUnackedReliable);
-	// });
-	// Print("\n", 0);
-	// for (int i = 0; i < clientsNum; ++i) {
-	// 	Print("          pending reliable = %i\n",
-	// 		  ipc->pendingReliable[i].load());
-	// 	Print("          sent unacked reliable = %i\n",
-	// 		  ipc->unackedReliable[i].load());
-	// }
 }
 
 void runTestMaster(uint32_t messages, const uint32_t clientsNum)
@@ -298,12 +283,7 @@ void runTestMaster(uint32_t messages, const uint32_t clientsNum)
 
 	Print(" all_in(%fs)", t);
 
-	auto com =
-		icon7::CommandHandle<icon7::commands::ExecuteFunctionPointer>::Create(
-			[]() {
-				host->ForEachPeer(+[](icon7::Peer *p) { p->Disconnect(); });
-			});
-	host->EnqueueCommand(std::move(com));
+	host->DisconnectAllAsync();
 
 	double clientMiBpsRecv =
 		double(ipc->clientsReceivedBytes) / (t * 1024.0 * 1024.0);
@@ -327,23 +307,9 @@ void runTestSlave()
 {
 	host->Connect("127.0.0.1", serverPort);
 	while (ipc->runTestFlag != 0) {
-		// 		icon7::Command com(icon7::commands::ExecuteFunctionPointer{[]()
-		// { 			host->ForEachPeer(+[](icon7::Peer *p) { auto stats
-		// =
-		// ((icon7::uS::tcpudp::Peer *)p)->GetRealTimeStats();
-		// 				ipc->pendingReliable[processId] =
-		// stats.m_cbPendingReliable; ipc->unackedReliable[processId] =
-		// stats.m_cbSentUnackedReliable;
-		// 			});
-		// 		}});
-		// 		host->EnqueueCommand(std::move(com));
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
-	auto com =
-		icon7::CommandHandle<icon7::commands::ExecuteFunctionPointer>::Create(
-			[]() {
-				host->ForEachPeer(+[](icon7::Peer *p) { p->Disconnect(); });
-			});
+	// 	host->DisconnectAllAsync();
 	std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
