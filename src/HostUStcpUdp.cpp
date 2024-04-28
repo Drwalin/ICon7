@@ -20,8 +20,8 @@
 
 #define ICON7_INCLUDE_CONCURRENT_QUEUE_CPP
 
-#include "../include/icon7/RPCEnvironment.hpp"
 #include "../include/icon7/HostUStcp.hpp"
+#include "../include/icon7/Debug.hpp"
 
 #include "../include/icon7/HostUStcpUdp.hpp"
 #include "../include/icon7/PeerUStcpUdp.hpp"
@@ -47,8 +47,8 @@ Host::~Host() {}
 
 void Host::_InternalDestroy() { icon7::uS::tcp::Host::_InternalDestroy(); }
 
-void Host::_InternalListen(const std::string &address, IPProto ipProto, uint16_t port,
-						   commands::ExecuteBooleanOnHost &com)
+void Host::_InternalListen(const std::string &address, IPProto ipProto,
+						   uint16_t port, commands::ExecuteBooleanOnHost &com)
 {
 	const char *proto = "127.0.0.1";
 	if (ipProto == IPv6) {
@@ -157,14 +157,14 @@ void Host::_InternalOnReceiveUdpPacket(int receivedPacketsCount)
 			// invalid packet received: dropping
 			continue;
 		}
-		
+
 		uint8_t *payload =
 			(uint8_t *)us_udp_packet_buffer_payload(receivingBuffer, i);
 		int bytes = us_udp_packet_buffer_payload_length(receivingBuffer, i);
-		
+
 		uint32_t peerIdentity = 0;
 		memcpy(&peerIdentity, payload, 4);
-		
+
 		auto it = peerByReceivingIdentity.find(peerIdentity);
 		if (it == peerByReceivingIdentity.end()) {
 			// TODO: show error for invalid peer receiving identity
@@ -176,7 +176,7 @@ void Host::_InternalOnReceiveUdpPacket(int receivedPacketsCount)
 					memcpy(&it->second->ip4, addr, sizeof(struct sockaddr_in6));
 				}
 			}
-			it->second->_InternalOnUdpPacket(payload+4, bytes-4);
+			it->second->_InternalOnUdpPacket(payload + 4, bytes - 4);
 		}
 	}
 }
@@ -221,7 +221,7 @@ void Host::_Internal_on_open_Finish(std::shared_ptr<icon7::Peer> _peer)
 {
 	icon7::uS::tcp::Host::_Internal_on_open_Finish(_peer);
 	Peer *peer = (Peer *)_peer.get();
-	
+
 	peer->_InternalOnOpenFinish();
 }
 

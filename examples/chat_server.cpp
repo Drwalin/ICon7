@@ -88,9 +88,8 @@ int main(int argc, char **argv)
 	});
 	host->SetRpcEnvironment(&rpc);
 	host->RunAsync();
-	
-	auto Listen = [host, port](std::string addr)->bool
-	{
+
+	auto Listen = [host, port](std::string addr) -> bool {
 		auto listeningFuture = host->ListenOnPort(addr, port, icon7::IPv4);
 		listeningFuture.wait_for(std::chrono::seconds(2));
 		if (listeningFuture.get()) {

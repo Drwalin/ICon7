@@ -62,9 +62,10 @@ public:
 protected:
 	bool InitLoopAndContext(us_socket_context_options_t options);
 
-	virtual void
-	_InternalConnect(commands::ExecuteConnect &connectCommand) override;
-	virtual void _InternalListen(const std::string &address,IPProto ipProto, uint16_t port,
+	virtual void _InternalConnect(
+		commands::internal::ExecuteConnect &connectCommand) override;
+	virtual void _InternalListen(const std::string &address, IPProto ipProto,
+								 uint16_t port,
 								 commands::ExecuteBooleanOnHost &com) override;
 
 	static void _Internal_wakeup_cb(struct us_loop_t *loop);
@@ -98,9 +99,9 @@ protected:
 	virtual std::shared_ptr<icon7::uS::tcp::Peer> MakePeer(us_socket_t *socket);
 
 	friend class Peer;
-	
+
 	static void _InternalOnTimerWakup(us_timer_t *timer);
-	
+
 	static Host *HostFromUsLoop(us_loop_t *loop);
 	static Host **HostStoreFromUsLoop(us_loop_t *loop);
 
@@ -111,7 +112,7 @@ protected:
 
 	us_socket_context_t *socketContext;
 	std::unordered_set<us_listen_socket_t *> listenSockets;
-	
+
 	us_timer_t *timerWakeup;
 };
 } // namespace tcp

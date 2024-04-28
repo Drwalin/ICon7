@@ -37,7 +37,7 @@ class Peer : public icon7::uS::tcp::Peer
 public:
 	Peer(uS::tcpudp::Host *host, us_socket_t *socket);
 	virtual ~Peer();
-	
+
 	const uint32_t maxUnreliablePacketSize;
 
 protected:
@@ -57,11 +57,12 @@ protected:
 	virtual void _InternalClearInternalDataOnClose() override;
 
 	virtual bool _InternalHasQueuedSends() const override;
-	
+
 	void _InternalOnUdpPacket(void *data, uint32_t bytes);
-	virtual void _InternalOnPacketWithControllSequenceBackend(
-			std::vector<uint8_t> &buffer, uint32_t headerSize) override;
-	
+	virtual void
+	_InternalOnPacketWithControllSequenceBackend(std::vector<uint8_t> &buffer,
+												 uint32_t headerSize) override;
+
 	void _InternalOnOpenFinish();
 
 	friend class Host;
@@ -73,21 +74,21 @@ protected:
 	};
 	std::multimap<uint32_t, SendFrameStruct> udpSendFrames;
 	FrameDecoder udpFrameDecoder;
-	
-	uint32_t sendingIdentity; // received from peer
+
+	uint32_t sendingIdentity;	// received from peer
 	uint32_t receivingIdentity; // generatea from Host counter
 	uint32_t receivingNewestPacketId;
 	uint32_t sendingNewestPacketId;
 	uint8_t sendingKey[32];
 	uint8_t receivingKey[32];
-	
+
 	bool hasPeerThisAddress;
 	bool hasRemoteAddress;
 	bool hasSendingIdentity;
-	
+
 private:
-	std::vector<SendFrameStruct> tmpUdpPacketCollection; 
-	std::vector<int> tmpUdpPacketCollectionSizes; 
+	std::vector<SendFrameStruct> tmpUdpPacketCollection;
+	std::vector<int> tmpUdpPacketCollectionSizes;
 };
 } // namespace tcpudp
 } // namespace uS

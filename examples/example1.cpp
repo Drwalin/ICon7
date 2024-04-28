@@ -39,11 +39,13 @@ int main()
 	hosta->RunAsync();
 
 	{
-		icon7::commands::ExecuteBooleanOnHost com;
-		com.function = [](auto host, bool v, void *) {
+		auto com = icon7::CommandHandle<
+			icon7::commands::ExecuteBooleanOnHost>::Create();
+		com->function = [](auto host, bool v, void *) {
 			printf(" %s\n", v ? "Listening" : "Fail to listen");
 		};
-		hosta->ListenOnPort("127.0.0.1", port, icon7::IPv4, std::move(com), nullptr);
+		hosta->ListenOnPort("127.0.0.1", port, icon7::IPv4, std::move(com),
+							nullptr);
 	}
 
 	icon7::uS::tcp::Host *hostb = new icon7::uS::tcp::Host();
@@ -52,8 +54,9 @@ int main()
 	hostb->RunAsync();
 
 	{
-		icon7::commands::ExecuteOnPeer com;
-		com.function = [](icon7::Peer *peer, auto x, void *) {
+		auto com =
+			icon7::CommandHandle<icon7::commands::ExecuteOnPeer>::Create();
+		com->function = [](icon7::Peer *peer, auto x, void *) {
 			peer->Disconnect();
 		};
 		hostb->Connect("127.0.0.1", port, std::move(com), nullptr);

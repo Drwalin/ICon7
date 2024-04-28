@@ -23,11 +23,24 @@
 
 namespace icon7
 {
+Command::~Command() {}
+
 namespace commands
 {
 void ExecuteOnPeer::Execute() { function(peer.get(), data, userPointer); }
 
 void ExecuteOnPeerNoArgs::Execute() { function(peer.get()); }
+
+void ExecuteBooleanOnHost::Execute() { function(host, result, userPointer); }
+
+void ExecuteOnHost::Execute() { function(host, userPointer); }
+
+void ExecuteFunctionPointer::Execute() { function(); }
+
+void ExecuteFunction::Execute() { function(); }
+
+namespace internal
+{
 
 void ExecuteAddPeerToFlush::Execute()
 {
@@ -44,19 +57,15 @@ void ExecuteReturnRC::Execute()
 	function(peer.get(), flags, reader, funcPtr);
 }
 
-void ExecuteBooleanOnHost::Execute() { function(host, result, userPointer); }
-
-void ExecuteOnHost::Execute() { function(host, userPointer); }
-
 void ExecuteConnect::Execute() { host->_InternalConnect(*this); }
 
 void ExecuteListen::Execute()
 {
-	host->_InternalListen(address, ipProto, port, onListen);
+	host->_InternalListen(address, ipProto, port, *onListen.operator->());
 	if (queue) {
 		queue->EnqueueCommand(std::move(onListen));
 	} else {
-		onListen.Execute();
+		onListen->Execute();
 	}
 }
 
@@ -68,23 +77,6 @@ void ExecuteDisconnect::Execute()
 	}
 }
 
-void ExecuteFunctionPointer::Execute() { function(); }
-
-void ExecuteFunction::Execute() { function(); }
+} // namespace internal
 } // namespace commands
-
-using namespace commands;
-
-void Command::Execute()
-{
-	std::visit(
-		[](auto &&c) -> int {
-			if constexpr (std::is_same_v<std::decay_t<decltype(c)>, int> ==
-						  false)
-				c.Execute();
-			return 0;
-		},
-		std::move(cmd));
-	cmd = 0;
-}
 } // namespace icon7

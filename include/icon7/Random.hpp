@@ -29,6 +29,6 @@ public:
 	static uint64_t UInt64();
 	static void Bytes(void *ptr, std::size_t bytes);
 };
-}
+} // namespace icon7
 
 #endif

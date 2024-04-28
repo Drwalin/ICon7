@@ -50,11 +50,11 @@
 #define LOG_ERROR_TF(...) LOG_ERROR_ARGS(true, true, __VA_ARGS__)
 
 #ifndef ICON7_DISABLE_LOG_LEVEL_WARN
-# define LOG_WARN_ARGS(USE_TIME, USE_FILE, ...)                                 \
+#define LOG_WARN_ARGS(USE_TIME, USE_FILE, ...)                                 \
 	LOG_FULL(WARN, USE_TIME, USE_FILE, __VA_ARGS__)
 #else
-# define ICON7_DISABLE_LOG_LEVEL_INFO
-# define LOG_WARN_ARGS(USE_TIME, USE_FILE, ...)
+#define ICON7_DISABLE_LOG_LEVEL_INFO
+#define LOG_WARN_ARGS(USE_TIME, USE_FILE, ...)
 #endif
 #define LOG_WARN(...) LOG_WARN_ARGS(true, true, __VA_ARGS__)
 #define LOG_WARN_(...) LOG_WARN_ARGS(false, false, __VA_ARGS__)
@@ -63,11 +63,11 @@
 #define LOG_WARN_TF(...) LOG_WARN_ARGS(true, true, __VA_ARGS__)
 
 #ifndef ICON7_DISABLE_LOG_LEVEL_INFO
-# define LOG_INFO_ARGS(USE_TIME, USE_FILE, ...)                                 \
+#define LOG_INFO_ARGS(USE_TIME, USE_FILE, ...)                                 \
 	LOG_FULL(INFO, USE_TIME, USE_FILE, __VA_ARGS__)
 #else
-# define ICON7_DISABLE_LOG_LEVEL_DEBUG
-# define LOG_INFO_ARGS(USE_TIME, USE_FILE, ...)
+#define ICON7_DISABLE_LOG_LEVEL_DEBUG
+#define LOG_INFO_ARGS(USE_TIME, USE_FILE, ...)
 #endif
 #define LOG_INFO(...) LOG_INFO_ARGS(true, true, __VA_ARGS__)
 #define LOG_INFO_(...) LOG_INFO_ARGS(false, false, __VA_ARGS__)
@@ -76,11 +76,11 @@
 #define LOG_INFO_TF(...) LOG_INFO_ARGS(true, true, __VA_ARGS__)
 
 #ifndef ICON7_DISABLE_LOG_LEVEL_DEBUG
-# define LOG_DEBUG_ARGS(USE_TIME, USE_FILE, ...)                                \
+#define LOG_DEBUG_ARGS(USE_TIME, USE_FILE, ...)                                \
 	LOG_FULL(DEBUG, USE_TIME, USE_FILE, __VA_ARGS__)
 #else
-# define ICON7_DISABLE_LOG_LEVEL_TRACE
-# define LOG_DEBUG_ARGS(USE_TIME, USE_FILE, ...)
+#define ICON7_DISABLE_LOG_LEVEL_TRACE
+#define LOG_DEBUG_ARGS(USE_TIME, USE_FILE, ...)
 #endif
 #define LOG_DEBUG(...) LOG_DEBUG_ARGS(true, true, __VA_ARGS__)
 #define LOG_DEBUG_(...) LOG_DEBUG_ARGS(false, false, __VA_ARGS__)
@@ -89,10 +89,10 @@
 #define LOG_DEBUG_TF(...) LOG_DEBUG_ARGS(true, true, __VA_ARGS__)
 
 #ifndef ICON7_DISABLE_LOG_LEVEL_TRACE
-# define LOG_TRACE_ARGS(USE_TIME, USE_FILE, ...)                                \
+#define LOG_TRACE_ARGS(USE_TIME, USE_FILE, ...)                                \
 	LOG_FULL(TRACE, USE_TIME, USE_FILE, __VA_ARGS__)
 #else
-# define LOG_TRACE_ARGS(USE_TIME, USE_FILE, ...)
+#define LOG_TRACE_ARGS(USE_TIME, USE_FILE, ...)
 #endif
 #define LOG_TRACE(...) LOG_TRACE_ARGS(true, true, __VA_ARGS__)
 #define LOG_TRACE_(...) LOG_TRACE_ARGS(false, false, __VA_ARGS__)

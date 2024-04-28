@@ -31,16 +31,18 @@ public:
 	CommandExecutionQueue();
 	~CommandExecutionQueue();
 
-	void EnqueueCommand(Command &&command);
-	uint32_t TryDequeueBulkAny(Command *commands, uint32_t max);
+	void EnqueueCommand(CommandHandle<Command> &&command);
+	uint32_t TryDequeueBulkAny(CommandHandle<Command> *commands, uint32_t max);
 
-	static void RunAsyncExecution(CommandExecutionQueue *queue,
-								  uint32_t sleepMicrosecondsOnNoActions);
 	void QueueStopAsyncExecution();
 	void WaitStopAsyncExecution();
 	bool IsRunningAsync() const;
 
 	bool HasAny() const;
+
+	void RunAsyncExecution(uint32_t sleepMicrosecondsOnNoActions);
+	void ExecuteLoop(uint32_t sleepMicrosecondsOnNoActions);
+	uint32_t Execute(uint32_t maxToDequeue);
 
 private:
 	enum AsyncExecutionFlags {
@@ -50,8 +52,6 @@ private:
 		STOPPED = 0
 	};
 
-	static void _InternalExecuteLoop(CommandExecutionQueue *queue,
-									 uint32_t sleepMicrosecondsOnNoActions);
 	std::atomic<uint32_t> asyncExecutionFlags;
 
 private:

@@ -19,10 +19,10 @@
 #ifndef ICON7_COMMAND_HPP
 #define ICON7_COMMAND_HPP
 
-#include <variant>
 #include <memory>
 #include <vector>
 #include <functional>
+#include <type_traits>
 
 #include "Flags.hpp"
 #include "ByteReader.hpp"
@@ -34,290 +34,274 @@ class Host;
 class Peer;
 class MessageConverter;
 
-class Command;
 class CommandExecutionQueue;
 
-// TODO: remove copy constructors/operators
+class Command
+{
+public:
+	inline Command() {}
+
+	Command(Command &&other) = delete;
+	Command(Command &other) = delete;
+	Command(const Command &other) = delete;
+
+	Command &operator=(Command &&other) = delete;
+	Command &operator=(Command &other) = delete;
+	Command &operator=(const Command &other) = delete;
+
+	virtual void Execute() = 0;
+
+	virtual ~Command();
+};
+
+template <typename T = Command> class CommandHandle
+{
+public:
+	CommandHandle() : _com(nullptr) {}
+	template <typename T2> CommandHandle(CommandHandle<T2> &&o)
+	{
+		static_assert(std::is_base_of_v<T, T2>);
+		_com = o._com;
+		o._com = nullptr;
+	}
+	CommandHandle(CommandHandle &o) = delete;
+	CommandHandle(const CommandHandle &o) = delete;
+
+	CommandHandle &operator=(CommandHandle &o) = delete;
+	CommandHandle &operator=(const CommandHandle &o) = delete;
+	template <typename T2> CommandHandle &operator=(CommandHandle<T2> &&o)
+	{
+		static_assert(std::is_base_of_v<T, T2>);
+		this->~CommandHandle();
+		_com = o._com;
+		o._com = nullptr;
+		return *this;
+	}
+
+	template <typename... Args>
+	inline static CommandHandle<T> Create(Args &&...args)
+	{
+		CommandHandle<T> com;
+		com._com = new T(std::move(args)...);
+		return com;
+	}
+
+	inline void Execute()
+	{
+		if (_com) {
+			_com->Execute();
+			this->~CommandHandle();
+		}
+	}
+
+	inline ~CommandHandle();
+
+	inline T &operator*(int) { return *_com; }
+	inline T *operator->() { return _com; }
+
+public:
+	T *_com = nullptr;
+};
+
+template <typename T> inline CommandHandle<T>::~CommandHandle()
+{
+	if (_com) {
+		delete _com;
+		_com = nullptr;
+	}
+}
 
 namespace commands
 {
-class ExecuteOnPeerNoArgs final
+class ExecuteOnPeerNoArgs : public Command
 {
 public:
+	virtual ~ExecuteOnPeerNoArgs() = default;
 	ExecuteOnPeerNoArgs() = default;
-	ExecuteOnPeerNoArgs(ExecuteOnPeerNoArgs &&) = default;
 	ExecuteOnPeerNoArgs(std::shared_ptr<Peer> peer,
 						void (*function)(Peer *peer))
 		: peer(peer), function(function)
 	{
 	}
-	ExecuteOnPeerNoArgs &operator=(ExecuteOnPeerNoArgs &&) = default;
 
 	std::shared_ptr<Peer> peer;
-	void (*function)(Peer *peer);
+	void (*function)(Peer *peer) = nullptr;
 
-	void Execute();
+	virtual void Execute() override;
 };
 
-class ExecuteOnPeer final
+class ExecuteOnPeer : public Command
 {
 public:
+	virtual ~ExecuteOnPeer() = default;
 	ExecuteOnPeer() = default;
-	ExecuteOnPeer(ExecuteOnPeer &&) = default;
-	ExecuteOnPeer &operator=(ExecuteOnPeer &&) = default;
 
 	std::shared_ptr<Peer> peer;
 	std::vector<uint8_t> data;
-	void *userPointer;
+	void *userPointer = nullptr;
 	void (*function)(Peer *peer, std::vector<uint8_t> &data,
-					 void *customSharedData);
+					 void *customSharedData) = nullptr;
 
-	void Execute();
+	virtual void Execute() override;
 };
 
-class ExecuteAddPeerToFlush final
+class ExecuteBooleanOnHost : public Command
 {
 public:
-	ExecuteAddPeerToFlush() = default;
-	ExecuteAddPeerToFlush(ExecuteAddPeerToFlush &&) = default;
-	ExecuteAddPeerToFlush(std::shared_ptr<Peer> peer, Host *host)
-		: peer(peer), host(host)
-	{
-	}
-	ExecuteAddPeerToFlush &operator=(ExecuteAddPeerToFlush &&) = default;
-
-	std::shared_ptr<Peer> peer;
-	Host *host;
-
-	void Execute();
-};
-
-class ExecuteRPC final
-{
-public:
-	ExecuteRPC(ByteReader &&reader) : reader(std::move(reader)) {}
-	ExecuteRPC(ExecuteRPC &&o)
-		: peer(std::move(o.peer)), reader(std::move(o.reader)),
-		  messageConverter(std::move(o.messageConverter)), flags(o.flags)
-	{
-	}
-	ExecuteRPC &operator=(ExecuteRPC &&) = default;
-
-	std::shared_ptr<Peer> peer;
-	ByteReader reader;
-	MessageConverter *messageConverter;
-	Flags flags;
-	uint32_t returnId;
-
-	void Execute();
-};
-
-class ExecuteReturnRC final
-{
-public:
-	ExecuteReturnRC(ByteReader &&reader) : reader(std::move(reader)) {}
-	ExecuteReturnRC(ExecuteReturnRC &&o)
-		: peer(std::move(o.peer)), reader(std::move(o.reader)),
-		  function(std::move(o.function)), flags(o.flags)
-	{
-	}
-	ExecuteReturnRC &operator=(ExecuteReturnRC &&) = default;
-
-	std::shared_ptr<Peer> peer;
-	void *funcPtr;
-	ByteReader reader;
-	void (*function)(Peer *, Flags, ByteReader &, void *);
-	Flags flags;
-
-	void Execute();
-};
-
-class ExecuteBooleanOnHost final
-{
-public:
+	virtual ~ExecuteBooleanOnHost() = default;
 	ExecuteBooleanOnHost() = default;
-	ExecuteBooleanOnHost(ExecuteBooleanOnHost &&) = default;
 	ExecuteBooleanOnHost(Host *host, void *userPointer, bool result,
 						 void (*function)(Host *, bool, void *))
 		: host(host), userPointer(userPointer), result(result),
 		  function(function)
 	{
 	}
-	ExecuteBooleanOnHost &operator=(ExecuteBooleanOnHost &&) = default;
 
-	Host *host;
-	void *userPointer;
-	bool result;
+	Host *host = nullptr;
+	void *userPointer = nullptr;
+	bool result = false;
 
-	void (*function)(Host *, bool, void *);
+	void (*function)(Host *, bool, void *) = nullptr;
 
-	void Execute();
+	virtual void Execute() override;
 };
 
-class ExecuteOnHost final
+class ExecuteOnHost : public Command
 {
 public:
+	virtual ~ExecuteOnHost() = default;
 	ExecuteOnHost() = default;
-	ExecuteOnHost(ExecuteOnHost &&) = default;
 	ExecuteOnHost(Host *host, void *userPointer,
 				  void (*function)(Host *, void *))
 		: host(host), userPointer(userPointer), function(function)
 	{
 	}
-	ExecuteOnHost &operator=(ExecuteOnHost &&) = default;
 
-	Host *host;
-	void *userPointer;
+	Host *host = nullptr;
+	void *userPointer = nullptr;
 
-	void (*function)(Host *, void *);
+	void (*function)(Host *, void *) = nullptr;
 
-	void Execute();
+	virtual void Execute() override;
 };
 
-class ExecuteListen final
+class ExecuteFunctionPointer : public Command
 {
 public:
-	ExecuteListen() = default;
-	ExecuteListen(ExecuteListen &&) = default;
-	ExecuteListen &operator=(ExecuteListen &&) = default;
-
-	std::string address;
-	IPProto ipProto;
-	Host *host;
-	uint16_t port;
-
-	ExecuteBooleanOnHost onListen;
-	CommandExecutionQueue *queue;
-
-	void Execute();
-};
-
-class ExecuteConnect final
-{
-public:
-	ExecuteConnect() = default;
-	ExecuteConnect(ExecuteConnect &&) = default;
-	ExecuteConnect &operator=(ExecuteConnect &&) = default;
-
-	Host *host;
-	std::string address;
-	uint16_t port;
-
-	CommandExecutionQueue *executionQueue;
-	ExecuteOnPeer onConnected;
-
-	void Execute();
-};
-
-class ExecuteDisconnect final
-{
-public:
-	ExecuteDisconnect() = default;
-	ExecuteDisconnect(ExecuteDisconnect &&) = default;
-	ExecuteDisconnect &operator=(ExecuteDisconnect &&) = default;
-
-	std::shared_ptr<Peer> peer;
-
-	void Execute();
-};
-
-class ExecuteFunctionPointer final
-{
-public:
+	virtual ~ExecuteFunctionPointer() = default;
 	ExecuteFunctionPointer() = default;
-	ExecuteFunctionPointer(ExecuteFunctionPointer &&) = default;
 	ExecuteFunctionPointer(void (*function)()) : function(function) {}
-	ExecuteFunctionPointer &operator=(ExecuteFunctionPointer &&) = default;
 
-	void (*function)();
+	void (*function)() = nullptr;
 
-	void Execute();
+	virtual void Execute() override;
 };
 
-class ExecuteFunction final
+class ExecuteFunction : public Command
 {
 public:
+	virtual ~ExecuteFunction() = default;
 	ExecuteFunction() = default;
-	ExecuteFunction(ExecuteFunction &&) = default;
 	ExecuteFunction(std::function<void()> function) : function(function) {}
-	ExecuteFunction &operator=(ExecuteFunction &&) = default;
 
 	std::function<void()> function;
 
-	void Execute();
+	virtual void Execute() override;
 };
-} // namespace commands
 
-class Command final
+namespace internal
+{
+class ExecuteRPC : public Command
 {
 public:
-	Command() : cmd(0) {}
-	~Command() = default;
-	Command(Command &&other) = default;
-	Command(Command &other) = delete;
-	Command(const Command &other) = delete;
+	virtual ~ExecuteRPC() = default;
+	ExecuteRPC(ByteReader &&reader) : reader(std::move(reader)) {}
 
-	Command &operator=(Command &&other) = default;
-	Command &operator=(Command &other) = delete;
-	Command &operator=(const Command &other) = delete;
+	std::shared_ptr<Peer> peer;
+	ByteReader reader;
+	MessageConverter *messageConverter = nullptr;
+	Flags flags = 0;
+	uint32_t returnId = 0;
 
-	std::variant<int, commands::ExecuteOnPeer, commands::ExecuteOnPeerNoArgs,
-				 commands::ExecuteAddPeerToFlush, commands::ExecuteRPC,
-				 commands::ExecuteReturnRC, commands::ExecuteBooleanOnHost,
-				 commands::ExecuteConnect, commands::ExecuteListen,
-				 commands::ExecuteDisconnect, commands::ExecuteFunctionPointer,
-				 commands::ExecuteOnHost, commands::ExecuteFunction>
-		cmd;
-
-	void Execute();
-
-public:
-	Command(commands::ExecuteOnHost &&executeOnHost)
-		: cmd(std::move(executeOnHost))
-	{
-	}
-	Command(commands::ExecuteOnPeer &&executeOnPeer)
-		: cmd(std::move(executeOnPeer))
-	{
-	}
-	Command(commands::ExecuteAddPeerToFlush &&executeAddPeerToFlush)
-		: cmd(std::move(executeAddPeerToFlush))
-	{
-	}
-	Command(commands::ExecuteOnPeerNoArgs &&executeOnPeerNoArgs)
-		: cmd(std::move(executeOnPeerNoArgs))
-	{
-	}
-	Command(commands::ExecuteRPC &&executeRPC) : cmd(std::move(executeRPC)) {}
-	Command(commands::ExecuteReturnRC &&executeReturnRC)
-		: cmd(std::move(executeReturnRC))
-	{
-	}
-	Command(commands::ExecuteBooleanOnHost &&executeBooleanOnHost)
-		: cmd(std::move(executeBooleanOnHost))
-	{
-	}
-	Command(commands::ExecuteConnect &&executeConnect)
-		: cmd(std::move(executeConnect))
-	{
-	}
-	Command(commands::ExecuteListen &&executeListen)
-		: cmd(std::move(executeListen))
-	{
-	}
-	Command(commands::ExecuteDisconnect &&executeDisconnect)
-		: cmd(std::move(executeDisconnect))
-	{
-	}
-	Command(commands::ExecuteFunctionPointer &&executeFunctionPointer)
-		: cmd(std::move(executeFunctionPointer))
-	{
-	}
-	Command(commands::ExecuteFunction &&executeFunction)
-		: cmd(std::move(executeFunction))
-	{
-	}
+	virtual void Execute() override;
 };
+
+class ExecuteReturnRC : public Command
+{
+public:
+	virtual ~ExecuteReturnRC() = default;
+	ExecuteReturnRC(ByteReader &&reader) : reader(std::move(reader)) {}
+
+	std::shared_ptr<Peer> peer;
+	void *funcPtr = nullptr;
+	ByteReader reader;
+	void (*function)(Peer *, Flags, ByteReader &, void *) = nullptr;
+	Flags flags = 0;
+
+	virtual void Execute() override;
+};
+
+class ExecuteAddPeerToFlush : public Command
+{
+public:
+	virtual ~ExecuteAddPeerToFlush() = default;
+	ExecuteAddPeerToFlush() = default;
+	ExecuteAddPeerToFlush(std::shared_ptr<Peer> peer, Host *host)
+		: peer(peer), host(host)
+	{
+	}
+
+	std::shared_ptr<Peer> peer;
+	Host *host = nullptr;
+
+	virtual void Execute() override;
+};
+
+class ExecuteListen : public Command
+{
+public:
+	virtual ~ExecuteListen() = default;
+	ExecuteListen() = default;
+
+	std::string address;
+	IPProto ipProto;
+	Host *host = nullptr;
+	uint16_t port = 0;
+
+	CommandHandle<ExecuteBooleanOnHost> onListen;
+	CommandExecutionQueue *queue = nullptr;
+
+	virtual void Execute() override;
+};
+
+class ExecuteConnect : public Command
+{
+public:
+	virtual ~ExecuteConnect() = default;
+	ExecuteConnect() = default;
+
+	Host *host = nullptr;
+	std::string address;
+	uint16_t port = 0;
+
+	CommandExecutionQueue *executionQueue;
+	CommandHandle<ExecuteOnPeer> onConnected;
+
+	virtual void Execute() override;
+};
+
+class ExecuteDisconnect : public Command
+{
+public:
+	virtual ~ExecuteDisconnect() = default;
+	ExecuteDisconnect() = default;
+
+	std::shared_ptr<Peer> peer;
+
+	virtual void Execute() override;
+};
+} // namespace internal
+} // namespace commands
 } // namespace icon7
 
 #endif

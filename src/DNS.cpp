@@ -36,63 +36,57 @@
 namespace icon7
 {
 
-AddressInfo::AddressInfo()
-{
-	proto = IPinvalid;
-}
+AddressInfo::AddressInfo() { proto = IPinvalid; }
 
-AddressInfo::~AddressInfo()
-{
-	Clear();
-}
+AddressInfo::~AddressInfo() { Clear(); }
 
-void AddressInfo::Clear()
-{
-	proto = IPinvalid;
-}
+void AddressInfo::Clear() { proto = IPinvalid; }
 
 struct sockaddr_storage *AddressInfo::Address()
 {
 	return (struct sockaddr_storage *)addressStorage;
 }
-	
-bool AddressInfo::Populate(const std::string address, const uint16_t port, const IPProto proto)
+
+bool AddressInfo::Populate(const std::string address, const uint16_t port,
+						   const IPProto proto)
 {
 	Clear();
-    struct addrinfo hints, *result;
-    memset(&hints, 0, sizeof(struct addrinfo));
+	struct addrinfo hints, *result;
+	memset(&hints, 0, sizeof(struct addrinfo));
 
-    hints.ai_flags = AI_PASSIVE;
+	hints.ai_flags = AI_PASSIVE;
 	if (proto == IPv4) {
 		hints.ai_family = AF_INET;
 	} else {
 		hints.ai_family = AF_INET6;
 	}
 
-    char portString[16];
-    snprintf(portString, 16, "%d", port);
+	char portString[16];
+	snprintf(portString, 16, "%d", port);
 
-    if (getaddrinfo(address.c_str(), portString, &hints, &result)) {
+	if (getaddrinfo(address.c_str(), portString, &hints, &result)) {
 		return false;
-    }
+	}
 
-    struct addrinfo *addr = nullptr;
+	struct addrinfo *addr = nullptr;
 	if (proto == IPv6) {
-		for (struct addrinfo *a = result; a && addr==nullptr; a = a->ai_next) {
+		for (struct addrinfo *a = result; a && addr == nullptr;
+			 a = a->ai_next) {
 			if (a->ai_family == AF_INET6) {
 				addr = a;
 				this->proto = proto;
 			}
 		}
 	} else if (proto == IPv4) {
-		for (struct addrinfo *a = result; a && addr==nullptr; a = a->ai_next) {
+		for (struct addrinfo *a = result; a && addr == nullptr;
+			 a = a->ai_next) {
 			if (a->ai_family == AF_INET) {
 				addr = a;
 				this->proto = proto;
 			}
 		}
 	}
-	
+
 	if (proto == IPv4) {
 		memcpy(Address(), addr, ADDRESS4_STORAGE_SIZE);
 	} else if (proto == IPv6) {
@@ -100,11 +94,11 @@ bool AddressInfo::Populate(const std::string address, const uint16_t port, const
 	}
 
 	freeaddrinfo(result);
-	
+
 	if (proto == IPinvalid) {
 		return false;
 	}
-	
+
 	return true;
 }
 
@@ -119,4 +113,4 @@ bool AddressInfo::CopyAddressTo(void *ptr)
 	}
 	return true;
 }
-}
+} // namespace icon7

@@ -44,38 +44,41 @@ namespace uS
 namespace tcpudp
 {
 class Peer;
-	
+
 class Host : public icon7::uS::tcp::Host
 {
 public:
 	Host();
 	virtual ~Host();
-	
+
 	virtual void _InternalDestroy() override;
 
-	virtual void _InternalListen(const std::string &address,IPProto ipProto, uint16_t port,
+	virtual void _InternalListen(const std::string &address, IPProto ipProto,
+								 uint16_t port,
 								 commands::ExecuteBooleanOnHost &com) override;
 
 	virtual void _InternalSingleLoopIteration() override;
 
 	virtual void StopListening() override;
-	
+
 	bool _InternalCanSendMorePackets();
 	void *_InternalGetNextPacketDataPointer();
 	void _InternalFinishSendingPacket(uint32_t bytesCount, void *address);
 	void _InternalPerformSend();
-	
-	virtual void _Internal_on_open_Finish(std::shared_ptr<icon7::Peer> peer) override;
-	
+
+	virtual void
+	_Internal_on_open_Finish(std::shared_ptr<icon7::Peer> peer) override;
+
 	uint32_t GenerateNewReceivingIdentityForPeer(std::shared_ptr<Peer> peer);
-	
+
 	friend class Peer;
 
 protected:
 	static void _InternalOnReceiveUdpPacket(us_udp_socket_t *socket,
-			us_udp_packet_buffer_t *buffer, int receivedPacketsCount);
+											us_udp_packet_buffer_t *buffer,
+											int receivedPacketsCount);
 	void _InternalOnReceiveUdpPacket(int receivedPacketsCount);
-	
+
 	static void _InternalOnDrainUdpSocket(us_udp_socket_t *socket);
 	void _InternalOnDrainUdpSocket();
 
@@ -91,7 +94,7 @@ protected:
 	us_udp_packet_buffer_t *sendingBuffer;
 
 	FrameDecoder frameDecoder;
-	
+
 	uint32_t firstFilledSendPacketId, lastFilledSendPacketId;
 };
 } // namespace tcpudp
