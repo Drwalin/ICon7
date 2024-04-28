@@ -22,6 +22,8 @@
 #include <memory>
 #include <type_traits>
 
+#include "../../concurrent/node.hpp"
+
 #include "Flags.hpp"
 #include "ByteReader.hpp"
 
@@ -34,7 +36,7 @@ class MessageConverter;
 
 class CommandExecutionQueue;
 
-class Command
+class Command : public concurrent::node<Command>
 {
 public:
 	inline Command() {}
@@ -98,6 +100,8 @@ public:
 
 	inline T &operator*(int) { return *_com; }
 	inline T *operator->() { return _com; }
+
+	friend class CommandExecutionQueue;
 
 public:
 	T *_com = nullptr;

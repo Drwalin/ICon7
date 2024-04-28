@@ -16,6 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <cstring>
+
 #include "../include/icon7/FramingProtocol.hpp"
 
 #include "../include/icon7/SendFrameStruct.hpp"
@@ -36,5 +38,64 @@ SendFrameStruct::SendFrameStruct(std::vector<uint8_t> &&_dataWithoutHeader,
 								 flags);
 }
 SendFrameStruct::SendFrameStruct() {}
+
+SendFrameStruct::SendFrameStruct(SendFrameStruct &o)
+{
+	dataWithoutHeader = o.dataWithoutHeader;
+	memcpy(header, o.header, 4);
+	headerBytesSent = o.headerBytesSent;
+	headerSize = o.headerSize;
+	__m_next.store(o.__m_next.load());
+}
+
+SendFrameStruct::SendFrameStruct(const SendFrameStruct &o)
+{
+	dataWithoutHeader = o.dataWithoutHeader;
+	memcpy(header, o.header, 4);
+	headerBytesSent = o.headerBytesSent;
+	headerSize = o.headerSize;
+	__m_next.store(o.__m_next.load());
+}
+
+SendFrameStruct::SendFrameStruct(SendFrameStruct &&o)
+{
+	dataWithoutHeader = std::move(o.dataWithoutHeader);
+	memcpy(header, o.header, 4);
+	headerBytesSent = o.headerBytesSent;
+	headerSize = o.headerSize;
+	__m_next.store(o.__m_next.load());
+	o.__m_next = nullptr;
+}
+
+SendFrameStruct &SendFrameStruct::operator=(SendFrameStruct &o)
+{
+	dataWithoutHeader = o.dataWithoutHeader;
+	memcpy(header, o.header, 4);
+	headerBytesSent = o.headerBytesSent;
+	headerSize = o.headerSize;
+	__m_next.store(o.__m_next.load());
+	return *this;
+}
+
+SendFrameStruct &SendFrameStruct::operator=(const SendFrameStruct &o)
+{
+	dataWithoutHeader = o.dataWithoutHeader;
+	memcpy(header, o.header, 4);
+	headerBytesSent = o.headerBytesSent;
+	headerSize = o.headerSize;
+	__m_next.store(o.__m_next.load());
+	return *this;
+}
+
+SendFrameStruct &SendFrameStruct::operator=(SendFrameStruct &&o)
+{
+	dataWithoutHeader = std::move(o.dataWithoutHeader);
+	memcpy(header, o.header, 4);
+	headerBytesSent = o.headerBytesSent;
+	headerSize = o.headerSize;
+	__m_next.store(o.__m_next.load());
+	o.__m_next = nullptr;
+	return *this;
+}
 
 } // namespace icon7

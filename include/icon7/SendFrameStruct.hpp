@@ -19,29 +19,48 @@
 #ifndef ICON7_SEND_FRAME_STRUCT_HPP
 #define ICON7_SEND_FRAME_STRUCT_HPP
 
-#include <cinttypes>
+#include <cstdint>
 
 #include <vector>
+
+#include "../../concurrent/node.hpp"
 
 #include "Flags.hpp"
 
 namespace icon7
 {
-struct SendFrameStruct {
+struct SendFrameStruct : public concurrent::node<SendFrameStruct> {
 	std::vector<uint8_t> dataWithoutHeader;
-	uint32_t bytesSent;
-	Flags flags;
-	uint8_t header[4];
-	uint8_t headerBytesSent;
-	uint8_t headerSize;
+	uint32_t bytesSent = 0;
+	Flags flags = 0;
+	uint8_t header[4] = {0, 0, 0, 0};
+	uint8_t headerBytesSent = 0;
+	uint8_t headerSize = 0;
 
 	inline uint32_t GetBytes() const
 	{
 		return headerSize + dataWithoutHeader.size();
 	}
 
+	static SendFrameStruct *Acquire(std::vector<uint8_t> &&dataWithoutHeader,
+									Flags flags)
+	{
+		return new SendFrameStruct(std::move(dataWithoutHeader), flags);
+	}
+	static void Release(SendFrameStruct *ptr) { delete ptr; }
+
 	SendFrameStruct(std::vector<uint8_t> &&dataWithoutHeader, Flags flags);
 	SendFrameStruct();
+
+	// TODO: mark copy semantics as deleted
+
+	SendFrameStruct(SendFrameStruct &);
+	SendFrameStruct(const SendFrameStruct &);
+	SendFrameStruct(SendFrameStruct &&);
+
+	SendFrameStruct &operator=(SendFrameStruct &);
+	SendFrameStruct &operator=(const SendFrameStruct &);
+	SendFrameStruct &operator=(SendFrameStruct &&);
 };
 } // namespace icon7
 

@@ -19,7 +19,7 @@
 #ifndef ICON7_FLAGS_HPP
 #define ICON7_FLAGS_HPP
 
-#include <cinttypes>
+#include <cstdint>
 
 namespace icon7
 {

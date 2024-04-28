@@ -21,6 +21,8 @@
 
 #include <atomic>
 
+#include "../../concurrent/mpsc_queue.hpp"
+
 #include "Command.hpp"
 
 namespace icon7
@@ -32,7 +34,7 @@ public:
 	~CommandExecutionQueue();
 
 	void EnqueueCommand(CommandHandle<Command> &&command);
-	uint32_t TryDequeueBulkAny(CommandHandle<Command> *commands, uint32_t max);
+	bool TryDequeue(CommandHandle<Command> &command);
 
 	void QueueStopAsyncExecution();
 	void WaitStopAsyncExecution();
@@ -55,7 +57,7 @@ private:
 	std::atomic<uint32_t> asyncExecutionFlags;
 
 private:
-	void *concurrentQueueCommands;
+	concurrent::mpsc::queue<Command> queue;
 };
 } // namespace icon7
 

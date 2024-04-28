@@ -27,8 +27,6 @@ Command::~Command() {}
 
 namespace commands
 {
-// void ExecuteOnPeer::Execute() { function(peer.get(), data, userPointer); }
-
 namespace internal
 {
 
@@ -46,7 +44,7 @@ void ExecuteConnect::Execute() { host->_InternalConnect(*this); }
 
 void ExecuteListen::Execute()
 {
-	host->_InternalListen(address, ipProto, port, *onListen.operator->());
+	host->_InternalListen(address, ipProto, port, onListen);
 	if (queue) {
 		queue->EnqueueCommand(std::move(onListen));
 	} else {
