@@ -20,8 +20,10 @@
 #define ICON7_HOST_HPP
 
 #include <string>
-#include <future>
 #include <unordered_set>
+#include <functional>
+
+#include "../../concurrent/future.hpp"
 
 #include "Flags.hpp"
 #include "Command.hpp"
@@ -47,8 +49,8 @@ public:
 	virtual void _InternalDestroy();
 	void DisconnectAllAsync();
 
-	virtual std::future<bool> ListenOnPort(const std::string &address,
-										   uint16_t port, IPProto ipProto);
+	virtual concurrent::future<bool>
+	ListenOnPort(const std::string &address, uint16_t port, IPProto ipProto);
 	void ListenOnPort(const std::string &address, uint16_t port,
 					  IPProto ipProto,
 					  CommandHandle<commands::ExecuteBooleanOnHost> &&callback,
@@ -57,8 +59,8 @@ public:
 	void SetOnConnect(void (*callback)(Peer *)) { onConnect = callback; }
 	void SetOnDisconnect(void (*callback)(Peer *)) { onDisconnect = callback; }
 
-	std::future<std::shared_ptr<Peer>> ConnectPromise(std::string address,
-													  uint16_t port);
+	concurrent::future<std::shared_ptr<Peer>>
+	ConnectPromise(std::string address, uint16_t port);
 	void Connect(std::string address, uint16_t port);
 	void Connect(std::string address, uint16_t port,
 				 CommandHandle<commands::ExecuteOnPeer> &&onConnected,
@@ -94,9 +96,9 @@ public: // thread unsafe, safe only in hosts loop thread
 	void _InternalInsertPeerToFlush(Peer *peer);
 	virtual void
 	_InternalConnect(commands::internal::ExecuteConnect &connectCommand) = 0;
-	virtual void _InternalListen(const std::string &address, IPProto ipProto,
-								 uint16_t port,
-								 commands::ExecuteBooleanOnHost &com) = 0;
+	virtual void
+	_InternalListen(const std::string &address, IPProto ipProto, uint16_t port,
+					CommandHandle<commands::ExecuteBooleanOnHost> &com) = 0;
 	void
 	_InternalConnect_Finish(commands::internal::ExecuteConnect &connectCommand);
 	virtual void _Internal_on_open_Finish(std::shared_ptr<Peer> peer);

@@ -73,7 +73,7 @@ int main()
 
 	std::thread t(
 		[](icon7::RPCEnvironment *rpc, auto hostb, auto port) {
-			auto f = hostb->ConnectPromise("127.0.0.1", port).share();
+			auto f = hostb->ConnectPromise("127.0.0.1", port);
 			f.wait();
 			auto _peer = f.get();
 			icon7::Peer *peer = _peer.get();

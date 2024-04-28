@@ -20,6 +20,7 @@
 #define ICON7_PEER_US_TCPUDP_HPP
 
 #include <map>
+#include <vector>
 
 #include "SendFrameStruct.hpp"
 #include "HostUStcpUdp.hpp"

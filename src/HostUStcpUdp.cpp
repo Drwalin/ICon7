@@ -18,8 +18,6 @@
 
 #include <cstring>
 
-#define ICON7_INCLUDE_CONCURRENT_QUEUE_CPP
-
 #include "../include/icon7/HostUStcp.hpp"
 #include "../include/icon7/Debug.hpp"
 
@@ -48,7 +46,8 @@ Host::~Host() {}
 void Host::_InternalDestroy() { icon7::uS::tcp::Host::_InternalDestroy(); }
 
 void Host::_InternalListen(const std::string &address, IPProto ipProto,
-						   uint16_t port, commands::ExecuteBooleanOnHost &com)
+						   uint16_t port,
+						   CommandHandle<commands::ExecuteBooleanOnHost> &com)
 {
 	const char *proto = "127.0.0.1";
 	if (ipProto == IPv6) {
@@ -63,13 +62,13 @@ void Host::_InternalListen(const std::string &address, IPProto ipProto,
 		us_create_udp_socket(loop, receivingBuffer, _InternalOnReceiveUdpPacket,
 							 _InternalOnDrainUdpSocket, proto, port, this);
 	if (udpSocket == nullptr) {
-		com.result = false;
+		com->result = false;
 		return;
 	}
 
 	icon7::uS::tcp::Host::_InternalListen(address, ipProto, port, com);
 
-	if (com.result == false) {
+	if (com->result == false) {
 		us_close_and_free_udp_socket(udpSocket, 0);
 		free(receivingBuffer);
 		free(sendingBuffer);

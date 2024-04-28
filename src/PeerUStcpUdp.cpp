@@ -18,11 +18,10 @@
 
 #include <cstring>
 
-#include <algorithm>
 #include <memory>
 
+#include "../include/icon7/Debug.hpp"
 #include "../include/icon7/HostUStcpUdp.hpp"
-#include "../include/icon7/RPCEnvironment.hpp"
 #include "../include/icon7/Random.hpp"
 
 #include "../include/icon7/PeerUStcpUdp.hpp"
@@ -61,7 +60,8 @@ bool Peer::_InternalSend(SendFrameStruct &dataFrame, bool hasMore)
 {
 	if (dataFrame.flags & FLAG_UNRELIABLE) {
 		uint32_t bytes = dataFrame.GetBytes();
-		udpSendFrames.insert({bytes, std::move(dataFrame)});
+		udpSendFrames.insert(
+			std::pair<uint32_t, SendFrameStruct>(bytes, std::move(dataFrame)));
 		return true;
 	} else {
 		return icon7::uS::tcp::Peer::_InternalSend(dataFrame, hasMore);

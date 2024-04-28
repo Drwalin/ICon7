@@ -1,7 +1,6 @@
 #include "icon7/Command.hpp"
 #include <cstdio>
 
-#include <future>
 #include <chrono>
 #include <thread>
 
@@ -46,7 +45,7 @@ int main()
 		hosta->RunAsync();
 
 		{
-			hosta->ListenOnPort("127.0.0.1", port, icon7::IPv4, {}, nullptr);
+			hosta->ListenOnPort("127.0.0.1", port, icon7::IPv4);
 		}
 
 		icon7::uS::tcp::Host *hostb = new icon7::uS::tcp::Host();
@@ -54,9 +53,9 @@ int main()
 		hostb->Init();
 		hostb->RunAsync();
 
-		std::vector<std::shared_future<std::shared_ptr<icon7::Peer>>> peers;
+		std::vector<concurrent::future<std::shared_ptr<icon7::Peer>>> peers;
 		for (int i = 0; i < 10; ++i) {
-			peers.push_back(hostb->ConnectPromise("127.0.0.1", port).share());
+			peers.push_back(hostb->ConnectPromise("127.0.0.1", port));
 		}
 		for (auto &f : peers) {
 			f.wait();

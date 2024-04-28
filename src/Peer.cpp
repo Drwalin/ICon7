@@ -16,8 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#define ICON7_INCLUDE_CONCURRENT_QUEUE_CPP
-
 #include "../include/icon7/Host.hpp"
 #include "../include/icon7/RPCEnvironment.hpp"
 #include "../include/icon7/Command.hpp"
@@ -35,15 +33,10 @@ Peer::Peer(Host *host) : host(host)
 	userPointer = nullptr;
 	onDisconnect = nullptr;
 	peerFlags = 0;
-	sendQueue = new QueueType();
 	sendingQueueSize = 0;
 }
 
-Peer::~Peer()
-{
-	delete sendQueue;
-	sendQueue = nullptr;
-}
+Peer::~Peer() {}
 
 void Peer::Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
 {
@@ -53,14 +46,16 @@ void Peer::Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
 		return;
 	}
 	sendingQueueSize++;
-	sendQueue->enqueue(SendFrameStruct(std::move(dataWithoutHeader), flags));
+	sendQueue.push(
+		SendFrameStruct::Acquire(std::move(dataWithoutHeader), flags));
 	host->InsertPeerToFlush(this);
 }
 void Peer::SendLocalThread(std::vector<uint8_t> &&dataWithoutHeader,
 						   Flags flags)
 {
 	sendingQueueSize++;
-	sendQueueLocal.push(SendFrameStruct(std::move(dataWithoutHeader), flags));
+	sendQueue.get_output_stack().push(
+		SendFrameStruct::Acquire(std::move(dataWithoutHeader), flags));
 	host->_InternalInsertPeerToFlush(this);
 }
 
@@ -149,28 +144,20 @@ void Peer::SetReadyToUse() { peerFlags |= BIT_READY; }
 
 void Peer::_InternalFlushQueuedSends()
 {
-	_InternalPopQueuedSendsFromAsync();
-	for (uint32_t i = 0; i < 16 && sendQueueLocal.empty() == false; ++i) {
-		if (_InternalSend(sendQueueLocal.front(), sendingQueueSize > 1)) {
-			sendQueueLocal.pop();
-			sendingQueueSize--;
+	SendFrameStruct *frame;
+	for (uint32_t i = 0; i < 16; ++i) {
+		frame = sendQueue.pop();
+		if (frame) {
+			if (_InternalSend(*frame, sendingQueueSize > 1)) {
+				sendingQueueSize--;
+				SendFrameStruct::Release(frame);
+			} else {
+				sendQueue.get_output_stack().push(frame);
+				break;
+			}
 		} else {
 			break;
 		}
-		if (sendQueueLocal.empty()) {
-			_InternalPopQueuedSendsFromAsync();
-		}
-	}
-	_InternalPopQueuedSendsFromAsync();
-}
-
-void Peer::_InternalPopQueuedSendsFromAsync()
-{
-	const uint32_t MAX_DEQUEUE = 16;
-	SendFrameStruct frames[MAX_DEQUEUE];
-	uint32_t poped = sendQueue->try_dequeue_bulk(frames, MAX_DEQUEUE);
-	for (uint32_t i = 0; i < poped; ++i) {
-		sendQueueLocal.push(std::move(frames[i]));
 	}
 }
 

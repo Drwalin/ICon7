@@ -16,7 +16,7 @@
 icon7::RPCEnvironment rpc;
 
 icon7::Host *host = nullptr;
-const uint32_t CLIENTS_NUM = 10;
+const uint32_t CLIENTS_NUM = 50;
 const uint16_t serverPort = 4000;
 
 extern "C" int processId;
@@ -141,9 +141,9 @@ template <typename... Args> void Print(const char *fmt, Args... args)
 	fflush(stdout);
 }
 
-void Runner(icon7::Peer *_peer)
+void Runner(std::shared_ptr<icon7::Peer> peer)
 {
-	std::shared_ptr<icon7::Peer> peer = _peer->shared_from_this();
+	icon7::Peer *_peer = peer.get();
 	while (peer->IsReadyToUse() == false) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
@@ -156,7 +156,7 @@ void Runner(icon7::Peer *_peer)
 			}
 			break;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		for (uint32_t j = 0; j < ((processId == -1) ? 4 : 1); ++j) {
 			uint32_t s = (processId == -1) ? GetRandomMessageSize() : 100;
 			data.resize(s / 21);
@@ -190,7 +190,10 @@ void Runner(icon7::Peer *_peer)
 	peer->Disconnect();
 }
 
-void Run(icon7::Peer *peer) { std::thread(Runner, peer).detach(); }
+void Run(icon7::Peer *peer)
+{
+	std::thread(Runner, peer->shared_from_this()).detach();
+}
 
 void FunctionReceive(icon7::Peer *peer, std::vector<TestStruct> &data, double t)
 {
@@ -305,7 +308,8 @@ void runTestMaster(uint32_t messages, const uint32_t clientsNum)
 
 void runTestSlave()
 {
-	host->Connect("127.0.0.1", serverPort);
+	auto p = host->ConnectPromise("127.0.0.1", serverPort);
+	p.wait_for(std::chrono::milliseconds(10));
 	while (ipc->runTestFlag != 0) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
@@ -316,9 +320,10 @@ void runTestSlave()
 int main()
 {
 	LOG_INFO("");
-	const std::vector<uint32_t> messagesCount = {64 * 1024,	  2 * 1024,
-												 16 * 1024,	  256 * 1024,
-												 1024 * 1024, 8 * 1024 * 1024};
+	const std::vector<uint32_t> messagesCount = {// 64 * 1024,	  2 * 1024,
+												 // 16 * 1024,
+												 256 * 1024, 1024 * 1024,
+												 8 * 1024 * 1024};
 
 	ipc =
 		(IPC *)mmap(NULL, sharedMemorySize, PROT_READ | PROT_WRITE | PROT_EXEC,
@@ -337,6 +342,7 @@ int main()
 				for (int j = 0; j < i; ++j) {
 					kill(pids[j], SIGKILL);
 				}
+				LOG_FATAL("Fork failed: %i", i);
 				perror("fork");
 				exit(EXIT_FAILURE);
 			} else if (pid == 0) { // child process

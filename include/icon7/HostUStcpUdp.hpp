@@ -29,10 +29,6 @@
 
 #include "../uSockets/src/libusockets.h"
 
-#ifdef ICON7_INCLUDE_CONCURRENT_QUEUE_CPP
-#include "../concurrentqueue/concurrentqueue.h"
-#endif
-
 #include "FrameDecoder.hpp"
 
 #include "HostUStcp.hpp"
@@ -53,9 +49,9 @@ public:
 
 	virtual void _InternalDestroy() override;
 
-	virtual void _InternalListen(const std::string &address, IPProto ipProto,
-								 uint16_t port,
-								 commands::ExecuteBooleanOnHost &com) override;
+	virtual void _InternalListen(
+		const std::string &address, IPProto ipProto, uint16_t port,
+		CommandHandle<commands::ExecuteBooleanOnHost> &com) override;
 
 	virtual void _InternalSingleLoopIteration() override;
 

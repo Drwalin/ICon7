@@ -97,8 +97,8 @@ uint32_t Host::DispatchAllEventsFromQueue(uint32_t maxEvents)
 	return commandQueue.Execute(maxEvents);
 }
 
-std::future<std::shared_ptr<Peer>> Host::ConnectPromise(std::string address,
-														uint16_t port)
+concurrent::future<std::shared_ptr<Peer>>
+Host::ConnectPromise(std::string address, uint16_t port)
 {
 	class CommandConnectPromise : public commands::ExecuteOnPeer
 	{
@@ -106,7 +106,7 @@ std::future<std::shared_ptr<Peer>> Host::ConnectPromise(std::string address,
 		CommandConnectPromise() = default;
 		virtual ~CommandConnectPromise() = default;
 
-		std::promise<std::shared_ptr<Peer>> promise;
+		concurrent::promise<std::shared_ptr<Peer>> promise;
 
 		virtual void Execute() override
 		{
@@ -119,7 +119,7 @@ std::future<std::shared_ptr<Peer>> Host::ConnectPromise(std::string address,
 	};
 
 	auto onConnected = CommandHandle<CommandConnectPromise>::Create();
-	std::future<std::shared_ptr<Peer>> future =
+	concurrent::future<std::shared_ptr<Peer>> future =
 		onConnected->promise.get_future();
 	Connect(address, port, std::move(onConnected), nullptr);
 	return future;
@@ -158,8 +158,8 @@ void Host::_Internal_on_close_Finish(std::shared_ptr<Peer> peer)
 	peer->peerFlags |= Peer::BIT_CLOSED;
 }
 
-std::future<bool> Host::ListenOnPort(const std::string &address, uint16_t port,
-									 IPProto ipProto)
+concurrent::future<bool> Host::ListenOnPort(const std::string &address,
+											uint16_t port, IPProto ipProto)
 {
 	class CommandListnePromise : public commands::ExecuteBooleanOnHost
 	{
@@ -167,7 +167,7 @@ std::future<bool> Host::ListenOnPort(const std::string &address, uint16_t port,
 		CommandListnePromise() = default;
 		virtual ~CommandListnePromise() = default;
 
-		std::promise<bool> promise;
+		concurrent::promise<bool> promise;
 
 		virtual void Execute() override { promise.set_value(result); }
 	};
@@ -183,6 +183,17 @@ void Host::ListenOnPort(
 	CommandHandle<commands::ExecuteBooleanOnHost> &&callback,
 	CommandExecutionQueue *queue)
 {
+	if (callback.IsValid() == false) {
+		LOG_FATAL("Used Host::ListenOnPort with empty callback");
+		// TODO: maybe removethis dummy?
+		class Dummy final : public commands::ExecuteBooleanOnHost
+		{
+		public:
+			virtual ~Dummy() {}
+			virtual void Execute() override {}
+		};
+		callback = CommandHandle<Dummy>();
+	}
 	auto com = CommandHandle<commands::internal::ExecuteListen>::Create();
 	com->address = address;
 	com->host = this;

@@ -1,9 +1,9 @@
-[submodule "concurrentqueue"]
-	path = concurrentqueue
-	url = https://github.com/cameron314/concurrentqueue.git
 [submodule "bitscpp"]
 	path = bitscpp
 	url = https://github.com/Drwalin/bitscpp.git
 [submodule "uSockets"]
 	path = uSockets
 	url = https://github.com/Drwalin/uSockets.git
+[submodule "concurrent"]
+	path = concurrent
+	url = https://github.com/Drwalin/concurrent.git

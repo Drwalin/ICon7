@@ -22,11 +22,8 @@
 #include <vector>
 #include <atomic>
 #include <memory>
-#include <queue>
 
-#ifdef ICON7_INCLUDE_CONCURRENT_QUEUE_CPP
-#include "../concurrentqueue/concurrentqueue.h"
-#endif
+#include "../../concurrent/mpsc_queue.hpp"
 
 #include "Flags.hpp"
 #include "Command.hpp"
@@ -84,7 +81,6 @@ public:
 
 protected:
 	virtual void _InternalFlushQueuedSends();
-	virtual void _InternalPopQueuedSendsFromAsync();
 	/*
 	 * return true if successfully whole dataFrame has been sent.
 	 * false otherwise.
@@ -114,17 +110,7 @@ protected:
 	inline const static uint32_t BIT_CLOSED = 4;
 
 protected:
-#ifdef ICON7_INCLUDE_CONCURRENT_QUEUE_CPP
-	using QueueType = moodycamel::ConcurrentQueue<SendFrameStruct>;
-#endif
-
-	union {
-		void *sendQueue_variable_name_placeholder;
-#ifdef ICON7_INCLUDE_CONCURRENT_QUEUE_CPP
-		QueueType *sendQueue;
-#endif
-	};
-	std::queue<SendFrameStruct> sendQueueLocal;
+	concurrent::mpsc::queue<SendFrameStruct> sendQueue;
 	std::atomic<uint32_t> sendingQueueSize;
 
 	void (*onDisconnect)(Peer *);

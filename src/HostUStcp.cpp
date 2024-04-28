@@ -140,7 +140,8 @@ bool Host::InitLoopAndContext(us_socket_context_options_t options)
 }
 
 void Host::_InternalListen(const std::string &address, IPProto ipProto,
-						   uint16_t port, commands::ExecuteBooleanOnHost &com)
+						   uint16_t port,
+						   CommandHandle<commands::ExecuteBooleanOnHost> &com)
 {
 	us_listen_socket_t *socket = nullptr;
 	if (address.size() == 0) {
@@ -159,7 +160,7 @@ void Host::_InternalListen(const std::string &address, IPProto ipProto,
 		listenSockets.insert(socket);
 	}
 
-	com.result = socket;
+	com->result = socket;
 }
 
 void Host::SingleLoopIteration()
