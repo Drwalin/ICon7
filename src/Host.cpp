@@ -73,8 +73,16 @@ void Host::_InternalDestroy()
 
 void Host::DisconnectAllAsync()
 {
-	this->EnqueueCommand(CommandHandle<commands::ExecuteOnHost>::Create(
-		this, nullptr, [](Host *host, void *) { host->DisconnectAll(); }));
+	class CommandDisconnectAll : public commands::ExecuteOnHost
+	{
+	public:
+		CommandDisconnectAll() = default;
+		~CommandDisconnectAll() = default;
+		virtual void Execute() override { host->DisconnectAll(); }
+	};
+	auto com = CommandHandle<CommandDisconnectAll>::Create();
+	com->host = this;
+	EnqueueCommand(std::move(com));
 }
 
 void Host::DisconnectAll()
@@ -92,21 +100,27 @@ uint32_t Host::DispatchAllEventsFromQueue(uint32_t maxEvents)
 std::future<std::shared_ptr<Peer>> Host::ConnectPromise(std::string address,
 														uint16_t port)
 {
-	std::promise<std::shared_ptr<Peer>> *promise =
-		new std::promise<std::shared_ptr<Peer>>();
-	auto onConnected = CommandHandle<commands::ExecuteOnPeer>::Create();
-	onConnected->userPointer = promise;
-	onConnected->function = [](auto peer, auto data, auto userPointer) {
-		std::promise<std::shared_ptr<Peer>> *promise =
-			(std::promise<std::shared_ptr<Peer>> *)(userPointer);
-		if (peer != nullptr) {
-			promise->set_value(peer->shared_from_this());
-		} else {
-			promise->set_value(nullptr);
+	class CommandConnectPromise : public commands::ExecuteOnPeer
+	{
+	public:
+		CommandConnectPromise() = default;
+		virtual ~CommandConnectPromise() = default;
+
+		std::promise<std::shared_ptr<Peer>> promise;
+
+		virtual void Execute() override
+		{
+			if (peer != nullptr) {
+				promise.set_value(peer->shared_from_this());
+			} else {
+				promise.set_value(nullptr);
+			}
 		}
-		delete promise;
 	};
-	std::future<std::shared_ptr<Peer>> future = promise->get_future();
+
+	auto onConnected = CommandHandle<CommandConnectPromise>::Create();
+	std::future<std::shared_ptr<Peer>> future =
+		onConnected->promise.get_future();
 	Connect(address, port, std::move(onConnected), nullptr);
 	return future;
 }
@@ -147,16 +161,19 @@ void Host::_Internal_on_close_Finish(std::shared_ptr<Peer> peer)
 std::future<bool> Host::ListenOnPort(const std::string &address, uint16_t port,
 									 IPProto ipProto)
 {
-	std::promise<bool> *promise = new std::promise<bool>();
-	auto callback = CommandHandle<commands::ExecuteBooleanOnHost>::Create();
-	callback->host = this;
-	callback->userPointer = promise;
-	callback->function = [](Host *host, bool result, void *userPointer) {
-		std::promise<bool> *promise = (std::promise<bool> *)(userPointer);
-		promise->set_value(result);
-		delete promise;
+	class CommandListnePromise : public commands::ExecuteBooleanOnHost
+	{
+	public:
+		CommandListnePromise() = default;
+		virtual ~CommandListnePromise() = default;
+
+		std::promise<bool> promise;
+
+		virtual void Execute() override { promise.set_value(result); }
 	};
-	auto future = promise->get_future();
+	auto callback = CommandHandle<CommandListnePromise>::Create();
+	callback->host = this;
+	auto future = callback->promise.get_future();
 	ListenOnPort(address, port, ipProto, std::move(callback), nullptr);
 	return future;
 }
@@ -179,9 +196,7 @@ void Host::ListenOnPort(
 
 void Host::Connect(std::string address, uint16_t port)
 {
-	auto com = CommandHandle<commands::ExecuteOnPeer>::Create();
-	com->function = [](auto a, auto b, auto c) {};
-	Connect(address, port, std::move(com), nullptr);
+	Connect(address, port, {}, nullptr);
 }
 
 void Host::Connect(std::string address, uint16_t port,

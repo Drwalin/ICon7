@@ -20,6 +20,8 @@
 
 #include "../concurrentqueue/concurrentqueue.h"
 
+#include "../include/icon7/Debug.hpp"
+
 #include "../include/icon7/CommandExecutionQueue.hpp"
 
 namespace icon7
@@ -41,7 +43,11 @@ CommandExecutionQueue::~CommandExecutionQueue()
 
 void CommandExecutionQueue::EnqueueCommand(CommandHandle<Command> &&command)
 {
-	((QueueType *)concurrentQueueCommands)->enqueue(std::move(command));
+	if (command.IsValid() == false) {
+		LOG_ERROR("Trying to enqueue empty command");
+	} else {
+		((QueueType *)concurrentQueueCommands)->enqueue(std::move(command));
+	}
 }
 
 uint32_t

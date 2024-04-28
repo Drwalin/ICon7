@@ -20,8 +20,6 @@
 #define ICON7_COMMAND_HPP
 
 #include <memory>
-#include <vector>
-#include <functional>
 #include <type_traits>
 
 #include "Flags.hpp"
@@ -94,6 +92,8 @@ public:
 		}
 	}
 
+	inline bool IsValid() const { return _com != nullptr; }
+
 	inline ~CommandHandle();
 
 	inline T &operator*(int) { return *_com; }
@@ -113,57 +113,14 @@ template <typename T> inline CommandHandle<T>::~CommandHandle()
 
 namespace commands
 {
-class ExecuteOnPeerNoArgs : public Command
-{
-public:
-	virtual ~ExecuteOnPeerNoArgs() = default;
-	ExecuteOnPeerNoArgs() = default;
-	ExecuteOnPeerNoArgs(std::shared_ptr<Peer> peer,
-						void (*function)(Peer *peer))
-		: peer(peer), function(function)
-	{
-	}
-
-	std::shared_ptr<Peer> peer;
-	void (*function)(Peer *peer) = nullptr;
-
-	virtual void Execute() override;
-};
-
 class ExecuteOnPeer : public Command
 {
 public:
 	virtual ~ExecuteOnPeer() = default;
 	ExecuteOnPeer() = default;
+	ExecuteOnPeer(std::shared_ptr<Peer> &peer) : peer(peer) {}
 
 	std::shared_ptr<Peer> peer;
-	std::vector<uint8_t> data;
-	void *userPointer = nullptr;
-	void (*function)(Peer *peer, std::vector<uint8_t> &data,
-					 void *customSharedData) = nullptr;
-
-	virtual void Execute() override;
-};
-
-class ExecuteBooleanOnHost : public Command
-{
-public:
-	virtual ~ExecuteBooleanOnHost() = default;
-	ExecuteBooleanOnHost() = default;
-	ExecuteBooleanOnHost(Host *host, void *userPointer, bool result,
-						 void (*function)(Host *, bool, void *))
-		: host(host), userPointer(userPointer), result(result),
-		  function(function)
-	{
-	}
-
-	Host *host = nullptr;
-	void *userPointer = nullptr;
-	bool result = false;
-
-	void (*function)(Host *, bool, void *) = nullptr;
-
-	virtual void Execute() override;
 };
 
 class ExecuteOnHost : public Command
@@ -171,42 +128,22 @@ class ExecuteOnHost : public Command
 public:
 	virtual ~ExecuteOnHost() = default;
 	ExecuteOnHost() = default;
-	ExecuteOnHost(Host *host, void *userPointer,
-				  void (*function)(Host *, void *))
-		: host(host), userPointer(userPointer), function(function)
+	ExecuteOnHost(Host *host) : host(host) {}
+
+	Host *host = nullptr;
+};
+
+class ExecuteBooleanOnHost : public ExecuteOnHost
+{
+public:
+	virtual ~ExecuteBooleanOnHost() = default;
+	ExecuteBooleanOnHost() = default;
+	ExecuteBooleanOnHost(Host *host, bool result)
+		: ExecuteOnHost(host), result(result)
 	{
 	}
 
-	Host *host = nullptr;
-	void *userPointer = nullptr;
-
-	void (*function)(Host *, void *) = nullptr;
-
-	virtual void Execute() override;
-};
-
-class ExecuteFunctionPointer : public Command
-{
-public:
-	virtual ~ExecuteFunctionPointer() = default;
-	ExecuteFunctionPointer() = default;
-	ExecuteFunctionPointer(void (*function)()) : function(function) {}
-
-	void (*function)() = nullptr;
-
-	virtual void Execute() override;
-};
-
-class ExecuteFunction : public Command
-{
-public:
-	virtual ~ExecuteFunction() = default;
-	ExecuteFunction() = default;
-	ExecuteFunction(std::function<void()> function) : function(function) {}
-
-	std::function<void()> function;
-
-	virtual void Execute() override;
+	bool result = false;
 };
 
 namespace internal
@@ -222,21 +159,6 @@ public:
 	MessageConverter *messageConverter = nullptr;
 	Flags flags = 0;
 	uint32_t returnId = 0;
-
-	virtual void Execute() override;
-};
-
-class ExecuteReturnRC : public Command
-{
-public:
-	virtual ~ExecuteReturnRC() = default;
-	ExecuteReturnRC(ByteReader &&reader) : reader(std::move(reader)) {}
-
-	std::shared_ptr<Peer> peer;
-	void *funcPtr = nullptr;
-	ByteReader reader;
-	void (*function)(Peer *, Flags, ByteReader &, void *) = nullptr;
-	Flags flags = 0;
 
 	virtual void Execute() override;
 };

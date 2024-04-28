@@ -30,36 +30,29 @@ bool OnReturnCallback::IsExpired(
 
 void OnReturnCallback::Execute(Peer *peer, Flags flags, ByteReader &reader)
 {
-	if (peer != this->peer.get()) {
+	if (peer != callback->peer.get()) {
 		LOG_WARN(
 			"OnReturnedCallback executed by different peer than the request "
 			"was sent to");
 	}
 
+	callback->flags = flags;
+	callback->reader = std::move(reader);
+	callback->timedOut = false;
 	if (executionQueue) {
-		auto com = CommandHandle<commands::internal::ExecuteReturnRC>::Create(
-			std::move(reader));
-		com->peer = this->peer;
-		com->function = _internalOnReturnedValue;
-		com->funcPtr = onReturned;
-		com->flags = flags;
-		executionQueue->EnqueueCommand(std::move(com));
+		executionQueue->EnqueueCommand(std::move(callback));
 	} else {
-		_internalOnReturnedValue(this->peer.get(), flags, reader, onReturned);
+		callback.Execute();
 	}
 }
 
 void OnReturnCallback::ExecuteTimeout()
 {
-	if (onTimeout) {
-		if (executionQueue) {
-			auto com = CommandHandle<commands::ExecuteOnPeerNoArgs>();
-			com->peer = peer;
-			com->function = onTimeout;
-			executionQueue->EnqueueCommand(std::move(com));
-		} else {
-			onTimeout(peer.get());
-		}
+	callback->timedOut = true;
+	if (executionQueue) {
+		executionQueue->EnqueueCommand(std::move(callback));
+	} else {
+		callback.Execute();
 	}
 }
 } // namespace icon7

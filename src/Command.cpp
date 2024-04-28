@@ -27,17 +27,7 @@ Command::~Command() {}
 
 namespace commands
 {
-void ExecuteOnPeer::Execute() { function(peer.get(), data, userPointer); }
-
-void ExecuteOnPeerNoArgs::Execute() { function(peer.get()); }
-
-void ExecuteBooleanOnHost::Execute() { function(host, result, userPointer); }
-
-void ExecuteOnHost::Execute() { function(host, userPointer); }
-
-void ExecuteFunctionPointer::Execute() { function(); }
-
-void ExecuteFunction::Execute() { function(); }
+// void ExecuteOnPeer::Execute() { function(peer.get(), data, userPointer); }
 
 namespace internal
 {
@@ -50,11 +40,6 @@ void ExecuteAddPeerToFlush::Execute()
 void ExecuteRPC::Execute()
 {
 	messageConverter->Call(peer.get(), reader, flags, returnId);
-}
-
-void ExecuteReturnRC::Execute()
-{
-	function(peer.get(), flags, reader, funcPtr);
 }
 
 void ExecuteConnect::Execute() { host->_InternalConnect(*this); }

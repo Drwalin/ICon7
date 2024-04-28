@@ -39,12 +39,21 @@ Host::~Host() {}
 
 void Host::_InternalDestroy()
 {
-	this->EnqueueCommand(CommandHandle<commands::ExecuteOnHost>::Create(
-		this, nullptr, [](icon7::Host *_host, void *) {
-			Host *host = (Host *)_host;
+	class CommandCloseAllSockets : public commands::ExecuteOnHost
+	{
+	public:
+		CommandCloseAllSockets() = default;
+		~CommandCloseAllSockets() = default;
+		virtual void Execute() override
+		{
+			Host *host = (Host *)(this->host);
 			// close all sockets
 			us_socket_context_close(host->SSL, host->socketContext);
-		}));
+		}
+	};
+	auto com = CommandHandle<CommandCloseAllSockets>::Create();
+	com->host = this;
+	EnqueueCommand(std::move(com));
 
 	icon7::Host::_InternalDestroy();
 
@@ -293,14 +302,22 @@ void Host::WakeUp() { us_wakeup_loop(loop); }
 
 void Host::StopListening()
 {
-	EnqueueCommand(CommandHandle<commands::ExecuteOnHost>::Create(
-		this, nullptr, [](icon7::Host *host, void *) {
+	class CommandStopListening : public commands::ExecuteOnHost
+	{
+	public:
+		CommandStopListening() = default;
+		~CommandStopListening() = default;
+		virtual void Execute() override
+		{
 			for (us_listen_socket_t *s : ((tcp::Host *)host)->listenSockets) {
 				us_listen_socket_close(((tcp::Host *)host)->SSL, s);
 			}
 			((tcp::Host *)host)->listenSockets.clear();
-		}));
-	WakeUp();
+		}
+	};
+	auto com = CommandHandle<CommandStopListening>::Create();
+	com->host = this;
+	EnqueueCommand(std::move(com));
 }
 
 std::shared_ptr<Peer> Host::MakePeer(us_socket_t *socket)
