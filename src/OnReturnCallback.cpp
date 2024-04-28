@@ -16,6 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "../include/icon7/Debug.hpp"
+
 #include "../include/icon7/OnReturnCallback.hpp"
 
 namespace icon7
@@ -29,19 +31,19 @@ bool OnReturnCallback::IsExpired(
 void OnReturnCallback::Execute(Peer *peer, Flags flags, ByteReader &reader)
 {
 	if (peer != this->peer.get()) {
-		LOG_WARN("OnReturnedCallback executed by different peer than the request "
-			  "was sent to");
+		LOG_WARN(
+			"OnReturnedCallback executed by different peer than the request "
+			"was sent to");
 	}
 
 	if (executionQueue) {
-		Command command{commands::ExecuteReturnRC{std::move(reader)}};
-		commands::ExecuteReturnRC &com =
-			std::get<commands::ExecuteReturnRC>(command.cmd);
-		com.peer = this->peer;
-		com.function = _internalOnReturnedValue;
-		com.funcPtr = onReturned;
-		com.flags = flags;
-		executionQueue->EnqueueCommand(std::move(command));
+		auto com = CommandHandle<commands::internal::ExecuteReturnRC>::Create(
+			std::move(reader));
+		com->peer = this->peer;
+		com->function = _internalOnReturnedValue;
+		com->funcPtr = onReturned;
+		com->flags = flags;
+		executionQueue->EnqueueCommand(std::move(com));
 	} else {
 		_internalOnReturnedValue(this->peer.get(), flags, reader, onReturned);
 	}
@@ -51,12 +53,10 @@ void OnReturnCallback::ExecuteTimeout()
 {
 	if (onTimeout) {
 		if (executionQueue) {
-			Command command{commands::ExecuteOnPeerNoArgs{}};
-			commands::ExecuteOnPeerNoArgs &com =
-				std::get<commands::ExecuteOnPeerNoArgs>(command.cmd);
-			com.peer = peer;
-			com.function = onTimeout;
-			executionQueue->EnqueueCommand(std::move(command));
+			auto com = CommandHandle<commands::ExecuteOnPeerNoArgs>();
+			com->peer = peer;
+			com->function = onTimeout;
+			executionQueue->EnqueueCommand(std::move(com));
 		} else {
 			onTimeout(peer.get());
 		}

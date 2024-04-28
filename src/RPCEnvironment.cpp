@@ -59,14 +59,14 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader, Flags flags)
 			auto mtd = it->second;
 			auto queue = mtd->ExecuteGetQueue(peer, reader, flags);
 			if (queue) {
-				Command command{commands::ExecuteRPC(std::move(reader))};
-				commands::ExecuteRPC &com =
-					std::get<commands::ExecuteRPC>(command.cmd);
-				com.peer = peer->shared_from_this();
-				com.flags = flags;
-				com.returnId = returnId;
-				com.messageConverter = mtd;
-				queue->EnqueueCommand(std::move(command));
+				auto com =
+					CommandHandle<commands::internal::ExecuteRPC>::Create(
+						std::move(reader));
+				com->peer = peer->shared_from_this();
+				com->flags = flags;
+				com->returnId = returnId;
+				com->messageConverter = mtd;
+				queue->EnqueueCommand(std::move(com));
 			} else {
 				mtd->Call(peer, reader, flags, returnId);
 			}
@@ -91,9 +91,10 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader, Flags flags)
 		if (found) {
 			callback.Execute(peer, flags, reader);
 		} else {
-			LOG_WARN("Remote function call returned value but OnReturnedCallback "
-				  "already expired. returnId = %u/%u",
-				  id, this->returnCallCallbackIdGenerator);
+			LOG_WARN(
+				"Remote function call returned value but OnReturnedCallback "
+				"already expired. returnId = %u/%u",
+				id, this->returnCallCallbackIdGenerator);
 		}
 	} break;
 	default:

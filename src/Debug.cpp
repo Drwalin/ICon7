@@ -30,12 +30,12 @@
 #include "../include/icon7/Debug.hpp"
 
 #ifdef __unix__
-# include <sys/syscall.h>
-# ifdef SYS_gettid
-#  define gettid() syscall(SYS_gettid)
-# else
-#  define gettid() 0
-# endif
+#include <sys/syscall.h>
+#ifdef SYS_gettid
+#define gettid() syscall(SYS_gettid)
+#else
+#define gettid() 0
+#endif
 #endif
 
 namespace icon7
@@ -201,18 +201,15 @@ std::string GetPrettyFunctionName(const std::string function)
 }
 
 #ifdef __unix__
-# ifdef SYS_gettid
-static uint64_t GenThreadId()
-{
-	return syscall(SYS_gettid);
-}
-# else
+#ifdef SYS_gettid
+static uint64_t GenThreadId() { return syscall(SYS_gettid); }
+#else
 static uint64_t GenThreadId()
 {
 	static std::atomic<uint64_t> globID = 1;
 	return globID++;
 }
-# endif
+#endif
 #endif
 static thread_local uint64_t threadId = GenThreadId();
 static std::mutex mutex;

@@ -39,21 +39,21 @@ Host::~Host() {}
 
 void Host::_InternalDestroy()
 {
-	this->EnqueueCommand(commands::ExecuteOnHost{
+	this->EnqueueCommand(CommandHandle<commands::ExecuteOnHost>::Create(
 		this, nullptr, [](icon7::Host *_host, void *) {
 			Host *host = (Host *)_host;
 			// close all sockets
 			us_socket_context_close(host->SSL, host->socketContext);
-		}});
+		}));
 
 	icon7::Host::_InternalDestroy();
 
 	us_socket_context_free(SSL, socketContext);
 	socketContext = nullptr;
-	
+
 	us_timer_close(timerWakeup);
 	timerWakeup = nullptr;
-	
+
 	us_loop_free(loop);
 	loop = nullptr;
 }
@@ -70,15 +70,15 @@ bool Host::Init(bool useSSL, const char *key_file_name,
 	if (InitLoopAndContext(options) == false) {
 		return false;
 	}
-	timerWakeup = us_create_timer(loop, true, sizeof(void*));
-	*(Host**)us_timer_ext(timerWakeup) = this;
+	timerWakeup = us_create_timer(loop, true, sizeof(void *));
+	*(Host **)us_timer_ext(timerWakeup) = this;
 	us_timer_set(timerWakeup, _InternalOnTimerWakup, 50, 50);
 	return true;
 }
 
 void Host::_InternalOnTimerWakup(us_timer_t *timer)
 {
-	Host *host = *(Host**)us_timer_ext(timer);
+	Host *host = *(Host **)us_timer_ext(timer);
 	host->_InternalSingleLoopIteration();
 }
 
@@ -126,25 +126,25 @@ bool Host::InitLoopAndContext(us_socket_context_options_t options)
 	} else {
 		SetUSocketContextCallbacks<false>();
 	}
-	
+
 	return true;
 }
 
-void Host::_InternalListen(const std::string &address,IPProto ipProto, uint16_t port,
-						   commands::ExecuteBooleanOnHost &com)
+void Host::_InternalListen(const std::string &address, IPProto ipProto,
+						   uint16_t port, commands::ExecuteBooleanOnHost &com)
 {
 	us_listen_socket_t *socket = nullptr;
 	if (address.size() == 0) {
 		if (ipProto == IPv4) {
-			socket = us_socket_context_listen(SSL, socketContext, "127.0.0.1", port,
-											  0, sizeof(Host *));
+			socket = us_socket_context_listen(SSL, socketContext, "127.0.0.1",
+											  port, 0, sizeof(Host *));
 		} else {
-			socket = us_socket_context_listen(SSL, socketContext, "::1", port, 0,
-											  sizeof(Host *));
+			socket = us_socket_context_listen(SSL, socketContext, "::1", port,
+											  0, sizeof(Host *));
 		}
 	} else {
-		socket = us_socket_context_listen(SSL, socketContext, address.c_str(), port, 0,
-										  sizeof(Host *));
+		socket = us_socket_context_listen(SSL, socketContext, address.c_str(),
+										  port, 0, sizeof(Host *));
 	}
 	if (socket) {
 		listenSockets.insert(socket);
@@ -177,7 +177,7 @@ void Host::_Internal_post_cb(struct us_loop_t *loop)
 	host->_InternalSingleLoopIteration();
 }
 
-void Host::_InternalConnect(commands::ExecuteConnect &com)
+void Host::_InternalConnect(commands::internal::ExecuteConnect &com)
 {
 	us_socket_t *socket =
 		us_socket_context_connect(SSL, socketContext, com.address.c_str(),
@@ -187,9 +187,9 @@ void Host::_InternalConnect(commands::ExecuteConnect &com)
 	if (socket) {
 		peer = MakePeer(socket);
 		(*(icon7::Peer **)us_socket_ext(SSL, socket)) = peer.get();
-		com.onConnected.peer = peer;
+		com.onConnected->peer = peer;
 	} else {
-		com.onConnected.peer = nullptr;
+		com.onConnected->peer = nullptr;
 	}
 
 	_InternalConnect_Finish(com);
@@ -212,9 +212,9 @@ us_socket_t *Host::_Internal_on_open(struct us_socket_t *socket, int isClient,
 		peer =
 			(*(icon7::Peer **)us_socket_ext(SSL, socket))->shared_from_this();
 	}
-	
+
 	peer->isClient = isClient;
-	
+
 	host->_Internal_on_open_Finish(peer);
 
 	return socket;
@@ -293,13 +293,13 @@ void Host::WakeUp() { us_wakeup_loop(loop); }
 
 void Host::StopListening()
 {
-	EnqueueCommand(commands::ExecuteOnHost{
+	EnqueueCommand(CommandHandle<commands::ExecuteOnHost>::Create(
 		this, nullptr, [](icon7::Host *host, void *) {
 			for (us_listen_socket_t *s : ((tcp::Host *)host)->listenSockets) {
 				us_listen_socket_close(((tcp::Host *)host)->SSL, s);
 			}
 			((tcp::Host *)host)->listenSockets.clear();
-		}});
+		}));
 	WakeUp();
 }
 

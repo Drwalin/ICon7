@@ -23,7 +23,6 @@
 #include <future>
 #include <unordered_set>
 
-#include "Debug.hpp"
 #include "Flags.hpp"
 #include "Command.hpp"
 #include "CommandExecutionQueue.hpp"
@@ -48,9 +47,11 @@ public:
 	virtual void _InternalDestroy();
 	void DisconnectAllAsync();
 
-	virtual std::future<bool> ListenOnPort(const std::string &address, uint16_t port, IPProto ipProto);
-	void ListenOnPort(const std::string &address, uint16_t port, IPProto ipProto,
-					  commands::ExecuteBooleanOnHost &&callback,
+	virtual std::future<bool> ListenOnPort(const std::string &address,
+										   uint16_t port, IPProto ipProto);
+	void ListenOnPort(const std::string &address, uint16_t port,
+					  IPProto ipProto,
+					  CommandHandle<commands::ExecuteBooleanOnHost> &&callback,
 					  CommandExecutionQueue *queue = nullptr);
 
 	void SetOnConnect(void (*callback)(Peer *)) { onConnect = callback; }
@@ -60,7 +61,7 @@ public:
 													  uint16_t port);
 	void Connect(std::string address, uint16_t port);
 	void Connect(std::string address, uint16_t port,
-				 commands::ExecuteOnPeer &&onConnected,
+				 CommandHandle<commands::ExecuteOnPeer> &&onConnected,
 				 CommandExecutionQueue *queue = nullptr);
 
 	virtual void StopListening() = 0;
@@ -72,7 +73,7 @@ public:
 	bool IsQueuedStopAsync();
 
 	CommandExecutionQueue *GetCommandExecutionQueue() { return &commandQueue; }
-	void EnqueueCommand(Command &&command);
+	void EnqueueCommand(CommandHandle<Command> &&command);
 
 	void InsertPeerToFlush(Peer *peer);
 
@@ -91,11 +92,13 @@ public: // thread unsafe, safe only in hosts loop thread
 	virtual void _InternalSingleLoopIteration();
 
 	void _InternalInsertPeerToFlush(Peer *peer);
-	virtual void _InternalConnect(commands::ExecuteConnect &connectCommand) = 0;
-	virtual void _InternalListen(const std::string &address,
-			IPProto ipProto, uint16_t port,
+	virtual void
+	_InternalConnect(commands::internal::ExecuteConnect &connectCommand) = 0;
+	virtual void _InternalListen(const std::string &address, IPProto ipProto,
+								 uint16_t port,
 								 commands::ExecuteBooleanOnHost &com) = 0;
-	void _InternalConnect_Finish(commands::ExecuteConnect &connectCommand);
+	void
+	_InternalConnect_Finish(commands::internal::ExecuteConnect &connectCommand);
 	virtual void _Internal_on_open_Finish(std::shared_ptr<Peer> peer);
 	void _Internal_on_close_Finish(std::shared_ptr<Peer> peer);
 

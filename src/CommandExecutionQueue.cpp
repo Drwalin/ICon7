@@ -20,13 +20,11 @@
 
 #include "../concurrentqueue/concurrentqueue.h"
 
-#include "../include/icon7/Peer.hpp"
-
 #include "../include/icon7/CommandExecutionQueue.hpp"
 
 namespace icon7
 {
-using QueueType = moodycamel::ConcurrentQueue<Command>;
+using QueueType = moodycamel::ConcurrentQueue<CommandHandle<Command>>;
 
 CommandExecutionQueue::CommandExecutionQueue()
 {
@@ -41,13 +39,14 @@ CommandExecutionQueue::~CommandExecutionQueue()
 	concurrentQueueCommands = nullptr;
 }
 
-void CommandExecutionQueue::EnqueueCommand(Command &&command)
+void CommandExecutionQueue::EnqueueCommand(CommandHandle<Command> &&command)
 {
 	((QueueType *)concurrentQueueCommands)->enqueue(std::move(command));
 }
 
-uint32_t CommandExecutionQueue::TryDequeueBulkAny(Command *commands,
-												  uint32_t max)
+uint32_t
+CommandExecutionQueue::TryDequeueBulkAny(CommandHandle<Command> *commands,
+										 uint32_t max)
 {
 	size_t size = ((QueueType *)concurrentQueueCommands)->size_approx();
 	if (size == 0)
@@ -77,33 +76,39 @@ bool CommandExecutionQueue::IsRunningAsync() const
 }
 
 void CommandExecutionQueue::RunAsyncExecution(
-	CommandExecutionQueue *queue, uint32_t sleepMicrosecondsOnNoActions)
+	uint32_t sleepMicrosecondsOnNoActions)
 {
-	std::thread(&CommandExecutionQueue::_InternalExecuteLoop, queue,
+	std::thread(&CommandExecutionQueue::ExecuteLoop, this,
 				sleepMicrosecondsOnNoActions)
 		.detach();
 }
 
-void CommandExecutionQueue::_InternalExecuteLoop(
-	CommandExecutionQueue *queue, uint32_t sleepMicrosecondsOnNoActions)
+void CommandExecutionQueue::ExecuteLoop(uint32_t sleepMicrosecondsOnNoActions)
 {
-	queue->asyncExecutionFlags = IS_RUNNING;
-	const uint32_t MAX_DEQUEUE_COMMANDS = 128;
-	Command commands[MAX_DEQUEUE_COMMANDS];
-	while (queue->asyncExecutionFlags.load() == IS_RUNNING) {
-		const uint32_t dequeued =
-			queue->TryDequeueBulkAny(commands, MAX_DEQUEUE_COMMANDS);
-		if (dequeued > 0) {
-			for (uint32_t i = 0; i < dequeued; ++i) {
-				commands[i].Execute();
-				commands[i].~Command();
-			}
-		} else {
+	asyncExecutionFlags = IS_RUNNING;
+	while (asyncExecutionFlags.load() == IS_RUNNING) {
+		uint32_t dequeued = Execute(128);
+		if (dequeued == 0) {
 			std::this_thread::sleep_for(
 				std::chrono::microseconds(sleepMicrosecondsOnNoActions));
 		}
 	}
-	queue->asyncExecutionFlags = STOPPED;
+	asyncExecutionFlags = STOPPED;
+}
+
+uint32_t CommandExecutionQueue::Execute(uint32_t maxToDequeue)
+{
+	const uint32_t MAX_DEQUEUE_COMMANDS = 128;
+	CommandHandle<Command> commands[MAX_DEQUEUE_COMMANDS];
+	const uint32_t dequeued = TryDequeueBulkAny(
+		commands, maxToDequeue < MAX_DEQUEUE_COMMANDS ? maxToDequeue
+													  : MAX_DEQUEUE_COMMANDS);
+	if (dequeued > 0) {
+		for (uint32_t i = 0; i < dequeued; ++i) {
+			commands[i].Execute();
+		}
+	}
+	return dequeued;
 }
 
 bool CommandExecutionQueue::HasAny() const

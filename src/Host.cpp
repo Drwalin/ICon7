@@ -65,16 +65,16 @@ void Host::_InternalDestroy()
 		WakeUp();
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
-	DispatchAllEventsFromQueue(1024);
+	DispatchAllEventsFromQueue(128);
 	while (commandQueue.HasAny()) {
-		DispatchAllEventsFromQueue(1024);
+		commandQueue.Execute(128);
 	}
 }
 
 void Host::DisconnectAllAsync()
 {
-	this->EnqueueCommand(commands::ExecuteOnHost{
-		this, nullptr, [](Host *host, void *) { host->DisconnectAll(); }});
+	this->EnqueueCommand(CommandHandle<commands::ExecuteOnHost>::Create(
+		this, nullptr, [](Host *host, void *) { host->DisconnectAll(); }));
 }
 
 void Host::DisconnectAll()
@@ -86,17 +86,7 @@ void Host::DisconnectAll()
 
 uint32_t Host::DispatchAllEventsFromQueue(uint32_t maxEvents)
 {
-	const uint32_t MAX_DEQUEUE_COMMANDS = 128;
-	maxEvents = std::min(maxEvents, MAX_DEQUEUE_COMMANDS);
-	Command commands[MAX_DEQUEUE_COMMANDS];
-	const uint32_t dequeued =
-		commandQueue.TryDequeueBulkAny(commands, maxEvents);
-
-	for (uint32_t i = 0; i < dequeued; ++i) {
-		commands[i].Execute();
-		commands[i].~Command();
-	}
-	return dequeued;
+	return commandQueue.Execute(maxEvents);
 }
 
 std::future<std::shared_ptr<Peer>> Host::ConnectPromise(std::string address,
@@ -104,9 +94,9 @@ std::future<std::shared_ptr<Peer>> Host::ConnectPromise(std::string address,
 {
 	std::promise<std::shared_ptr<Peer>> *promise =
 		new std::promise<std::shared_ptr<Peer>>();
-	commands::ExecuteOnPeer onConnected;
-	onConnected.userPointer = promise;
-	onConnected.function = [](auto peer, auto data, auto userPointer) {
+	auto onConnected = CommandHandle<commands::ExecuteOnPeer>::Create();
+	onConnected->userPointer = promise;
+	onConnected->function = [](auto peer, auto data, auto userPointer) {
 		std::promise<std::shared_ptr<Peer>> *promise =
 			(std::promise<std::shared_ptr<Peer>> *)(userPointer);
 		if (peer != nullptr) {
@@ -121,10 +111,10 @@ std::future<std::shared_ptr<Peer>> Host::ConnectPromise(std::string address,
 	return future;
 }
 
-void Host::_InternalConnect_Finish(commands::ExecuteConnect &com)
+void Host::_InternalConnect_Finish(commands::internal::ExecuteConnect &com)
 {
-	if (com.onConnected.peer.get() != nullptr) {
-		peers.insert(com.onConnected.peer);
+	if (com.onConnected->peer.get() != nullptr) {
+		peers.insert(com.onConnected->peer);
 	}
 
 	if (com.executionQueue) {
@@ -154,13 +144,14 @@ void Host::_Internal_on_close_Finish(std::shared_ptr<Peer> peer)
 	peer->peerFlags |= Peer::BIT_CLOSED;
 }
 
-std::future<bool> Host::ListenOnPort(const std::string &address, uint16_t port, IPProto ipProto)
+std::future<bool> Host::ListenOnPort(const std::string &address, uint16_t port,
+									 IPProto ipProto)
 {
 	std::promise<bool> *promise = new std::promise<bool>();
-	commands::ExecuteBooleanOnHost callback;
-	callback.host = this;
-	callback.userPointer = promise;
-	callback.function = [](Host *host, bool result, void *userPointer) {
+	auto callback = CommandHandle<commands::ExecuteBooleanOnHost>::Create();
+	callback->host = this;
+	callback->userPointer = promise;
+	callback->function = [](Host *host, bool result, void *userPointer) {
 		std::promise<bool> *promise = (std::promise<bool> *)(userPointer);
 		promise->set_value(result);
 		delete promise;
@@ -170,42 +161,43 @@ std::future<bool> Host::ListenOnPort(const std::string &address, uint16_t port, 
 	return future;
 }
 
-void Host::ListenOnPort(const std::string &address, uint16_t port, IPProto ipProto,
-						commands::ExecuteBooleanOnHost &&callback,
-						CommandExecutionQueue *queue)
+void Host::ListenOnPort(
+	const std::string &address, uint16_t port, IPProto ipProto,
+	CommandHandle<commands::ExecuteBooleanOnHost> &&callback,
+	CommandExecutionQueue *queue)
 {
-	commands::ExecuteListen com;
-	com.address = address;
-	com.host = this;
-	com.ipProto = ipProto;
-	com.port = port;
-	com.onListen = std::move(callback);
-	com.queue = queue;
+	auto com = CommandHandle<commands::internal::ExecuteListen>::Create();
+	com->address = address;
+	com->host = this;
+	com->ipProto = ipProto;
+	com->port = port;
+	com->onListen = std::move(callback);
+	com->queue = queue;
 
 	EnqueueCommand(std::move(com));
 }
 
 void Host::Connect(std::string address, uint16_t port)
 {
-	commands::ExecuteOnPeer com;
-	com.function = [](auto a, auto b, auto c) {};
+	auto com = CommandHandle<commands::ExecuteOnPeer>::Create();
+	com->function = [](auto a, auto b, auto c) {};
 	Connect(address, port, std::move(com), nullptr);
 }
 
 void Host::Connect(std::string address, uint16_t port,
-				   commands::ExecuteOnPeer &&onConnected,
+				   CommandHandle<commands::ExecuteOnPeer> &&onConnected,
 				   CommandExecutionQueue *queue)
 {
-	commands::ExecuteConnect com{};
-	com.executionQueue = queue;
-	com.port = port;
-	com.address = address;
-	com.onConnected = std::move(onConnected);
-	com.host = this;
+	auto com = CommandHandle<commands::internal::ExecuteConnect>::Create();
+	com->executionQueue = queue;
+	com->port = port;
+	com->address = address;
+	com->onConnected = std::move(onConnected);
+	com->host = this;
 	EnqueueCommand(std::move(com));
 }
 
-void Host::EnqueueCommand(Command &&command)
+void Host::EnqueueCommand(CommandHandle<Command> &&command)
 {
 	commandQueue.EnqueueCommand(std::move(command));
 	WakeUp();
@@ -266,8 +258,9 @@ void Host::_InternalSingleLoopIteration()
 
 void Host::InsertPeerToFlush(Peer *peer)
 {
-	EnqueueCommand(
-		commands::ExecuteAddPeerToFlush{peer->shared_from_this(), this});
+	auto com = CommandHandle<commands::internal::ExecuteAddPeerToFlush>::Create(
+		peer->shared_from_this(), this);
+	EnqueueCommand(std::move(com));
 }
 
 void Host::_InternalInsertPeerToFlush(Peer *peer)

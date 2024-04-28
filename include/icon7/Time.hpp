@@ -33,8 +33,8 @@ std::string GetCurrentTimestampString(int subsecondsDigits);
 uint64_t StringToTimestamp(std::string str);
 void YMDFromTimestamp(uint64_t timestamp, int &day, int &month, int &year);
 uint64_t TimestampFromYMD(int day, int month, int year);
-}
+} // namespace time
 
-}
+} // namespace icon7
 
 #endif

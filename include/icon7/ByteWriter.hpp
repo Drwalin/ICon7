@@ -32,7 +32,8 @@ public:
 	~ByteWriter();
 
 	ByteWriter(ByteWriter &&o)
-		: bitscpp::ByteWriter<std::vector<uint8_t>>(&_data), _data(std::move(o._data))
+		: bitscpp::ByteWriter<std::vector<uint8_t>>(&_data),
+		  _data(std::move(o._data))
 	{
 	}
 

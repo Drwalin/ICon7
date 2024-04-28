@@ -50,7 +50,8 @@ public:
 	Peer &operator=(const Peer &) = delete;
 
 	virtual void Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags);
-	virtual void SendLocalThread(std::vector<uint8_t> &&dataWithoutHeader, Flags flags);
+	virtual void SendLocalThread(std::vector<uint8_t> &&dataWithoutHeader,
+								 Flags flags);
 	void Disconnect();
 
 	inline bool IsReadyToUse() const { return peerFlags & BIT_READY; }
@@ -97,12 +98,13 @@ protected:
 										  uint32_t headerSize, void *peer);
 	void _InternalOnPacket(std::vector<uint8_t> &buffer, uint32_t headerSize);
 	void _InternalOnPacketWithControllSequence(std::vector<uint8_t> &buffer,
-			uint32_t headerSize);
-	virtual void _InternalOnPacketWithControllSequenceBackend(
-			std::vector<uint8_t> &buffer, uint32_t headerSize);
+											   uint32_t headerSize);
+	virtual void
+	_InternalOnPacketWithControllSequenceBackend(std::vector<uint8_t> &buffer,
+												 uint32_t headerSize);
 
 	friend class Host;
-	friend class commands::ExecuteDisconnect;
+	friend class commands::internal::ExecuteDisconnect;
 
 protected:
 	Peer(Host *host);

@@ -22,7 +22,6 @@ const uint16_t serverPort = 4000;
 extern "C" int processId;
 int processId = -1;
 
-
 class Mutex
 {
 public:
@@ -104,7 +103,8 @@ struct TestStruct {
 
 namespace bitscpp
 {
-inline bitscpp::ByteWriter<std::vector<uint8_t>> &op(bitscpp::ByteWriter<std::vector<uint8_t>> &s, const TestStruct &v)
+inline bitscpp::ByteWriter<std::vector<uint8_t>> &
+op(bitscpp::ByteWriter<std::vector<uint8_t>> &s, const TestStruct &v)
 {
 	s.op(v.id);
 	s.op(v.x);
@@ -176,7 +176,7 @@ void Runner(icon7::Peer *_peer)
 			}
 			rpc.Send(_peer, flag, "first", data, dt);
 		}
-		if (processId == 0 && i%12100 == 0) {
+		if (processId == 0 && i % 12100 == 0) {
 			LOG_INFO("Sending: %i/%i", i, (int)ipc->countMessages);
 		}
 	}
@@ -298,8 +298,11 @@ void runTestMaster(uint32_t messages, const uint32_t clientsNum)
 
 	Print(" all_in(%fs)", t);
 
-	icon7::Command com(icon7::commands::ExecuteFunctionPointer{
-		[]() { host->ForEachPeer(+[](icon7::Peer *p) { p->Disconnect(); }); }});
+	auto com =
+		icon7::CommandHandle<icon7::commands::ExecuteFunctionPointer>::Create(
+			[]() {
+				host->ForEachPeer(+[](icon7::Peer *p) { p->Disconnect(); });
+			});
 	host->EnqueueCommand(std::move(com));
 
 	double clientMiBpsRecv =
@@ -336,8 +339,11 @@ void runTestSlave()
 		// 		host->EnqueueCommand(std::move(com));
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
-	icon7::Command com(icon7::commands::ExecuteFunctionPointer{
-		[]() { host->ForEachPeer(+[](icon7::Peer *p) { p->Disconnect(); }); }});
+	auto com =
+		icon7::CommandHandle<icon7::commands::ExecuteFunctionPointer>::Create(
+			[]() {
+				host->ForEachPeer(+[](icon7::Peer *p) { p->Disconnect(); });
+			});
 	std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
@@ -374,7 +380,6 @@ int main()
 			}
 		}
 	}
-	
 
 	originTime = std::chrono::steady_clock::now();
 

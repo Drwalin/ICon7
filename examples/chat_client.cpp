@@ -48,13 +48,13 @@ int main(int argc, char **argv)
 	host->SetRpcEnvironment(&rpc);
 	host->RunAsync();
 
-	std::shared_ptr<icon7::Peer> peer = host->ConnectPromise(argv[1], port).get();
-	
+	std::shared_ptr<icon7::Peer> peer =
+		host->ConnectPromise(argv[1], port).get();
 
 	printf("To exit write: quit\n");
 
 	while (true) {
-		printf("[%s]:", peer->IsReadyToUse()?"ready":"not_ready");
+		printf("[%s]:", peer->IsReadyToUse() ? "ready" : "not_ready");
 		std::string str;
 		std::getline(std::cin, str);
 		if (str.substr(0, 4) == "quit" && str.size() <= 6) {

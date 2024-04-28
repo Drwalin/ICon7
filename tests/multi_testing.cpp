@@ -46,9 +46,11 @@ int main()
 		hosta->RunAsync();
 
 		{
-			icon7::commands::ExecuteBooleanOnHost com;
-			com.function = [](auto host, bool v, void *) {};
-			hosta->ListenOnPort("127.0.0.1", port, icon7::IPv4, std::move(com), nullptr);
+			auto com = icon7::CommandHandle<
+				icon7::commands::ExecuteBooleanOnHost>::Create();
+			com->function = [](auto host, bool v, void *) {};
+			hosta->ListenOnPort("127.0.0.1", port, icon7::IPv4, std::move(com),
+								nullptr);
 		}
 
 		icon7::uS::tcp::Host *hostb = new icon7::uS::tcp::Host();
@@ -86,8 +88,8 @@ int main()
 
 		if (sent != received || returned != sent / 2) {
 			LOG_INFO("FAILED: sent/received = %i/%i ; returned/called = %i/%i",
-				  sent.load(), received.load(), returned.load(),
-				  sent.load() / 2);
+					 sent.load(), received.load(), returned.load(),
+					 sent.load() / 2);
 		}
 
 		delete hosta;

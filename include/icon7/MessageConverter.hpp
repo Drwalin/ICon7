@@ -23,6 +23,7 @@
 
 #include <bitscpp/ByteWriter.hpp>
 
+#include "Debug.hpp"
 #include "ByteReader.hpp"
 #include "PeerFlagsArgumentsReader.hpp"
 #include "Host.hpp"

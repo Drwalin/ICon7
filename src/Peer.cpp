@@ -22,6 +22,7 @@
 #include "../include/icon7/RPCEnvironment.hpp"
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/FramingProtocol.hpp"
+#include "../include/icon7/Debug.hpp"
 
 #include "../include/icon7/Peer.hpp"
 
@@ -56,7 +57,7 @@ void Peer::Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
 	host->InsertPeerToFlush(this);
 }
 void Peer::SendLocalThread(std::vector<uint8_t> &&dataWithoutHeader,
-		Flags flags)
+						   Flags flags)
 {
 	sendingQueueSize++;
 	sendQueueLocal.push(SendFrameStruct(std::move(dataWithoutHeader), flags));
@@ -66,11 +67,9 @@ void Peer::SendLocalThread(std::vector<uint8_t> &&dataWithoutHeader,
 void Peer::Disconnect()
 {
 	peerFlags |= BIT_DISCONNECTING;
-	Command command{commands::ExecuteDisconnect{}};
-	commands::ExecuteDisconnect &com =
-		std::get<commands::ExecuteDisconnect>(command.cmd);
-	com.peer = shared_from_this();
-	host->EnqueueCommand(std::move(command));
+	auto com = CommandHandle<commands::internal::ExecuteDisconnect>::Create();
+	com->peer = shared_from_this();
+	host->EnqueueCommand(std::move(com));
 }
 
 void Peer::_InternalOnData(uint8_t *data, uint32_t length)
@@ -91,7 +90,8 @@ void Peer::_InternalOnPacket(std::vector<uint8_t> &buffer, uint32_t headerSize)
 		return;
 	}
 	if ((FramingProtocol::GetPacketFlags(buffer.data(), 0) &
-		FLAGS_PROTOCOL_CONTROLL_SEQUENCE) == FLAGS_PROTOCOL_CONTROLL_SEQUENCE) {
+		 FLAGS_PROTOCOL_CONTROLL_SEQUENCE) ==
+		FLAGS_PROTOCOL_CONTROLL_SEQUENCE) {
 		_InternalOnPacketWithControllSequence(buffer, headerSize);
 	} else {
 		host->GetRpcEnvironment()->OnReceive(this, buffer, headerSize,
@@ -107,7 +107,7 @@ void Peer::_InternalOnPacketWithControllSequence(std::vector<uint8_t> &buffer,
 		// TODO: decode here future controll sequences
 		uint32_t vectorCall = buffer[headerSize];
 		LOG_WARN("Received packet with undefined controll sequence: 0x%X",
-			  vectorCall);
+				 vectorCall);
 	} else {
 		_InternalOnPacketWithControllSequenceBackend(buffer, headerSize);
 	}
@@ -118,8 +118,8 @@ void Peer::_InternalOnPacketWithControllSequenceBackend(
 {
 	uint32_t vectorCall = buffer[headerSize];
 	LOG_WARN("Unhandled packet with controll sequence by backend. Vector call "
-		  "value: 0x%X",
-		  vectorCall);
+			 "value: 0x%X",
+			 vectorCall);
 }
 
 void Peer::_InternalOnWritable()
@@ -145,9 +145,7 @@ void Peer::_InternalOnLongTimeout() { _InternalDisconnect(); }
 
 bool Peer::_InternalHasQueuedSends() const { return sendingQueueSize != 0; }
 
-void Peer::SetReadyToUse() {
-	peerFlags |= BIT_READY;
-}
+void Peer::SetReadyToUse() { peerFlags |= BIT_READY; }
 
 void Peer::_InternalFlushQueuedSends()
 {

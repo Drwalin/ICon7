@@ -30,7 +30,8 @@ public:
 
 public:
 	ByteReader(std::vector<uint8_t> &data, uint32_t offset)
-		: bitscpp::ByteReader<true>(data.data(), offset, data.size()), _data(data)
+		: bitscpp::ByteReader<true>(data.data(), offset, data.size()),
+		  _data(data)
 	{
 	}
 

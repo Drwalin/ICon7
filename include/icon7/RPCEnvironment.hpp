@@ -112,8 +112,9 @@ public:
 	}
 
 	template <typename... Targs>
-	static void SerializeSend(bitscpp::ByteWriter<std::vector<uint8_t>> &writer, Flags &flags,
-							  const std::string &name, const Targs &...args)
+	static void SerializeSend(bitscpp::ByteWriter<std::vector<uint8_t>> &writer,
+							  Flags &flags, const std::string &name,
+							  const Targs &...args)
 	{
 		writer.op(name);
 		(writer.op(args), ...);
