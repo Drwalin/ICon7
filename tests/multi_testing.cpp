@@ -4,6 +4,7 @@
 #include <chrono>
 #include <thread>
 
+#include <icon7/Debug.hpp>
 #include <icon7/Peer.hpp>
 #include <icon7/Flags.hpp>
 #include <icon7/RPCEnvironment.hpp>
@@ -32,8 +33,10 @@ int main()
 	icon7::Initialize();
 
 	int notPassedTests = 0;
-
-	int testsCount = 13;
+	const int sendsMoreThanCalls = 37;
+	const int totalSends = 23;
+	const int connectionsCount = 31;
+	const int testsCount = 13;
 
 	for (int i = 0; i < testsCount; ++i) {
 		sent = received = returned = 0;
@@ -54,9 +57,10 @@ int main()
 		hostb->Init();
 		hostb->RunAsync();
 
-		listenFuture.wait_for(std::chrono::milliseconds(50));
+		listenFuture.wait_for(std::chrono::milliseconds(150));
+		
 		std::vector<concurrent::future<std::shared_ptr<icon7::Peer>>> peers;
-		for (int i = 0; i < 31; ++i) {
+		for (int i = 0; i < connectionsCount; ++i) {
 			peers.push_back(hostb->ConnectPromise("127.0.0.1", port));
 		}
 		for (auto &f : peers) {
@@ -84,9 +88,11 @@ int main()
 				continue;
 			}
 
-			for (int k=0; k<87; ++k) {
-				rpc.Send(peer, icon7::FLAG_RELIABLE, "sum", 3, 23);
-				sent++;
+			for (int k=0; k<totalSends; ++k) {
+				for (int l=0; l<sendsMoreThanCalls-1; ++l) {
+					rpc.Send(peer, icon7::FLAG_RELIABLE, "sum", 3, 23);
+					sent++;
+				}
 
 				rpc.Call(peer, icon7::FLAG_RELIABLE,
 						 icon7::OnReturnCallback::Make<uint32_t>(
@@ -98,7 +104,6 @@ int main()
 							 1000000, peer),
 						 "mul", 5, 13);
 				sent++;
-// 			std::this_thread::sleep_for(std::chrono::microseconds(1));
 			}
 
 			if (peer->GetPeerStateFlags() != 1) {
@@ -109,7 +114,7 @@ int main()
 		peers.clear();
 
 		for (int i = 0; i < 1000; ++i) {
-			if (sent == received && returned == sent / 2) {
+			if (sent == received && returned == sent / sendsMoreThanCalls) {
 				break;
 			}
 			hosta->WakeUp();
@@ -124,17 +129,17 @@ int main()
 			notPassedTests++;
 		}
 
-		if (sent != received || returned != sent / 2 || notPassedTests) {
+		if (sent != received || returned != sent / sendsMoreThanCalls || notPassedTests) {
 			LOG_INFO("Iteration: %i FAILED: sent/received = %i/%i ; "
 					 "returned/called = %i/%i",
 					 i, sent.load(), received.load(), returned.load(),
-					 sent.load() / 2);
+					 sent.load() / sendsMoreThanCalls);
 			notPassedTests++;
 		} else {
 			LOG_INFO("Iteration: %i finished: sent/received = %i/%i ; "
 					 "returned/called = %i/%i",
 					 i, sent.load(), received.load(), returned.load(),
-					 sent.load() / 2);
+					 sent.load() / sendsMoreThanCalls);
 		}
 
 		delete hosta;
@@ -143,59 +148,54 @@ int main()
 
 	icon7::Deinitialize();
 
-	// 	{
-	// 	LOG_DEBUG("master pool before: malloc: %lu  free: %lu  objResid: %lu
-	// memResid: %lu  bucketAcq: %lu  bucketRel: %lu  objectAcq: %lu  objectRel:
-	// %lu  objInGlob: %lu  objBucAcq: %lu  objBucRel: %lu",
-	// 			icon7::globalConcurrentCommandPool.estimate_system_allocations(),
-	// 			icon7::globalConcurrentCommandPool.estimate_system_frees(),
-	// 			icon7::globalConcurrentCommandPool.current_memory_resident_objects(),
-	// 			icon7::globalConcurrentCommandPool.current_memory_resident(),
-	// 			icon7::globalConcurrentCommandPool.count_bucket_acquisitions(),
-	// 			icon7::globalConcurrentCommandPool.count_bucket_releases(),
-	// 			icon7::globalConcurrentCommandPool.local_sum_acquisition.load(),
-	// 			icon7::globalConcurrentCommandPool.local_sum_release.load(),
-	// 			icon7::globalConcurrentCommandPool.count_objects_in_global_pool(),
-	// 			icon7::globalConcurrentCommandPool.sum_object_acquisition.load(),
-	// 			icon7::globalConcurrentCommandPool.sum_object_release.load()
-	// 			);
-	// 		auto &s =
-	// icon7::globalConcurrentCommandPool.mod_tls_pool<128>(nullptr, false); 		for
-	// (auto it : s) { 			it->release_buckets_to_global(); 	LOG_DEBUG("master pool
-	// releas: malloc: %lu  free: %lu  objResid: %lu  memResid: %lu  bucketAcq:
-	// %lu  bucketRel: %lu  objectAcq: %lu  objectRel: %lu  objInGlob: %lu
-	// objBucAcq: %lu  objBucRel: %lu",
-	// 			icon7::globalConcurrentCommandPool.estimate_system_allocations(),
-	// 			icon7::globalConcurrentCommandPool.estimate_system_frees(),
-	// 			icon7::globalConcurrentCommandPool.current_memory_resident_objects(),
-	// 			icon7::globalConcurrentCommandPool.current_memory_resident(),
-	// 			icon7::globalConcurrentCommandPool.count_bucket_acquisitions(),
-	// 			icon7::globalConcurrentCommandPool.count_bucket_releases(),
-	// 			icon7::globalConcurrentCommandPool.local_sum_acquisition.load(),
-	// 			icon7::globalConcurrentCommandPool.local_sum_release.load(),
-	// 			icon7::globalConcurrentCommandPool.count_objects_in_global_pool(),
-	// 			icon7::globalConcurrentCommandPool.sum_object_acquisition.load(),
-	// 			icon7::globalConcurrentCommandPool.sum_object_release.load()
-	// 			);
-	// 		}
-	// 	}
-	//
-	// 	icon7::globalConcurrentCommandPool.free_all();
-	// 	LOG_DEBUG("master pool  after: malloc: %lu  free: %lu  objResid: %lu
-	// memResid: %lu  bucketAcq: %lu  bucketRel: %lu  objectAcq: %lu  objectRel:
-	// %lu  objInGlob: %lu  objBucAcq: %lu  objBucRel: %lu",
-	// 			icon7::globalConcurrentCommandPool.estimate_system_allocations(),
-	// 			icon7::globalConcurrentCommandPool.estimate_system_frees(),
-	// 			icon7::globalConcurrentCommandPool.current_memory_resident_objects(),
-	// 			icon7::globalConcurrentCommandPool.current_memory_resident(),
-	// 			icon7::globalConcurrentCommandPool.count_bucket_acquisitions(),
-	// 			icon7::globalConcurrentCommandPool.count_bucket_releases(),
-	// 			icon7::globalConcurrentCommandPool.local_sum_acquisition.load(),
-	// 			icon7::globalConcurrentCommandPool.local_sum_release.load(),
-	// 			icon7::globalConcurrentCommandPool.count_objects_in_global_pool(),
-	// 			icon7::globalConcurrentCommandPool.sum_object_acquisition.load(),
-	// 			icon7::globalConcurrentCommandPool.sum_object_release.load()
-	// 			);
+		{
+		LOG_DEBUG("master pool before: malloc: %lu  free: %lu  objResid: %lu  memResid: %lu  bucketAcq: %lu  bucketRel: %lu  objectAcq: %lu  objectRel: %lu  objInGlob: %lu  objBucAcq: %lu  objBucRel: %lu",
+				icon7::globalPool.estimate_system_allocations(),
+				icon7::globalPool.estimate_system_frees(),
+				icon7::globalPool.current_memory_resident_objects(),
+				icon7::globalPool.current_memory_resident(),
+				icon7::globalPool.count_bucket_acquisitions(),
+				icon7::globalPool.count_bucket_releases(),
+				icon7::globalPool.local_sum_acquisition.load(),
+				icon7::globalPool.local_sum_release.load(),
+				icon7::globalPool.count_objects_in_global_pool(),
+				icon7::globalPool.sum_object_acquisition.load(),
+				icon7::globalPool.sum_object_release.load()
+				);
+			auto &s =
+	icon7::globalPool.mod_tls_pool<128>(nullptr, false);
+	for (auto it : s) {
+		it->release_buckets_to_global();
+		LOG_DEBUG("master pool releas: malloc: %lu  free: %lu  objResid: %lu  memResid: %lu  bucketAcq: %lu  bucketRel: %lu  objectAcq: %lu  objectRel: %lu  objInGlob: %lu  objBucAcq: %lu  objBucRel: %lu",
+				icon7::globalPool.estimate_system_allocations(),
+				icon7::globalPool.estimate_system_frees(),
+				icon7::globalPool.current_memory_resident_objects(),
+				icon7::globalPool.current_memory_resident(),
+				icon7::globalPool.count_bucket_acquisitions(),
+				icon7::globalPool.count_bucket_releases(),
+				icon7::globalPool.local_sum_acquisition.load(),
+				icon7::globalPool.local_sum_release.load(),
+				icon7::globalPool.count_objects_in_global_pool(),
+				icon7::globalPool.sum_object_acquisition.load(),
+				icon7::globalPool.sum_object_release.load()
+				);
+			}
+		}
+	
+		icon7::globalPool.free_all();
+		LOG_DEBUG("master pool  after: malloc: %lu  free: %lu  objResid: %lu  memResid: %lu  bucketAcq: %lu  bucketRel: %lu  objectAcq: %lu  objectRel: %lu  objInGlob: %lu  objBucAcq: %lu  objBucRel: %lu",
+				icon7::globalPool.estimate_system_allocations(),
+				icon7::globalPool.estimate_system_frees(),
+				icon7::globalPool.current_memory_resident_objects(),
+				icon7::globalPool.current_memory_resident(),
+				icon7::globalPool.count_bucket_acquisitions(),
+				icon7::globalPool.count_bucket_releases(),
+				icon7::globalPool.local_sum_acquisition.load(),
+				icon7::globalPool.local_sum_release.load(),
+				icon7::globalPool.count_objects_in_global_pool(),
+				icon7::globalPool.sum_object_acquisition.load(),
+				icon7::globalPool.sum_object_release.load()
+				);
 
 	if (notPassedTests) {
 		LOG_DEBUG("Failed: %i/%i tests", notPassedTests, testsCount);

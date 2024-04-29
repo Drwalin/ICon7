@@ -23,6 +23,9 @@
 
 namespace icon7
 {
+	
+concurrent::buckets_pool<192> globalPool(1024*16);
+thread_local nonconcurrent::thread_local_pool<192, 128> tlsPool(&globalPool);
 
 Command::~Command() { __m_next = nullptr; }
 
