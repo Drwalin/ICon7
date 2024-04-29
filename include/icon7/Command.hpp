@@ -23,6 +23,7 @@
 #include <type_traits>
 
 #include "../../concurrent/node.hpp"
+#include "../../concurrent/bucket_pool.hpp"
 
 #include "Flags.hpp"
 #include "ByteReader.hpp"
@@ -53,6 +54,9 @@ public:
 	virtual ~Command();
 };
 
+extern concurrent::buckets_pool<192> globalPool;
+extern thread_local nonconcurrent::thread_local_pool<192, 128> tlsPool;
+
 template <typename T = Command> class CommandHandle
 {
 public:
@@ -80,7 +84,7 @@ public:
 	void Destroy()
 	{
 		if (_com != nullptr) {
-			delete _com;
+			tlsPool.release(_com);
 			_com = nullptr;
 		}
 	}
@@ -89,7 +93,7 @@ public:
 	inline static CommandHandle<T> Create(Args &&...args)
 	{
 		CommandHandle<T> com;
-		com._com = new T(std::move(args)...);
+		com._com = tlsPool.acquire<T>(std::move(args)...);
 		com->__m_next = nullptr;
 		return com;
 	}

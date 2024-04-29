@@ -18,19 +18,27 @@
 
 #include <cstring>
 
+#include "../../concurrent/bucket_pool.hpp"
+
 #include "../include/icon7/FramingProtocol.hpp"
 
 #include "../include/icon7/SendFrameStruct.hpp"
 
 namespace icon7
 {
+	
+extern concurrent::buckets_pool<192> globalPool;
+extern thread_local nonconcurrent::thread_local_pool<192, 128> tlsPool;
+	
 SendFrameStruct *
 SendFrameStruct::Acquire(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
 {
-	return new SendFrameStruct(std::move(dataWithoutHeader), flags);
+	return tlsPool.acquire<SendFrameStruct>(std::move(dataWithoutHeader), flags);
 }
 
-void SendFrameStruct::Release(SendFrameStruct *ptr) { delete ptr; }
+void SendFrameStruct::Release(SendFrameStruct *ptr) {
+	tlsPool.release(ptr);
+}
 
 SendFrameStruct::SendFrameStruct(std::vector<uint8_t> &&_dataWithoutHeader,
 								 Flags flags)
