@@ -37,6 +37,10 @@ Peer::~Peer() { socket = nullptr; }
 
 bool Peer::_InternalSend(SendFrameStruct &f, bool hasMore)
 {
+	if (socket == nullptr || !IsReadyToUse() || IsDisconnecting() ||
+		IsClosed()) {
+		return false;
+	}
 	if (f.headerBytesSent < f.headerSize) {
 		f.headerBytesSent +=
 			us_socket_write(SSL, socket, (char *)(f.header + f.headerBytesSent),
@@ -47,9 +51,10 @@ bool Peer::_InternalSend(SendFrameStruct &f, bool hasMore)
 		}
 	}
 	if (f.bytesSent < f.dataWithoutHeader.size()) {
-		f.bytesSent += us_socket_write(
+		auto b = us_socket_write(
 			SSL, socket, (char *)(f.dataWithoutHeader.data() + f.bytesSent),
 			f.dataWithoutHeader.size() - f.bytesSent, hasMore);
+		f.bytesSent += b;
 	}
 	if (f.bytesSent < f.dataWithoutHeader.size()) {
 		return false;
@@ -63,6 +68,7 @@ void Peer::_InternalClearInternalDataOnClose()
 {
 	icon7::Peer::_InternalClearInternalDataOnClose();
 	socket = nullptr;
+	this->peerFlags |= BIT_CLOSED;
 	SSL = 0;
 }
 

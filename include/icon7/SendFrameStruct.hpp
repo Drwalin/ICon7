@@ -43,11 +43,8 @@ struct SendFrameStruct : public concurrent::node<SendFrameStruct> {
 	}
 
 	static SendFrameStruct *Acquire(std::vector<uint8_t> &&dataWithoutHeader,
-									Flags flags)
-	{
-		return new SendFrameStruct(std::move(dataWithoutHeader), flags);
-	}
-	static void Release(SendFrameStruct *ptr) { delete ptr; }
+									Flags flags);
+	static void Release(SendFrameStruct *ptr);
 
 	SendFrameStruct(std::vector<uint8_t> &&dataWithoutHeader, Flags flags);
 	SendFrameStruct();

@@ -65,7 +65,7 @@ void Host::_InternalDestroy()
 		WakeUp();
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
-	DispatchAllEventsFromQueue(128);
+	commandQueue.Execute(128);
 	while (commandQueue.HasAny()) {
 		commandQueue.Execute(128);
 	}
@@ -90,11 +90,6 @@ void Host::DisconnectAll()
 	for (auto &p : peers) {
 		p->Disconnect();
 	}
-}
-
-uint32_t Host::DispatchAllEventsFromQueue(uint32_t maxEvents)
-{
-	return commandQueue.Execute(maxEvents);
 }
 
 concurrent::future<std::shared_ptr<Peer>>
@@ -155,7 +150,6 @@ void Host::_Internal_on_close_Finish(std::shared_ptr<Peer> peer)
 	peer->_InternalClearInternalDataOnClose();
 	peers.erase(peer);
 	peersToFlush.erase(peer);
-	peer->peerFlags |= Peer::BIT_CLOSED;
 }
 
 concurrent::future<bool> Host::ListenOnPort(const std::string &address,
@@ -267,7 +261,7 @@ void Host::_InternalSingleLoopIteration()
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 	}
-	DispatchAllEventsFromQueue(128);
+	commandQueue.Execute(128);
 	std::vector<std::shared_ptr<Peer>> toRemoveFromQueue;
 	toRemoveFromQueue.reserve(64);
 	for (auto p : peersToFlush) {
@@ -284,6 +278,8 @@ void Host::_InternalSingleLoopIteration()
 
 void Host::InsertPeerToFlush(Peer *peer)
 {
+	// TODO: optimise this to remove passing command to host thread
+	// i.e.: implement concurrent bit set of active peers
 	auto com = CommandHandle<commands::internal::ExecuteAddPeerToFlush>::Create(
 		peer->shared_from_this(), this);
 	EnqueueCommand(std::move(com));

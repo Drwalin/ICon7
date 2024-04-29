@@ -87,7 +87,6 @@ public:
 public: // thread unsafe, safe only in hosts loop thread
 	void ForEachPeer(void(func)(icon7::Peer *));
 	void ForEachPeer(std::function<void(icon7::Peer *)> func);
-	uint32_t DispatchAllEventsFromQueue(uint32_t maxEventsDispatched = 100);
 	void DisconnectAll();
 
 	virtual void SingleLoopIteration() = 0;

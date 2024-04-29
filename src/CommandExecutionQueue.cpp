@@ -30,7 +30,18 @@ CommandExecutionQueue::CommandExecutionQueue()
 	asyncExecutionFlags = STOPPED;
 }
 
-CommandExecutionQueue::~CommandExecutionQueue() { WaitStopAsyncExecution(); }
+CommandExecutionQueue::~CommandExecutionQueue()
+{
+	WaitStopAsyncExecution();
+	for (int i = 0; i < 3; ++i) {
+		while (true) {
+			CommandHandle<Command> com;
+			if (TryDequeue(com) == false) {
+				break;
+			}
+		}
+	}
+}
 
 void CommandExecutionQueue::EnqueueCommand(CommandHandle<Command> &&command)
 {
@@ -97,8 +108,8 @@ void CommandExecutionQueue::ExecuteLoop(uint32_t sleepMicrosecondsOnNoActions)
 uint32_t CommandExecutionQueue::Execute(uint32_t maxToDequeue)
 {
 	uint32_t i = 0;
-	CommandHandle<Command> com;
 	for (; i < maxToDequeue; ++i) {
+		CommandHandle<Command> com;
 		if (TryDequeue(com)) {
 			com.Execute();
 		} else {

@@ -111,7 +111,8 @@ public:
 
 	virtual void ExecuteOnReturn() override
 	{
-		onReturned(this->peer.get(), this->flags);
+		if (onReturned)
+			onReturned(this->peer.get(), this->flags);
 	}
 
 	virtual void ExecuteTimeout() override
@@ -152,13 +153,13 @@ public:
 		OnReturnCallback ret;
 		auto cb =
 			CommandHandle<ExecuteReturnCallbackStdfunction<Tret>>::Create();
+		cb->peer = peer->shared_from_this();
 		cb->onReturned = std::move(onReturned);
 		cb->onTimeout = std::move(onTimeout);
 		ret.callback = std::move(cb);
 		ret.executionQueue = executionQueue;
 		ret.timeoutTimePoint = std::chrono::steady_clock::now() +
 							   (std::chrono::milliseconds(timeoutMilliseconds));
-		ret.callback->peer = peer->shared_from_this();
 		return ret;
 	}
 
@@ -170,13 +171,13 @@ public:
 		OnReturnCallback ret;
 		auto cb =
 			CommandHandle<ExecuteReturnCallbackStdfunction<void>>::Create();
+		cb->peer = peer->shared_from_this();
 		cb->onReturned = std::move(onReturned);
 		cb->onTimeout = std::move(onTimeout);
 		ret.callback = std::move(cb);
 		ret.executionQueue = executionQueue;
 		ret.timeoutTimePoint = std::chrono::steady_clock::now() +
 							   (std::chrono::milliseconds(timeoutMilliseconds));
-		ret.callback->peer = peer->shared_from_this();
 		return ret;
 	}
 

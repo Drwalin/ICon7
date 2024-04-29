@@ -23,7 +23,8 @@
 
 namespace icon7
 {
-Command::~Command() {}
+
+Command::~Command() { __m_next = nullptr; }
 
 namespace commands
 {
@@ -44,11 +45,26 @@ void ExecuteConnect::Execute() { host->_InternalConnect(*this); }
 
 void ExecuteListen::Execute()
 {
-	host->_InternalListen(address, ipProto, port, onListen);
-	if (queue) {
-		queue->EnqueueCommand(std::move(onListen));
+	if (onListen.IsValid() == false) {
+		class DummyOnListen final : public ExecuteBooleanOnHost
+		{
+		public:
+			DummyOnListen() = default;
+			virtual ~DummyOnListen() = default;
+			virtual void Execute() override {}
+		};
+		onListen = CommandHandle<DummyOnListen>::Create();
+		onListen->host = host;
+		host->_InternalListen(address, ipProto, port, onListen);
+		onListen.~CommandHandle<ExecuteBooleanOnHost>();
+		onListen._com = nullptr;
 	} else {
-		onListen->Execute();
+		host->_InternalListen(address, ipProto, port, onListen);
+		if (queue) {
+			queue->EnqueueCommand(std::move(onListen));
+		} else {
+			onListen.Execute();
+		}
 	}
 }
 
