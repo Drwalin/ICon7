@@ -156,7 +156,7 @@ void Runner(std::shared_ptr<icon7::Peer> peer)
 			}
 			break;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 		for (uint32_t j = 0; j < ((processId == -1) ? 4 : 1); ++j) {
 			uint32_t s = (processId == -1) ? GetRandomMessageSize() : 100;
 			data.resize(s / 21);
@@ -265,8 +265,24 @@ void runTestMaster(uint32_t messages, const uint32_t clientsNum)
 	auto beg = std::chrono::steady_clock::now();
 	auto t0 = std::chrono::steady_clock::now();
 	ipc->runTestFlag = 1;
+	int I = 0;
 	while (ipc->counterSentByClients < messages ||
 		   ipc->counterSentByServer < messages * 4) {
+		++I;
+		if (I % 100 == 0) {
+			// 			LOG_DEBUG("master pool: malloc: %lu  free: %lu objResid:
+			// %lu  memResid: %lu  bucketAcq: %lu  bucketRel: %lu  objectAcq:
+			// %lu  objectRel: %lu",
+			// 					icon7::globalConcurrentCommandPool.estimate_system_allocations(),
+			// 					icon7::globalConcurrentCommandPool.estimate_system_frees(),
+			// 					icon7::globalConcurrentCommandPool.current_memory_resident_objects(),
+			// 					icon7::globalConcurrentCommandPool.current_memory_resident(),
+			// 					icon7::globalConcurrentCommandPool.count_bucket_acquisitions(),
+			// 					icon7::globalConcurrentCommandPool.count_bucket_releases(),
+			// 					icon7::globalConcurrentCommandPool.local_sum_acquisition.load(),
+			// 					icon7::globalConcurrentCommandPool.local_sum_release.load()
+			// 					);
+		}
 		auto now = std::chrono::steady_clock::now();
 		double dt = std::chrono::duration<double>(now - t0).count();
 		if (dt > 5) {
@@ -312,6 +328,19 @@ void runTestSlave()
 	p.wait_for(std::chrono::milliseconds(10));
 	while (ipc->runTestFlag != 0) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+		// 		static int i=0;
+		// 		++i;
+		// 		if (i%5000 == 0) {
+		// 			LOG_DEBUG("slave pool: malloc: %lu  free: %lu  objResid: %lu
+		// memResid: %lu  bucketAcq: %lu  bucketRel: %lu",
+		// 					icon7::globalConcurrentCommandPool.estimate_system_allocations(),
+		// 					icon7::globalConcurrentCommandPool.estimate_system_frees(),
+		// 					icon7::globalConcurrentCommandPool.current_memory_resident_objects(),
+		// 					icon7::globalConcurrentCommandPool.current_memory_resident(),
+		// 					icon7::globalConcurrentCommandPool.count_bucket_acquisitions(),
+		// 					icon7::globalConcurrentCommandPool.count_bucket_releases());
+		// 		}
 	}
 	// 	host->DisconnectAllAsync();
 	std::this_thread::sleep_for(std::chrono::milliseconds(10));

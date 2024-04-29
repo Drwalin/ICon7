@@ -24,6 +24,13 @@
 
 namespace icon7
 {
+SendFrameStruct *
+SendFrameStruct::Acquire(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
+{
+	return new SendFrameStruct(std::move(dataWithoutHeader), flags);
+}
+
+void SendFrameStruct::Release(SendFrameStruct *ptr) { delete ptr; }
 
 SendFrameStruct::SendFrameStruct(std::vector<uint8_t> &&_dataWithoutHeader,
 								 Flags flags)

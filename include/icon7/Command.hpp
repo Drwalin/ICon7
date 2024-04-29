@@ -29,7 +29,6 @@
 
 namespace icon7
 {
-
 class Host;
 class Peer;
 class MessageConverter;
@@ -78,19 +77,28 @@ public:
 		return *this;
 	}
 
+	void Destroy()
+	{
+		if (_com != nullptr) {
+			delete _com;
+			_com = nullptr;
+		}
+	}
+
 	template <typename... Args>
 	inline static CommandHandle<T> Create(Args &&...args)
 	{
 		CommandHandle<T> com;
 		com._com = new T(std::move(args)...);
+		com->__m_next = nullptr;
 		return com;
 	}
 
 	inline void Execute()
 	{
-		if (_com) {
+		if (_com != nullptr) {
 			_com->Execute();
-			this->~CommandHandle();
+			Destroy();
 		}
 	}
 
@@ -107,13 +115,7 @@ public:
 	T *_com = nullptr;
 };
 
-template <typename T> inline CommandHandle<T>::~CommandHandle()
-{
-	if (_com) {
-		delete _com;
-		_com = nullptr;
-	}
-}
+template <typename T> inline CommandHandle<T>::~CommandHandle() { Destroy(); }
 
 namespace commands
 {
@@ -187,6 +189,7 @@ class ExecuteListen : public Command
 {
 public:
 	virtual ~ExecuteListen() = default;
+
 	ExecuteListen() = default;
 
 	std::string address;

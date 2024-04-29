@@ -46,7 +46,7 @@ protected:
 
 	virtual void _InternalClearInternalDataOnClose() override;
 
-	friend class HostUStcp;
+	friend class Host;
 
 protected:
 	us_socket_t *socket;

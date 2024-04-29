@@ -57,6 +57,10 @@ public:
 		return peerFlags & BIT_DISCONNECTING;
 	}
 	inline bool IsClosed() const { return peerFlags & BIT_CLOSED; }
+	inline bool HadConnectError() const
+	{
+		return peerFlags & BIT_ERROR_CONNECT;
+	}
 
 	void SetOnDisconnect(void (*callback)(Peer *)) { onDisconnect = callback; }
 
@@ -78,6 +82,8 @@ public:
 	bool isClient;
 
 	void SetReadyToUse();
+
+	inline uint32_t GetPeerStateFlags() const { return peerFlags.load(); }
 
 protected:
 	virtual void _InternalFlushQueuedSends();
@@ -108,6 +114,7 @@ protected:
 	inline const static uint32_t BIT_READY = 1;
 	inline const static uint32_t BIT_DISCONNECTING = 2;
 	inline const static uint32_t BIT_CLOSED = 4;
+	inline const static uint32_t BIT_ERROR_CONNECT = 8;
 
 protected:
 	concurrent::mpsc::queue<SendFrameStruct> sendQueue;

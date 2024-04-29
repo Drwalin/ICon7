@@ -198,6 +198,7 @@ void Host::_InternalConnect(commands::internal::ExecuteConnect &com)
 		peer = MakePeer(socket);
 		(*(icon7::Peer **)us_socket_ext(SSL, socket)) = peer.get();
 		com.onConnected->peer = peer;
+		peer->isClient = true;
 	} else {
 		com.onConnected->peer = nullptr;
 	}
@@ -218,6 +219,7 @@ us_socket_t *Host::_Internal_on_open(struct us_socket_t *socket, int isClient,
 	if (isClient == false) {
 		peer = host->MakePeer(socket);
 		(*(icon7::Peer **)us_socket_ext(SSL, socket)) = peer.get();
+		peer->isClient = false;
 	} else {
 		peer =
 			(*(icon7::Peer **)us_socket_ext(SSL, socket))->shared_from_this();
@@ -284,10 +286,11 @@ template <bool SSL>
 us_socket_t *Host::_Internal_on_connect_error(struct us_socket_t *socket,
 											  int code)
 {
-	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
+	icon7::uS::tcp::Peer *peer =
+		*(icon7::uS::tcp::Peer **)us_socket_ext(SSL, socket);
 	Host *host = (Host *)peer->host;
 
-	peer->_InternalOnDisconnect();
+	peer->_InternalClearInternalDataOnClose();
 	host->peers.erase(peer->shared_from_this());
 
 	return socket;

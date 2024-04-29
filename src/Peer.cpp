@@ -36,7 +36,19 @@ Peer::Peer(Host *host) : host(host)
 	sendingQueueSize = 0;
 }
 
-Peer::~Peer() {}
+Peer::~Peer()
+{
+	for (int i = 0; i < 3; ++i) {
+		while (true) {
+			auto ptr = sendQueue.pop();
+			if (ptr) {
+				SendFrameStruct::Release(ptr);
+			} else {
+				break;
+			}
+		}
+	}
+}
 
 void Peer::Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
 {
@@ -161,6 +173,9 @@ void Peer::_InternalFlushQueuedSends()
 	}
 }
 
-void Peer::_InternalClearInternalDataOnClose() {}
+void Peer::_InternalClearInternalDataOnClose()
+{
+	this->peerFlags |= BIT_CLOSED;
+}
 
 } // namespace icon7
