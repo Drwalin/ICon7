@@ -27,27 +27,38 @@
 namespace icon7
 {
 
-Peer::Peer(Host *host) : host(host)
+Peer::Peer(Host *host) : host(host), queue(1024), consumerToken(queue)
 {
 	userData = 0;
 	userPointer = nullptr;
 	onDisconnect = nullptr;
 	peerFlags = 0;
 	sendingQueueSize = 0;
+	localQueueSize = 0;
+	localQueueOffset = 0;
+	localQueue = new SendFrameStruct[MAX_LOCAL_QUEUE_SIZE];
 }
 
 Peer::~Peer()
 {
-	for (int i = 0; i < 3; ++i) {
+	for (int i = localQueueOffset; i < localQueueSize; ++i) {
+		SendFrameStruct::Release(localQueue[i]);
+	}
+	localQueueOffset = 0;
+	localQueueSize = 0;
+	for (int i = 0; i < 16; ++i) {
 		while (true) {
-			auto ptr = sendQueue.pop();
-			if (ptr) {
-				SendFrameStruct::Release(ptr);
-			} else {
+			size_t dequeued = queue.try_dequeue_bulk(consumerToken, localQueue,
+													 MAX_LOCAL_QUEUE_SIZE);
+			if (dequeued == 0) {
 				break;
+			}
+			for (int i = 0; i < dequeued; ++i) {
+				SendFrameStruct::Release(localQueue[i]);
 			}
 		}
 	}
+	delete[] localQueue;
 }
 
 void Peer::Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
@@ -58,15 +69,21 @@ void Peer::Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
 		return;
 	}
 	sendingQueueSize++;
-	sendQueue.push(
+	queue.enqueue(
 		SendFrameStruct::Acquire(std::move(dataWithoutHeader), flags));
 	host->InsertPeerToFlush(this);
 }
+
 void Peer::SendLocalThread(std::vector<uint8_t> &&dataWithoutHeader,
 						   Flags flags)
 {
+	if (IsDisconnecting()) {
+		LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
+		// TODO: inform about dropping packets
+		return;
+	}
 	sendingQueueSize++;
-	sendQueue.get_output_stack().push(
+	queue.enqueue(
 		SendFrameStruct::Acquire(std::move(dataWithoutHeader), flags));
 	host->_InternalInsertPeerToFlush(this);
 }
@@ -154,19 +171,27 @@ bool Peer::_InternalHasQueuedSends() const { return sendingQueueSize != 0; }
 
 void Peer::SetReadyToUse() { peerFlags |= BIT_READY; }
 
+void Peer::DequeueToLocalQueue()
+{
+	if (localQueueSize != localQueueOffset) {
+		return;
+	}
+	localQueueSize =
+		queue.try_dequeue_bulk(consumerToken, localQueue, MAX_LOCAL_QUEUE_SIZE);
+	localQueueOffset = 0;
+}
+
 void Peer::_InternalFlushQueuedSends()
 {
-	SendFrameStruct *frame;
 	for (uint32_t i = 0; i < 16; ++i) {
-		frame = sendQueue.pop();
-		if (frame) {
-			if (_InternalSend(*frame, sendingQueueSize > 1)) {
-				sendingQueueSize--;
-				SendFrameStruct::Release(frame);
-			} else {
-				sendQueue.get_output_stack().push(frame);
-				break;
-			}
+		DequeueToLocalQueue();
+		if (localQueueSize == localQueueOffset) {
+			break;
+		}
+		if (_InternalSend(localQueue[localQueueOffset], sendingQueueSize > 1)) {
+			sendingQueueSize--;
+			SendFrameStruct::Release(localQueue[localQueueOffset]);
+			localQueueOffset++;
 		} else {
 			break;
 		}

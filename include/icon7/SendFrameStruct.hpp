@@ -23,13 +23,11 @@
 
 #include <vector>
 
-#include "../../concurrent/node.hpp"
-
 #include "Flags.hpp"
 
 namespace icon7
 {
-struct SendFrameStruct : public concurrent::node<SendFrameStruct> {
+struct SendFrameStruct {
 	std::vector<uint8_t> dataWithoutHeader;
 	uint32_t bytesSent = 0;
 	Flags flags = 0;
@@ -42,22 +40,23 @@ struct SendFrameStruct : public concurrent::node<SendFrameStruct> {
 		return headerSize + dataWithoutHeader.size();
 	}
 
-	static SendFrameStruct *Acquire(std::vector<uint8_t> &&dataWithoutHeader,
-									Flags flags);
-	static void Release(SendFrameStruct *ptr);
+	static SendFrameStruct Acquire(std::vector<uint8_t> &&dataWithoutHeader,
+								   Flags flags);
+	static void Release(SendFrameStruct &ptr);
 
 	SendFrameStruct(std::vector<uint8_t> &&dataWithoutHeader, Flags flags);
 	SendFrameStruct();
+	~SendFrameStruct();
 
 	// TODO: mark copy semantics as deleted
 
-	SendFrameStruct(SendFrameStruct &);
-	SendFrameStruct(const SendFrameStruct &);
-	SendFrameStruct(SendFrameStruct &&);
+	SendFrameStruct(SendFrameStruct &) = delete;
+	SendFrameStruct(const SendFrameStruct &) = delete;
+	SendFrameStruct(SendFrameStruct &&) = default;
 
-	SendFrameStruct &operator=(SendFrameStruct &);
-	SendFrameStruct &operator=(const SendFrameStruct &);
-	SendFrameStruct &operator=(SendFrameStruct &&);
+	SendFrameStruct &operator=(SendFrameStruct &) = delete;
+	SendFrameStruct &operator=(const SendFrameStruct &) = delete;
+	SendFrameStruct &operator=(SendFrameStruct &&) = default;
 };
 } // namespace icon7
 

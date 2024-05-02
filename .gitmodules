@@ -7,3 +7,6 @@
 [submodule "concurrent"]
 	path = concurrent
 	url = https://github.com/Drwalin/concurrent.git
+[submodule "concurrentqueue"]
+	path = concurrentqueue
+	url = https://github.com/cameron314/concurrentqueue.git

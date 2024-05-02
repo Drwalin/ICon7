@@ -23,7 +23,7 @@
 #include <atomic>
 #include <memory>
 
-#include "../../concurrent/mpsc_queue.hpp"
+#include "../../concurrentqueue/concurrentqueue.h"
 
 #include "Flags.hpp"
 #include "Command.hpp"
@@ -87,6 +87,7 @@ public:
 
 protected:
 	virtual void _InternalFlushQueuedSends();
+	void DequeueToLocalQueue();
 	/*
 	 * return true if successfully whole dataFrame has been sent.
 	 * false otherwise.
@@ -117,14 +118,18 @@ protected:
 	inline const static uint32_t BIT_ERROR_CONNECT = 8;
 
 protected:
-	concurrent::mpsc::queue<SendFrameStruct> sendQueue;
+	moodycamel::ConcurrentQueue<SendFrameStruct> queue;
+	moodycamel::ConsumerToken consumerToken;
+	SendFrameStruct *localQueue;
 	std::atomic<uint32_t> sendingQueueSize;
+	std::atomic<uint32_t> peerFlags;
 
 	void (*onDisconnect)(Peer *);
 
-	std::atomic<uint32_t> peerFlags;
-
 	FrameDecoder frameDecoder;
+	uint32_t localQueueSize;
+	uint32_t localQueueOffset;
+	const static inline uint32_t MAX_LOCAL_QUEUE_SIZE = 128;
 };
 } // namespace icon7
 
