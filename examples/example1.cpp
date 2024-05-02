@@ -29,9 +29,11 @@ int main()
 
 	icon7::Initialize();
 
-	icon7::RPCEnvironment rpc;
+	icon7::RPCEnvironment rpc, rpc2;
 	rpc.RegisterMessage("sum", Sum);
 	rpc.RegisterMessage("mul", Mul);
+	rpc2.RegisterMessage("sum", Sum);
+	rpc2.RegisterMessage("mul", Mul);
 
 	icon7::uS::tcp::Host *hosta = new icon7::uS::tcp::Host();
 	hosta->SetRpcEnvironment(&rpc);
@@ -55,7 +57,7 @@ int main()
 	}
 
 	icon7::uS::tcp::Host *hostb = new icon7::uS::tcp::Host();
-	hostb->SetRpcEnvironment(&rpc);
+	hostb->SetRpcEnvironment(&rpc2);
 	hostb->Init();
 	hostb->RunAsync();
 
@@ -95,7 +97,7 @@ int main()
 						  10000, peer),
 					  "mul", 5, 13);
 		},
-		&rpc, hostb, port);
+		&rpc2, hostb, port);
 
 	std::this_thread::sleep_for(std::chrono::milliseconds(300));
 

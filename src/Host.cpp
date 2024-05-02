@@ -35,12 +35,16 @@ Host::Host()
 	onConnect = nullptr;
 	onDisconnect = nullptr;
 	asyncRunnerFlags = 0;
+	rpcEnvironment = nullptr;
 }
 
 Host::~Host()
 {
 	WaitStopRunning();
 	asyncRunner.join();
+	if (rpcEnvironment) {
+		rpcEnvironment->host = this;
+	}
 }
 
 void Host::WaitStopRunning()
@@ -260,9 +264,8 @@ void Host::_InternalSingleLoopIteration()
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 	}
+	toRemoveFromQueue.clear();
 	commandQueue.Execute(128 * 1024);
-	std::vector<std::shared_ptr<Peer>> toRemoveFromQueue;
-	toRemoveFromQueue.reserve(64);
 	for (auto p : peersToFlush) {
 		p->_InternalOnWritable();
 		toRemoveFromQueue.emplace_back(p);
@@ -282,6 +285,18 @@ void Host::InsertPeerToFlush(Peer *peer)
 	auto com = CommandHandle<commands::internal::ExecuteAddPeerToFlush>::Create(
 		peer->shared_from_this(), this);
 	EnqueueCommand(std::move(com));
+}
+
+RPCEnvironment *Host::GetRpcEnvironment() { return rpcEnvironment; }
+
+void Host::SetRpcEnvironment(RPCEnvironment *env)
+{
+	rpcEnvironment = env;
+	if (rpcEnvironment->host != nullptr) {
+		LOG_FATAL(
+			"icon7::RPCEnvironment is used by multiple icon7::Host objects.");
+	}
+	rpcEnvironment->host = this;
 }
 
 void Host::_InternalInsertPeerToFlush(Peer *peer)

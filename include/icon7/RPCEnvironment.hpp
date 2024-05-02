@@ -40,8 +40,9 @@ class CommandExecutionQueue;
 class RPCEnvironment
 {
 public:
+	RPCEnvironment();
 	~RPCEnvironment();
-
+	
 	void OnReceive(Peer *peer, std::vector<uint8_t> &frameData,
 				   uint32_t headerSize, Flags flags);
 	/*
@@ -125,34 +126,58 @@ public:
 	void Call(Peer *peer, Flags flags, OnReturnCallback &&callback,
 			  const std::string &name, const Targs &...args)
 	{
-		uint32_t returnCallbackId = 0;
+		class CommandCallSend final : public commands::ExecuteOnPeer
 		{
-			std::lock_guard guard{mutexReturningCallbacks};
-			do {
-				returnCallbackId = ++returnCallCallbackIdGenerator;
-			} while (returnCallbackId == 0 &&
-					 returningCallbacks.count(returnCallbackId) != 0);
-			returningCallbacks[returnCallbackId] = std::move(callback);
-		}
-		std::vector<uint8_t> buffer;
-		bitscpp::ByteWriter<std::vector<uint8_t>> writer(buffer);
-		writer.op(returnCallbackId);
+		public:
+			CommandCallSend() = default;
+			virtual ~CommandCallSend() = default;
+			
+			RPCEnvironment * rpcEnv;
+			OnReturnCallback callback;
+			Flags flags;
+			std::vector<uint8_t> buffer;
+			
+			virtual void Execute() override
+			{
+				uint32_t rcbId = rpcEnv->GetNewReturnIdCallback();
+				rcbId = bitscpp::HostToNetworkUint<uint32_t>(rcbId);
+				memcpy(buffer.data(), &rcbId, sizeof(rcbId));
+				rpcEnv->returningCallbacks[rcbId] = std::move(callback);
+				peer->SendLocalThread(std::move(buffer), flags | FLAGS_CALL);
+			}
+		};
+		
+		auto cb = CommandHandle<CommandCallSend>::Create();
+		cb->rpcEnv = this;
+		cb->peer = peer->shared_from_this();
+		cb->flags = flags;
+		cb->callback = std::move(callback);
+		
+		bitscpp::ByteWriter<std::vector<uint8_t>> writer(cb->buffer);
+		writer.op((uint32_t)0);
 		writer.op(name);
 		(writer.op(args), ...);
-		peer->Send(std::move(buffer), flags | FLAGS_CALL);
+		
+		host->EnqueueCommand(std::move(cb));
 	}
 
 	void CheckForTimeoutFunctionCalls(uint32_t maxChecks = 10);
 
 	void RemoveRegisteredMessage(const std::string &name);
+	
+	uint32_t GetNewReturnIdCallback();
+	
+	friend class Host;
 
 protected:
 	std::unordered_map<std::string, MessageConverter *> registeredMessages;
+	Host *host = nullptr;
 
-	std::mutex mutexReturningCallbacks;
 	uint32_t returnCallCallbackIdGenerator = 0;
 	std::unordered_map<uint32_t, OnReturnCallback> returningCallbacks;
 	uint32_t lastCheckedId = 1;
+	
+	std::vector<OnReturnCallback> timeouts;
 };
 } // namespace icon7
 

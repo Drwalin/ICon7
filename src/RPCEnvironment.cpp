@@ -26,6 +26,8 @@
 
 namespace icon7
 {
+RPCEnvironment::RPCEnvironment() {}
+
 RPCEnvironment::~RPCEnvironment()
 {
 	for (auto it : registeredMessages) {
@@ -80,7 +82,6 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader, Flags flags)
 		OnReturnCallback callback;
 		bool found = false;
 		{
-			std::lock_guard guard{mutexReturningCallbacks};
 			auto it2 = returningCallbacks.find(id);
 			if (it2 != returningCallbacks.end()) {
 				callback = std::move(it2->second);
@@ -104,31 +105,27 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader, Flags flags)
 
 void RPCEnvironment::CheckForTimeoutFunctionCalls(uint32_t maxChecks)
 {
-	std::vector<OnReturnCallback> timeouts;
-	timeouts.reserve(16);
+	timeouts.clear();
 	auto now = std::chrono::steady_clock::now();
-	if (mutexReturningCallbacks.try_lock()) {
-		auto it = returningCallbacks.find(lastCheckedId);
-		if (it == returningCallbacks.end())
-			it = returningCallbacks.begin();
-		for (int i = 0; i < maxChecks && it != returningCallbacks.end(); ++i) {
-			lastCheckedId = it->first;
-			if (it->second.IsExpired(now)) {
-				std::unordered_map<uint32_t, OnReturnCallback>::iterator next =
-					it;
-				++next;
-				uint32_t nextId = 0;
-				if (next != returningCallbacks.end()) {
-					nextId = next->first;
-				}
-				timeouts.push_back(std::move(it->second));
-				returningCallbacks.erase(lastCheckedId);
-				it = returningCallbacks.find(nextId);
-			} else {
-				++it;
+	auto it = returningCallbacks.find(lastCheckedId);
+	if (it == returningCallbacks.end())
+		it = returningCallbacks.begin();
+	for (int i = 0; i < maxChecks && it != returningCallbacks.end(); ++i) {
+		lastCheckedId = it->first;
+		if (it->second.IsExpired(now)) {
+			std::unordered_map<uint32_t, OnReturnCallback>::iterator next =
+				it;
+			++next;
+			uint32_t nextId = 0;
+			if (next != returningCallbacks.end()) {
+				nextId = next->first;
 			}
+			timeouts.push_back(std::move(it->second));
+			returningCallbacks.erase(lastCheckedId);
+			it = returningCallbacks.find(nextId);
+		} else {
+			++it;
 		}
-		mutexReturningCallbacks.unlock();
 	}
 	for (auto &t : timeouts) {
 		t.ExecuteTimeout();
@@ -143,5 +140,14 @@ void RPCEnvironment::RemoveRegisteredMessage(const std::string &name)
 	}
 	delete it->second;
 	registeredMessages.erase(it);
+}
+
+uint32_t RPCEnvironment::GetNewReturnIdCallback()
+{
+	uint32_t rcbId = 0;
+	do {
+		rcbId = ++returnCallCallbackIdGenerator;
+	} while (rcbId == 0 || returningCallbacks.count(rcbId) != 0);
+	return rcbId;
 }
 } // namespace icon7

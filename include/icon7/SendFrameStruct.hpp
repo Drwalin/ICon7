@@ -48,8 +48,6 @@ struct SendFrameStruct {
 	SendFrameStruct();
 	~SendFrameStruct();
 
-	// TODO: mark copy semantics as deleted
-
 	SendFrameStruct(SendFrameStruct &) = delete;
 	SendFrameStruct(const SendFrameStruct &) = delete;
 	SendFrameStruct(SendFrameStruct &&) = default;
