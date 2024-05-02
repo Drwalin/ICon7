@@ -81,7 +81,7 @@ bool Host::Init(bool useSSL, const char *key_file_name,
 	}
 	timerWakeup = us_create_timer(loop, true, sizeof(void *));
 	*(Host **)us_timer_ext(timerWakeup) = this;
-	us_timer_set(timerWakeup, _InternalOnTimerWakup, 50, 50);
+	us_timer_set(timerWakeup, _InternalOnTimerWakup, 1, 1);
 	return true;
 }
 

@@ -48,7 +48,7 @@ void CommandExecutionQueue::EnqueueCommand(CommandHandle<Command> &&command)
 	if (command.IsValid() == false) {
 		LOG_ERROR("Trying to enqueue empty command");
 	} else {
-		queue.push(command._com);
+		queue.enqueue(command._com);
 		command._com = nullptr;
 	}
 }
@@ -61,7 +61,8 @@ void CommandExecutionQueue::QueueStopAsyncExecution()
 bool CommandExecutionQueue::TryDequeue(CommandHandle<Command> &command)
 {
 	command.~CommandHandle();
-	Command *ptr = queue.pop();
+	Command *ptr = nullptr;
+	queue.try_dequeue(ptr);
 	if (ptr) {
 		command._com = ptr;
 		return true;
@@ -69,6 +70,12 @@ bool CommandExecutionQueue::TryDequeue(CommandHandle<Command> &command)
 		command._com = nullptr;
 		return false;
 	}
+}
+
+size_t CommandExecutionQueue::TryDequeueBulk(CommandHandle<Command> *commands,
+											 size_t max)
+{
+	return queue.try_dequeue_bulk((Command **)commands, max);
 }
 
 void CommandExecutionQueue::WaitStopAsyncExecution()
@@ -107,17 +114,19 @@ void CommandExecutionQueue::ExecuteLoop(uint32_t sleepMicrosecondsOnNoActions)
 
 uint32_t CommandExecutionQueue::Execute(uint32_t maxToDequeue)
 {
-	uint32_t i = 0;
-	for (; i < maxToDequeue; ++i) {
-		CommandHandle<Command> com;
-		if (TryDequeue(com)) {
-			com.Execute();
-		} else {
-			break;
+	uint32_t total = 0;
+	CommandHandle<Command> commands[128];
+	while (maxToDequeue && HasAny()) {
+		uint32_t toDequeue = std::min<uint32_t>(maxToDequeue, 128);
+		uint32_t dequeued = TryDequeueBulk(commands, toDequeue);
+		maxToDequeue -= dequeued;
+		total += dequeued;
+		for (int i = 0; i < dequeued; ++i) {
+			commands[i].Execute();
 		}
 	}
-	return i;
+	return total;
 }
 
-bool CommandExecutionQueue::HasAny() const { return false; }
+bool CommandExecutionQueue::HasAny() const { return queue.size_approx() != 0; }
 } // namespace icon7

@@ -62,13 +62,17 @@ bool Peer::_InternalSend(SendFrameStruct &f, bool hasMore)
 	return true;
 }
 
-void Peer::_InternalDisconnect() { us_socket_close(SSL, socket, 0, nullptr); }
+void Peer::_InternalDisconnect()
+{
+	peerFlags |= BIT_DISCONNECTING;
+	us_socket_close(SSL, socket, 0, nullptr);
+}
 
 void Peer::_InternalClearInternalDataOnClose()
 {
 	icon7::Peer::_InternalClearInternalDataOnClose();
 	socket = nullptr;
-	this->peerFlags |= BIT_CLOSED;
+	peerFlags |= BIT_CLOSED;
 	SSL = 0;
 }
 

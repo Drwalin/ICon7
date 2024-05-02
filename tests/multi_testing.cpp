@@ -33,10 +33,10 @@ int main()
 	icon7::Initialize();
 
 	int notPassedTests = 0;
-	const int sendsMoreThanCalls = 37;
-	const int totalSends = 23;
-	const int connectionsCount = 31;
-	const int testsCount = 13;
+	const int sendsMoreThanCalls = 117;
+	const int totalSends = 173;
+	const int connectionsCount = 71;
+	const int testsCount = 7;
 
 	for (int i = 0; i < testsCount; ++i) {
 		sent = received = returned = 0;
@@ -58,7 +58,7 @@ int main()
 		hostb->RunAsync();
 
 		listenFuture.wait_for(std::chrono::milliseconds(150));
-		
+
 		std::vector<concurrent::future<std::shared_ptr<icon7::Peer>>> peers;
 		for (int i = 0; i < connectionsCount; ++i) {
 			peers.push_back(hostb->ConnectPromise("127.0.0.1", port));
@@ -66,6 +66,8 @@ int main()
 		for (auto &f : peers) {
 			f.wait();
 		}
+
+		std::vector<std::shared_ptr<icon7::Peer>> validPeers;
 		for (auto &f : peers) {
 			f.wait();
 			icon7::Peer *peer = f.get().get();
@@ -85,35 +87,48 @@ int main()
 			if (peer->HadConnectError() || peer->IsClosed()) {
 				std::this_thread::sleep_for(std::chrono::milliseconds(50));
 				LOG_WARN("Failed to etablish connection");
+				++notPassedTests;
 				continue;
-			}
-
-			for (int k=0; k<totalSends; ++k) {
-				for (int l=0; l<sendsMoreThanCalls-1; ++l) {
-					rpc.Send(peer, icon7::FLAG_RELIABLE, "sum", 3, 23);
-					sent++;
-				}
-
-				rpc.Call(peer, icon7::FLAG_RELIABLE,
-						 icon7::OnReturnCallback::Make<uint32_t>(
-							 [](icon7::Peer *peer, icon7::Flags flags,
-								uint32_t result) -> void { returned++; },
-							 [](icon7::Peer *peer) -> void {
-								 printf(" Multiplication timeout\n");
-							 },
-							 1000000, peer),
-						 "mul", 5, 13);
-				sent++;
 			}
 
 			if (peer->GetPeerStateFlags() != 1) {
 				LOG_DEBUG("Peer state: %u", peer->GetPeerStateFlags());
 			}
-		}
 
+			validPeers.emplace_back(f.get());
+		}
 		peers.clear();
 
-		for (int i = 0; i < 1000; ++i) {
+		{
+			for (int k = 0; k < totalSends; ++k) {
+				for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
+					for (auto p : validPeers) {
+						auto peer = p.get();
+						rpc.Send(peer, icon7::FLAG_RELIABLE, "sum", 3, 23);
+						sent++;
+					}
+				}
+
+				for (auto p : validPeers) {
+					auto peer = p.get();
+					rpc.Call(peer, icon7::FLAG_RELIABLE,
+							 icon7::OnReturnCallback::Make<uint32_t>(
+								 [](icon7::Peer *peer, icon7::Flags flags,
+									uint32_t result) -> void { returned++; },
+								 [](icon7::Peer *peer) -> void {
+									 printf(" Multiplication timeout\n");
+								 },
+								 1000000, peer),
+							 "mul", 5, 13);
+					sent++;
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds(10));
+			}
+		}
+
+		validPeers.clear();
+
+		for (int i = 0; i < 10000; ++i) {
 			if (sent == received && returned == sent / sendsMoreThanCalls) {
 				break;
 			}
@@ -129,7 +144,8 @@ int main()
 			notPassedTests++;
 		}
 
-		if (sent != received || returned != sent / sendsMoreThanCalls || notPassedTests) {
+		if (sent != received || returned != sent / sendsMoreThanCalls ||
+			notPassedTests) {
 			LOG_INFO("Iteration: %i FAILED: sent/received = %i/%i ; "
 					 "returned/called = %i/%i",
 					 i, sent.load(), received.load(), returned.load(),
@@ -147,55 +163,6 @@ int main()
 	}
 
 	icon7::Deinitialize();
-
-		{
-		LOG_DEBUG("master pool before: malloc: %lu  free: %lu  objResid: %lu  memResid: %lu  bucketAcq: %lu  bucketRel: %lu  objectAcq: %lu  objectRel: %lu  objInGlob: %lu  objBucAcq: %lu  objBucRel: %lu",
-				icon7::globalPool.estimate_system_allocations(),
-				icon7::globalPool.estimate_system_frees(),
-				icon7::globalPool.current_memory_resident_objects(),
-				icon7::globalPool.current_memory_resident(),
-				icon7::globalPool.count_bucket_acquisitions(),
-				icon7::globalPool.count_bucket_releases(),
-				icon7::globalPool.local_sum_acquisition.load(),
-				icon7::globalPool.local_sum_release.load(),
-				icon7::globalPool.count_objects_in_global_pool(),
-				icon7::globalPool.sum_object_acquisition.load(),
-				icon7::globalPool.sum_object_release.load()
-				);
-			auto &s =
-	icon7::globalPool.mod_tls_pool<128>(nullptr, false);
-	for (auto it : s) {
-		it->release_buckets_to_global();
-		LOG_DEBUG("master pool releas: malloc: %lu  free: %lu  objResid: %lu  memResid: %lu  bucketAcq: %lu  bucketRel: %lu  objectAcq: %lu  objectRel: %lu  objInGlob: %lu  objBucAcq: %lu  objBucRel: %lu",
-				icon7::globalPool.estimate_system_allocations(),
-				icon7::globalPool.estimate_system_frees(),
-				icon7::globalPool.current_memory_resident_objects(),
-				icon7::globalPool.current_memory_resident(),
-				icon7::globalPool.count_bucket_acquisitions(),
-				icon7::globalPool.count_bucket_releases(),
-				icon7::globalPool.local_sum_acquisition.load(),
-				icon7::globalPool.local_sum_release.load(),
-				icon7::globalPool.count_objects_in_global_pool(),
-				icon7::globalPool.sum_object_acquisition.load(),
-				icon7::globalPool.sum_object_release.load()
-				);
-			}
-		}
-	
-		icon7::globalPool.free_all();
-		LOG_DEBUG("master pool  after: malloc: %lu  free: %lu  objResid: %lu  memResid: %lu  bucketAcq: %lu  bucketRel: %lu  objectAcq: %lu  objectRel: %lu  objInGlob: %lu  objBucAcq: %lu  objBucRel: %lu",
-				icon7::globalPool.estimate_system_allocations(),
-				icon7::globalPool.estimate_system_frees(),
-				icon7::globalPool.current_memory_resident_objects(),
-				icon7::globalPool.current_memory_resident(),
-				icon7::globalPool.count_bucket_acquisitions(),
-				icon7::globalPool.count_bucket_releases(),
-				icon7::globalPool.local_sum_acquisition.load(),
-				icon7::globalPool.local_sum_release.load(),
-				icon7::globalPool.count_objects_in_global_pool(),
-				icon7::globalPool.sum_object_acquisition.load(),
-				icon7::globalPool.sum_object_release.load()
-				);
 
 	if (notPassedTests) {
 		LOG_DEBUG("Failed: %i/%i tests", notPassedTests, testsCount);

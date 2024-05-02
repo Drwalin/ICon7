@@ -22,21 +22,52 @@
 #include <memory>
 #include <type_traits>
 
-#include "../../concurrent/node.hpp"
-#include "../../concurrent/bucket_pool.hpp"
+#include "../concurrentqueue/concurrentqueue.h"
 
 #include "Flags.hpp"
 #include "ByteReader.hpp"
 
 namespace icon7
 {
+
+class CommandPool
+{
+public:
+	moodycamel::ConcurrentQueue<void *> queue;
+	size_t maxObjects = 1024 * 128;
+	inline const static size_t BYTES = 192;
+
+	template <typename T, typename... Args> T *Acquire(Args... args)
+	{
+		static_assert(sizeof(T) <= BYTES);
+		void *ret = nullptr;
+		if (queue.try_dequeue(ret)) {
+			return new (ret) T(std::move(args)...);
+		}
+		return new (malloc(BYTES)) T(std::move(args)...);
+	}
+
+	template <typename T> void Release(T *ptr)
+	{
+		ptr->~T();
+		if (queue.size_approx() > maxObjects) {
+			free(ptr);
+			return;
+		}
+		queue.enqueue((void *)ptr);
+		return;
+	}
+};
+
+extern CommandPool globalCommandPool;
+
 class Host;
 class Peer;
 class MessageConverter;
 
 class CommandExecutionQueue;
 
-class Command : public concurrent::node<Command>
+class Command
 {
 public:
 	inline Command() {}
@@ -53,9 +84,6 @@ public:
 
 	virtual ~Command();
 };
-
-extern concurrent::buckets_pool<192> globalPool;
-extern thread_local nonconcurrent::thread_local_pool<192, 128> tlsPool;
 
 template <typename T = Command> class CommandHandle
 {
@@ -84,7 +112,7 @@ public:
 	void Destroy()
 	{
 		if (_com != nullptr) {
-			tlsPool.release(_com);
+			globalCommandPool.Release(_com);
 			_com = nullptr;
 		}
 	}
@@ -93,8 +121,7 @@ public:
 	inline static CommandHandle<T> Create(Args &&...args)
 	{
 		CommandHandle<T> com;
-		com._com = tlsPool.acquire<T>(std::move(args)...);
-		com->__m_next = nullptr;
+		com._com = globalCommandPool.Acquire<T>(std::move(args)...);
 		return com;
 	}
 

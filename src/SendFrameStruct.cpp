@@ -16,29 +16,19 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <cstring>
-
-#include "../../concurrent/bucket_pool.hpp"
-
 #include "../include/icon7/FramingProtocol.hpp"
 
 #include "../include/icon7/SendFrameStruct.hpp"
 
 namespace icon7
 {
-	
-extern concurrent::buckets_pool<192> globalPool;
-extern thread_local nonconcurrent::thread_local_pool<192, 128> tlsPool;
-	
-SendFrameStruct *
+SendFrameStruct
 SendFrameStruct::Acquire(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
 {
-	return tlsPool.acquire<SendFrameStruct>(std::move(dataWithoutHeader), flags);
+	return SendFrameStruct(std::move(dataWithoutHeader), flags);
 }
 
-void SendFrameStruct::Release(SendFrameStruct *ptr) {
-	tlsPool.release(ptr);
-}
+void SendFrameStruct::Release(SendFrameStruct &ptr) {}
 
 SendFrameStruct::SendFrameStruct(std::vector<uint8_t> &&_dataWithoutHeader,
 								 Flags flags)
@@ -54,63 +44,5 @@ SendFrameStruct::SendFrameStruct(std::vector<uint8_t> &&_dataWithoutHeader,
 }
 SendFrameStruct::SendFrameStruct() {}
 
-SendFrameStruct::SendFrameStruct(SendFrameStruct &o)
-{
-	dataWithoutHeader = o.dataWithoutHeader;
-	memcpy(header, o.header, 4);
-	headerBytesSent = o.headerBytesSent;
-	headerSize = o.headerSize;
-	__m_next.store(o.__m_next.load());
-}
-
-SendFrameStruct::SendFrameStruct(const SendFrameStruct &o)
-{
-	dataWithoutHeader = o.dataWithoutHeader;
-	memcpy(header, o.header, 4);
-	headerBytesSent = o.headerBytesSent;
-	headerSize = o.headerSize;
-	__m_next.store(o.__m_next.load());
-}
-
-SendFrameStruct::SendFrameStruct(SendFrameStruct &&o)
-{
-	dataWithoutHeader = std::move(o.dataWithoutHeader);
-	memcpy(header, o.header, 4);
-	headerBytesSent = o.headerBytesSent;
-	headerSize = o.headerSize;
-	__m_next.store(o.__m_next.load());
-	o.__m_next = nullptr;
-}
-
-SendFrameStruct &SendFrameStruct::operator=(SendFrameStruct &o)
-{
-	dataWithoutHeader = o.dataWithoutHeader;
-	memcpy(header, o.header, 4);
-	headerBytesSent = o.headerBytesSent;
-	headerSize = o.headerSize;
-	__m_next.store(o.__m_next.load());
-	return *this;
-}
-
-SendFrameStruct &SendFrameStruct::operator=(const SendFrameStruct &o)
-{
-	dataWithoutHeader = o.dataWithoutHeader;
-	memcpy(header, o.header, 4);
-	headerBytesSent = o.headerBytesSent;
-	headerSize = o.headerSize;
-	__m_next.store(o.__m_next.load());
-	return *this;
-}
-
-SendFrameStruct &SendFrameStruct::operator=(SendFrameStruct &&o)
-{
-	dataWithoutHeader = std::move(o.dataWithoutHeader);
-	memcpy(header, o.header, 4);
-	headerBytesSent = o.headerBytesSent;
-	headerSize = o.headerSize;
-	__m_next.store(o.__m_next.load());
-	o.__m_next = nullptr;
-	return *this;
-}
-
+SendFrameStruct::~SendFrameStruct() {}
 } // namespace icon7

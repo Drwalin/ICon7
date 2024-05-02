@@ -49,22 +49,21 @@ void Host::WaitStopRunning()
 	while (IsRunningAsync()) {
 		QueueStopRunning();
 		WakeUp();
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 }
 
 void Host::_InternalDestroy()
 {
-	DisconnectAllAsync();
 	StopListening();
+	DisconnectAllAsync();
 	QueueStopRunning();
-	while (IsRunningAsync()) {
-		DisconnectAllAsync();
-		StopListening();
-		QueueStopRunning();
+
+	do {
 		WakeUp();
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
-	}
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	} while (IsRunningAsync());
+
 	commandQueue.Execute(128);
 	while (commandQueue.HasAny()) {
 		commandQueue.Execute(128);
@@ -88,7 +87,7 @@ void Host::DisconnectAllAsync()
 void Host::DisconnectAll()
 {
 	for (auto &p : peers) {
-		p->Disconnect();
+		p->_InternalDisconnect();
 	}
 }
 
@@ -261,7 +260,7 @@ void Host::_InternalSingleLoopIteration()
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 	}
-	commandQueue.Execute(128);
+	commandQueue.Execute(128 * 1024);
 	std::vector<std::shared_ptr<Peer>> toRemoveFromQueue;
 	toRemoveFromQueue.reserve(64);
 	for (auto p : peersToFlush) {

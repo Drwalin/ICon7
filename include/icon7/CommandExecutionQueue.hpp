@@ -21,7 +21,7 @@
 
 #include <atomic>
 
-#include "../../concurrent/mpsc_queue.hpp"
+#include "../../concurrentqueue/concurrentqueue.h"
 
 #include "Command.hpp"
 
@@ -35,6 +35,7 @@ public:
 
 	void EnqueueCommand(CommandHandle<Command> &&command);
 	bool TryDequeue(CommandHandle<Command> &command);
+	size_t TryDequeueBulk(CommandHandle<Command> *commands, size_t max);
 
 	void QueueStopAsyncExecution();
 	void WaitStopAsyncExecution();
@@ -56,8 +57,10 @@ private:
 
 	std::atomic<uint32_t> asyncExecutionFlags;
 
+	friend class Host;
+
 private:
-	concurrent::mpsc::queue<Command> queue;
+	moodycamel::ConcurrentQueue<Command *> queue;
 };
 } // namespace icon7
 
