@@ -79,8 +79,8 @@ public:
 
 	void InsertPeerToFlush(Peer *peer);
 
-	inline RPCEnvironment *GetRpcEnvironment() { return rpcEnvironment; }
-	inline void SetRpcEnvironment(RPCEnvironment *env) { rpcEnvironment = env; }
+	RPCEnvironment *GetRpcEnvironment();
+	void SetRpcEnvironment(RPCEnvironment *env);
 
 	virtual void WakeUp();
 
@@ -124,6 +124,9 @@ protected:
 	CommandExecutionQueue commandQueue;
 	std::atomic<uint32_t> asyncRunnerFlags;
 	std::thread asyncRunner;
+	
+protected:
+	std::vector<std::shared_ptr<Peer>> toRemoveFromQueue;
 };
 
 void Initialize();

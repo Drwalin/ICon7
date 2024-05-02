@@ -41,9 +41,11 @@ int main()
 	for (int i = 0; i < testsCount; ++i) {
 		sent = received = returned = 0;
 		LOG_INFO("Iteration: %i started", i);
-		icon7::RPCEnvironment rpc;
+		icon7::RPCEnvironment rpc, rpc2;
 		rpc.RegisterMessage("sum", Sum);
 		rpc.RegisterMessage("mul", Mul);
+		rpc2.RegisterMessage("sum", Sum);
+		rpc2.RegisterMessage("mul", Mul);
 		port++;
 
 		icon7::uS::tcp::Host *hosta = new icon7::uS::tcp::Host();
@@ -53,7 +55,7 @@ int main()
 		auto listenFuture = hosta->ListenOnPort("127.0.0.1", port, icon7::IPv4);
 
 		icon7::uS::tcp::Host *hostb = new icon7::uS::tcp::Host();
-		hostb->SetRpcEnvironment(&rpc);
+		hostb->SetRpcEnvironment(&rpc2);
 		hostb->Init();
 		hostb->RunAsync();
 
@@ -104,14 +106,14 @@ int main()
 				for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
 					for (auto p : validPeers) {
 						auto peer = p.get();
-						rpc.Send(peer, icon7::FLAG_RELIABLE, "sum", 3, 23);
+						rpc2.Send(peer, icon7::FLAG_RELIABLE, "sum", 3, 23);
 						sent++;
 					}
 				}
 
 				for (auto p : validPeers) {
 					auto peer = p.get();
-					rpc.Call(peer, icon7::FLAG_RELIABLE,
+					rpc2.Call(peer, icon7::FLAG_RELIABLE,
 							 icon7::OnReturnCallback::Make<uint32_t>(
 								 [](icon7::Peer *peer, icon7::Flags flags,
 									uint32_t result) -> void { returned++; },
