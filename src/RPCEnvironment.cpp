@@ -113,8 +113,7 @@ void RPCEnvironment::CheckForTimeoutFunctionCalls(uint32_t maxChecks)
 	for (int i = 0; i < maxChecks && it != returningCallbacks.end(); ++i) {
 		lastCheckedId = it->first;
 		if (it->second.IsExpired(now)) {
-			std::unordered_map<uint32_t, OnReturnCallback>::iterator next =
-				it;
+			std::unordered_map<uint32_t, OnReturnCallback>::iterator next = it;
 			++next;
 			uint32_t nextId = 0;
 			if (next != returningCallbacks.end()) {

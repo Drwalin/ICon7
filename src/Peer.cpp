@@ -183,7 +183,7 @@ void Peer::DequeueToLocalQueue()
 
 void Peer::_InternalFlushQueuedSends()
 {
-	for (uint32_t i = 0; i < 16; ++i) {
+	for (uint32_t i = 0; i < 128; ++i) {
 		DequeueToLocalQueue();
 		if (localQueueSize == localQueueOffset) {
 			break;

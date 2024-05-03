@@ -34,9 +34,9 @@ int main()
 
 	int notPassedTests = 0;
 	const int sendsMoreThanCalls = 117;
-	const int totalSends = 173;
+	const int totalSends = 373;
 	const int connectionsCount = 71;
-	const int testsCount = 7;
+	const int testsCount = 1;
 
 	for (int i = 0; i < testsCount; ++i) {
 		sent = received = returned = 0;
@@ -102,7 +102,26 @@ int main()
 		peers.clear();
 
 		{
+			auto commandsBuffer =
+				hostb->GetCommandExecutionQueue()->GetThreadLocalBuffer();
 			for (int k = 0; k < totalSends; ++k) {
+				// 				LOG_TRACE("Count commands: %u",
+				// commandsBuffer->currentCommandsBuffer.countCommands);
+				for (auto p : validPeers) {
+					auto peer = p.get();
+					rpc2.Call(commandsBuffer, peer, icon7::FLAG_RELIABLE,
+							  icon7::OnReturnCallback::Make<uint32_t>(
+								  [](icon7::Peer *peer, icon7::Flags flags,
+									 uint32_t result) -> void { returned++; },
+								  [](icon7::Peer *peer) -> void {
+									  printf(" Multiplication timeout\n");
+								  },
+								  1000000, peer),
+							  "mul", 5, 13);
+					sent++;
+				}
+				// 				LOG_TRACE("Count commands: %u",
+				// commandsBuffer->currentCommandsBuffer.countCommands);
 				for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
 					for (auto p : validPeers) {
 						auto peer = p.get();
@@ -110,20 +129,11 @@ int main()
 						sent++;
 					}
 				}
-
-				for (auto p : validPeers) {
-					auto peer = p.get();
-					rpc2.Call(peer, icon7::FLAG_RELIABLE,
-							 icon7::OnReturnCallback::Make<uint32_t>(
-								 [](icon7::Peer *peer, icon7::Flags flags,
-									uint32_t result) -> void { returned++; },
-								 [](icon7::Peer *peer) -> void {
-									 printf(" Multiplication timeout\n");
-								 },
-								 1000000, peer),
-							 "mul", 5, 13);
-					sent++;
-				}
+				// 				LOG_TRACE("Count commands: %u",
+				// commandsBuffer->currentCommandsBuffer.countCommands);
+				commandsBuffer->FlushBuffer();
+				// 				LOG_TRACE("Count commands: %u",
+				// commandsBuffer->currentCommandsBuffer.countCommands);
 				std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			}
 		}

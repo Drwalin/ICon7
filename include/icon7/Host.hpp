@@ -124,7 +124,7 @@ protected:
 	CommandExecutionQueue commandQueue;
 	std::atomic<uint32_t> asyncRunnerFlags;
 	std::thread asyncRunner;
-	
+
 protected:
 	std::vector<std::shared_ptr<Peer>> toRemoveFromQueue;
 };

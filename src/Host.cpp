@@ -18,7 +18,6 @@
 
 #include <chrono>
 #include <thread>
-#include <vector>
 
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/Peer.hpp"
@@ -257,6 +256,15 @@ bool Host::IsRunningAsync() { return asyncRunnerFlags & RUNNING; }
 
 void Host::_InternalSingleLoopIteration()
 {
+	commandQueue.Execute(128 * 1024);
+	for (auto p : peers) {
+		if (p->_InternalHasQueuedSends()) {
+			p->_InternalOnWritable();
+		}
+	}
+	rpcEnvironment->CheckForTimeoutFunctionCalls(16);
+
+	/*
 	if (peersToFlush.empty() && commandQueue.HasAny() == false) {
 		if (peers.size() < 20) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
@@ -268,7 +276,9 @@ void Host::_InternalSingleLoopIteration()
 	commandQueue.Execute(128 * 1024);
 	for (auto p : peersToFlush) {
 		p->_InternalOnWritable();
-		toRemoveFromQueue.emplace_back(p);
+		if (p->_InternalHasQueuedSends() == false) {
+			toRemoveFromQueue.emplace_back(p);
+		}
 	}
 	for (auto &p : toRemoveFromQueue) {
 		if (p->_InternalHasQueuedSends() == false) {
@@ -276,15 +286,17 @@ void Host::_InternalSingleLoopIteration()
 		}
 	}
 	rpcEnvironment->CheckForTimeoutFunctionCalls(16);
+	*/
 }
 
 void Host::InsertPeerToFlush(Peer *peer)
 {
 	// TODO: optimise this to remove passing command to host thread
 	// i.e.: implement concurrent bit set of active peers
-	auto com = CommandHandle<commands::internal::ExecuteAddPeerToFlush>::Create(
+	/*
+	commandQueue.GetThreadLocalBuffer()->EnqueueCommand<commands::internal::ExecuteAddPeerToFlush>(
 		peer->shared_from_this(), this);
-	EnqueueCommand(std::move(com));
+	*/
 }
 
 RPCEnvironment *Host::GetRpcEnvironment() { return rpcEnvironment; }
@@ -301,7 +313,7 @@ void Host::SetRpcEnvironment(RPCEnvironment *env)
 
 void Host::_InternalInsertPeerToFlush(Peer *peer)
 {
-	peersToFlush.insert(peer->shared_from_this());
+	// 	peersToFlush.insert(peer->shared_from_this());
 }
 
 void Host::ForEachPeer(void(func)(icon7::Peer *))

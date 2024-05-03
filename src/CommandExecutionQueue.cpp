@@ -17,10 +17,12 @@
  */
 
 #include <chrono>
+#include <memory>
 #include <thread>
+#include <utility>
+#include <unordered_map>
 
 #include "../include/icon7/Debug.hpp"
-
 #include "../include/icon7/CommandExecutionQueue.hpp"
 
 namespace icon7
@@ -30,27 +32,31 @@ CommandExecutionQueue::CommandExecutionQueue()
 	asyncExecutionFlags = STOPPED;
 }
 
-CommandExecutionQueue::~CommandExecutionQueue()
-{
-	WaitStopAsyncExecution();
-	for (int i = 0; i < 3; ++i) {
-		while (true) {
-			CommandHandle<Command> com;
-			if (TryDequeue(com) == false) {
-				break;
-			}
-		}
-	}
-}
+CommandExecutionQueue::~CommandExecutionQueue() { WaitStopAsyncExecution(); }
 
 void CommandExecutionQueue::EnqueueCommand(CommandHandle<Command> &&command)
 {
 	if (command.IsValid() == false) {
 		LOG_ERROR("Trying to enqueue empty command");
 	} else {
-		queue.enqueue(command._com);
+		queue.enqueue(std::move(command));
 		command._com = nullptr;
 	}
+}
+
+void CommandExecutionQueue::EnqueueCommandsBuffer(CommandsBuffer &&buffer)
+{
+	class CommandExecuteCommandsBuffer final : public Command
+	{
+	public:
+		CommandExecuteCommandsBuffer() = default;
+		virtual ~CommandExecuteCommandsBuffer() = default;
+		CommandsBuffer buffer;
+		virtual void Execute() override { buffer.ExecuteAll(); }
+	};
+	auto com = CommandHandle<CommandExecuteCommandsBuffer>::Create();
+	com->buffer = std::move(buffer);
+	EnqueueCommand(std::move(com));
 }
 
 void CommandExecutionQueue::QueueStopAsyncExecution()
@@ -61,10 +67,7 @@ void CommandExecutionQueue::QueueStopAsyncExecution()
 bool CommandExecutionQueue::TryDequeue(CommandHandle<Command> &command)
 {
 	command.~CommandHandle();
-	Command *ptr = nullptr;
-	queue.try_dequeue(ptr);
-	if (ptr) {
-		command._com = ptr;
+	if (queue.try_dequeue(command)) {
 		return true;
 	} else {
 		command._com = nullptr;
@@ -75,7 +78,7 @@ bool CommandExecutionQueue::TryDequeue(CommandHandle<Command> &command)
 size_t CommandExecutionQueue::TryDequeueBulk(CommandHandle<Command> *commands,
 											 size_t max)
 {
-	return queue.try_dequeue_bulk((Command **)commands, max);
+	return queue.try_dequeue_bulk(commands, max);
 }
 
 void CommandExecutionQueue::WaitStopAsyncExecution()
@@ -123,10 +126,35 @@ uint32_t CommandExecutionQueue::Execute(uint32_t maxToDequeue)
 		total += dequeued;
 		for (int i = 0; i < dequeued; ++i) {
 			commands[i].Execute();
+			commands[i].~CommandHandle();
 		}
 	}
 	return total;
 }
 
 bool CommandExecutionQueue::HasAny() const { return queue.size_approx() != 0; }
+
+CommandsBufferHandler *CommandExecutionQueue::GetThreadLocalBuffer()
+{
+	thread_local std::unordered_map<CommandExecutionQueue *,
+									std::unique_ptr<CommandsBufferHandler>>
+		buffers;
+	auto &b = buffers[this];
+	if (b.get() == nullptr) {
+		b = CreateCommandBufferHandler();
+	}
+	return b.get();
+}
+
+std::unique_ptr<CommandsBufferHandler>
+CommandExecutionQueue::CreateCommandBufferHandler()
+{
+	return std::make_unique<CommandsBufferHandler>(this);
+}
+
+void CommandExecutionQueue::FlushThreadLocalCommandsBuffer()
+{
+	GetThreadLocalBuffer()->FlushBuffer();
+}
+
 } // namespace icon7
