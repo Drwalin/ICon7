@@ -24,6 +24,7 @@
 #include "../../concurrentqueue/concurrentqueue.h"
 
 #include "Command.hpp"
+#include "CommandsBufferHandler.hpp"
 
 namespace icon7
 {
@@ -33,6 +34,7 @@ public:
 	CommandExecutionQueue();
 	~CommandExecutionQueue();
 
+	void EnqueueCommandsBuffer(CommandsBuffer &&commands);
 	void EnqueueCommand(CommandHandle<Command> &&command);
 	bool TryDequeue(CommandHandle<Command> &command);
 	size_t TryDequeueBulk(CommandHandle<Command> *commands, size_t max);
@@ -47,6 +49,10 @@ public:
 	void ExecuteLoop(uint32_t sleepMicrosecondsOnNoActions);
 	uint32_t Execute(uint32_t maxToDequeue);
 
+	CommandsBufferHandler *GetThreadLocalBuffer();
+	std::unique_ptr<CommandsBufferHandler> CreateCommandBufferHandler();
+	void FlushThreadLocalCommandsBuffer();
+
 private:
 	enum AsyncExecutionFlags {
 		STARTING_RUNNING = 1,
@@ -60,7 +66,7 @@ private:
 	friend class Host;
 
 private:
-	moodycamel::ConcurrentQueue<Command *> queue;
+	moodycamel::ConcurrentQueue<CommandHandle<Command>> queue;
 };
 } // namespace icon7
 
