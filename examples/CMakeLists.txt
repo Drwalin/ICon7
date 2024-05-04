@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.9)
+cmake_policy(SET CMP0115 OLD)
 
 add_executable(example1 example1)
 target_link_libraries(example1 icon7)

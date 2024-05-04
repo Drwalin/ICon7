@@ -27,7 +27,7 @@
 namespace icon7
 {
 
-Peer::Peer(Host *host) : host(host), queue(1024), consumerToken(queue)
+Peer::Peer(Host *host) : host(host), queue(), consumerToken(queue)
 {
 	userData = 0;
 	userPointer = nullptr;
@@ -71,7 +71,7 @@ void Peer::Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
 	sendingQueueSize++;
 	queue.enqueue(
 		SendFrameStruct::Acquire(std::move(dataWithoutHeader), flags));
-	host->InsertPeerToFlush(this);
+// 	host->InsertPeerToFlush(this);
 }
 
 void Peer::SendLocalThread(std::vector<uint8_t> &&dataWithoutHeader,
@@ -85,7 +85,7 @@ void Peer::SendLocalThread(std::vector<uint8_t> &&dataWithoutHeader,
 	sendingQueueSize++;
 	queue.enqueue(
 		SendFrameStruct::Acquire(std::move(dataWithoutHeader), flags));
-	host->_InternalInsertPeerToFlush(this);
+// 	host->_InternalInsertPeerToFlush(this);
 }
 
 void Peer::Disconnect()
@@ -183,7 +183,7 @@ void Peer::DequeueToLocalQueue()
 
 void Peer::_InternalFlushQueuedSends()
 {
-	for (uint32_t i = 0; i < 128; ++i) {
+	for (uint32_t i = 0; i < 16; ++i) {
 		DequeueToLocalQueue();
 		if (localQueueSize == localQueueOffset) {
 			break;

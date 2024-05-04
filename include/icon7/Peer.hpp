@@ -25,6 +25,7 @@
 
 #include "../../concurrentqueue/concurrentqueue.h"
 
+#include "ConcurrentQueueTraits.hpp"
 #include "Flags.hpp"
 #include "Command.hpp"
 #include "FrameDecoder.hpp"
@@ -118,7 +119,7 @@ protected:
 	inline const static uint32_t BIT_ERROR_CONNECT = 8;
 
 protected:
-	moodycamel::ConcurrentQueue<SendFrameStruct> queue;
+	moodycamel::ConcurrentQueue<SendFrameStruct, ConcurrentQueueDefaultTraits> queue;
 	moodycamel::ConsumerToken consumerToken;
 	SendFrameStruct *localQueue;
 	std::atomic<uint32_t> sendingQueueSize;

@@ -263,30 +263,6 @@ void Host::_InternalSingleLoopIteration()
 		}
 	}
 	rpcEnvironment->CheckForTimeoutFunctionCalls(16);
-
-	/*
-	if (peersToFlush.empty() && commandQueue.HasAny() == false) {
-		if (peers.size() < 20) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-		} else {
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		}
-	}
-	toRemoveFromQueue.clear();
-	commandQueue.Execute(128 * 1024);
-	for (auto p : peersToFlush) {
-		p->_InternalOnWritable();
-		if (p->_InternalHasQueuedSends() == false) {
-			toRemoveFromQueue.emplace_back(p);
-		}
-	}
-	for (auto &p : toRemoveFromQueue) {
-		if (p->_InternalHasQueuedSends() == false) {
-			peersToFlush.erase(p);
-		}
-	}
-	rpcEnvironment->CheckForTimeoutFunctionCalls(16);
-	*/
 }
 
 void Host::InsertPeerToFlush(Peer *peer)

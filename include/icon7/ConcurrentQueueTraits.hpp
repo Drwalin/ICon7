@@ -16,36 +16,18 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef ICON7_MEMORY_POOL_HPP
-#define ICON7_MEMORY_POOL_HPP
+#ifndef ICON7_CONCURRENT_QUEUE_TRAITS_HPP
+#define ICON7_CONCURRENT_QUEUE_TRAITS_HPP
 
-#include <cstdint>
-
-#include <utility>
+#include "../../concurrentqueue/concurrentqueue.h"
 
 namespace icon7
 {
-class MemoryPool
+struct ConcurrentQueueDefaultTraits : public moodycamel::ConcurrentQueueDefaultTraits
 {
-public:
-	MemoryPool() = default;
-	~MemoryPool() = default;
-
-	static void *Allocate(uint32_t bytes);
-	static void Release(void *ptr, uint32_t bytes);
-
-	template <typename T, typename... Args>
-	static T *AllocateTyped(Args &&...args)
-	{
-		return new (Allocate(sizeof(T))) T(std::move(args)...);
-	}
-
-	template <typename T> static void ReleaseTyped(T *ptr, uint32_t bytes)
-	{
-		ptr->~T();
-		Release(ptr, bytes);
-	}
+	static const int MAX_SEMA_SPINS = 1000;
+	static const bool RECYCLE_ALLOCATED_BLOCKS = true;
 };
-} // namespace icon7
+}
 
 #endif
