@@ -27,7 +27,7 @@
 
 namespace icon7
 {
-CommandExecutionQueue::CommandExecutionQueue()
+CommandExecutionQueue::CommandExecutionQueue() : queue()
 {
 	asyncExecutionFlags = STOPPED;
 }

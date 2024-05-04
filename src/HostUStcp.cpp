@@ -302,7 +302,9 @@ us_socket_t *Host::_Internal_on_end(struct us_socket_t *socket)
 	return socket;
 }
 
-void Host::WakeUp() { us_wakeup_loop(loop); }
+void Host::WakeUp() {
+	us_wakeup_loop(loop);
+}
 
 void Host::StopListening()
 {

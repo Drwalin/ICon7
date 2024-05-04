@@ -118,15 +118,15 @@ protected:
 
 	RPCEnvironment *rpcEnvironment;
 
-	std::unordered_set<std::shared_ptr<Peer>> peers;
-	std::unordered_set<std::shared_ptr<Peer>> peersToFlush;
+	std::pmr::unordered_set<std::shared_ptr<Peer>> peers;
+	std::pmr::unordered_set<std::shared_ptr<Peer>> peersToFlush;
 
 	CommandExecutionQueue commandQueue;
 	std::atomic<uint32_t> asyncRunnerFlags;
 	std::thread asyncRunner;
 
 protected:
-	std::vector<std::shared_ptr<Peer>> toRemoveFromQueue;
+	std::pmr::vector<std::shared_ptr<Peer>> toRemoveFromQueue;
 };
 
 void Initialize();

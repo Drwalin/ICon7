@@ -22,45 +22,12 @@
 #include <memory>
 #include <type_traits>
 
-#include "../concurrentqueue/concurrentqueue.h"
-
 #include "Flags.hpp"
+#include "MemoryPool.hpp"
 #include "ByteReader.hpp"
 
 namespace icon7
 {
-
-class CommandPool
-{
-public:
-	moodycamel::ConcurrentQueue<void *> queue;
-	size_t maxObjects = 1024 * 128;
-	inline const static size_t BYTES = 192;
-
-	template <typename T, typename... Args> T *Acquire(Args... args)
-	{
-		static_assert(sizeof(T) <= BYTES);
-		void *ret = nullptr;
-		if (queue.try_dequeue(ret)) {
-			return new (ret) T(std::move(args)...);
-		}
-		return new (malloc(BYTES)) T(std::move(args)...);
-	}
-
-	template <typename T> void Release(T *ptr)
-	{
-		ptr->~T();
-		if (queue.size_approx() > maxObjects) {
-			free(ptr);
-			return;
-		}
-		queue.enqueue((void *)ptr);
-		return;
-	}
-};
-
-extern CommandPool globalCommandPool;
-
 class Host;
 class Peer;
 class MessageConverter;
@@ -81,6 +48,8 @@ public:
 	Command &operator=(const Command &other) = delete;
 
 	virtual void Execute() = 0;
+	
+	uint32_t _commandSize = 0;
 
 	virtual ~Command();
 };
@@ -112,7 +81,7 @@ public:
 	void Destroy()
 	{
 		if (_com != nullptr) {
-			globalCommandPool.Release(_com);
+			MemoryPool::ReleaseTyped(_com, _com->_commandSize);
 			_com = nullptr;
 		}
 	}
@@ -121,7 +90,8 @@ public:
 	inline static CommandHandle<T> Create(Args &&...args)
 	{
 		CommandHandle<T> com;
-		com._com = globalCommandPool.Acquire<T>(std::move(args)...);
+		com._com = MemoryPool::AllocateTyped<T>(std::move(args)...);
+		com._com->_commandSize = sizeof(T);
 		return com;
 	}
 

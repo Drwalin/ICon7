@@ -23,6 +23,7 @@
 
 #include "../../concurrentqueue/concurrentqueue.h"
 
+#include "ConcurrentQueueTraits.hpp"
 #include "Command.hpp"
 #include "CommandsBufferHandler.hpp"
 
@@ -66,7 +67,7 @@ private:
 	friend class Host;
 
 private:
-	moodycamel::ConcurrentQueue<CommandHandle<Command>> queue;
+	moodycamel::ConcurrentQueue<CommandHandle<Command>, ConcurrentQueueDefaultTraits> queue;
 };
 } // namespace icon7
 

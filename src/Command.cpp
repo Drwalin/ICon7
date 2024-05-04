@@ -23,8 +23,6 @@
 
 namespace icon7
 {
-CommandPool globalCommandPool;
-
 Command::~Command() {}
 
 namespace commands
