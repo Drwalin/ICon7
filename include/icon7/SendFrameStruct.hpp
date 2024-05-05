@@ -39,8 +39,7 @@ struct SendFrameStruct {
 		return headerSize + dataWithoutHeader.size();
 	}
 
-	static SendFrameStruct Acquire(ByteBuffer &dataWithoutHeader,
-								   Flags flags);
+	static SendFrameStruct Acquire(ByteBuffer &dataWithoutHeader, Flags flags);
 	static void Release(SendFrameStruct &ptr);
 
 	SendFrameStruct(ByteBuffer &dataWithoutHeader, Flags flags);

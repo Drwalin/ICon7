@@ -44,8 +44,8 @@ public:
 	RPCEnvironment();
 	~RPCEnvironment();
 
-	void OnReceive(Peer *peer, ByteBuffer &frameData,
-				   uint32_t headerSize, Flags flags);
+	void OnReceive(Peer *peer, ByteBuffer &frameData, uint32_t headerSize,
+				   Flags flags);
 	/*
 	 * expects that reader already filled flags fully and reader is at body
 	 * offset
@@ -113,9 +113,8 @@ public:
 	}
 
 	template <typename... Targs>
-	static void SerializeSend(ByteWriter &writer,
-							  Flags &flags, const std::string &name,
-							  const Targs &...args)
+	static void SerializeSend(ByteWriter &writer, Flags &flags,
+							  const std::string &name, const Targs &...args)
 	{
 		writer.op(name);
 		(writer.op(args), ...);
@@ -125,13 +124,11 @@ public:
 	class CommandCallSend final : public commands::ExecuteOnPeer
 	{
 	public:
-		CommandCallSend() = default;
 		CommandCallSend(std::shared_ptr<Peer> peer, RPCEnvironment *rpcEnv,
 						OnReturnCallback callback, Flags flags,
 						ByteBuffer buffer)
 			: ExecuteOnPeer(peer), rpcEnv(rpcEnv),
-			  callback(std::move(callback)), flags(flags),
-			  buffer(buffer)
+			  callback(std::move(callback)), flags(flags), buffer(buffer)
 		{
 		}
 		virtual ~CommandCallSend() = default;
@@ -171,17 +168,14 @@ public:
 	void Call(Peer *peer, Flags flags, OnReturnCallback &&callback,
 			  const std::string &name, const Targs &...args)
 	{
-		auto cb = CommandHandle<CommandCallSend>::Create();
-		cb->rpcEnv = this;
-		cb->peer = peer->shared_from_this();
-		cb->flags = flags;
-		cb->callback = std::move(callback);
-
 		ByteWriter writer(256);
 		writer.op((uint32_t)0);
 		writer.op(name);
 		(writer.op(args), ...);
 
+		auto cb = CommandHandle<CommandCallSend>::Create(
+			peer->shared_from_this(), this, std::move(callback), flags,
+			writer._data);
 		host->EnqueueCommand(std::move(cb));
 	}
 

@@ -33,12 +33,6 @@ public:
 public:
 	inline ByteReader() : bitscpp::ByteReader<true>(nullptr, 0, 0) {}
 
-// 	ByteReader(ByteBuffer &data, uint32_t offset)
-// 		: bitscpp::ByteReader<true>(data.data(), offset, data.size()),
-// 		  data(data)
-// 	{
-// 	}
-
 	inline ByteReader(ByteBuffer &data, uint32_t offset)
 		: bitscpp::ByteReader<true>(data.data(), offset, data.size()),
 		  _data(data)

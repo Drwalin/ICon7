@@ -22,14 +22,8 @@
 
 namespace icon7
 {
-void *MemoryPool::Allocate(uint32_t bytes)
-{
-	return malloc(bytes);
-}
+void *MemoryPool::Allocate(uint32_t bytes) { return malloc(bytes); }
 
-void MemoryPool::Release(void *ptr, uint32_t bytes)
-{
-	free(ptr); return;
-}
+void MemoryPool::Release(void *ptr, uint32_t bytes) { free(ptr); }
 
 } // namespace icon7
