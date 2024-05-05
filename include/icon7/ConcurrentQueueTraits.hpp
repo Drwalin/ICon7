@@ -23,11 +23,11 @@
 
 namespace icon7
 {
-struct ConcurrentQueueDefaultTraits : public moodycamel::ConcurrentQueueDefaultTraits
-{
+struct ConcurrentQueueDefaultTraits
+	: public moodycamel::ConcurrentQueueDefaultTraits {
 	static const int MAX_SEMA_SPINS = 1000;
 	static const bool RECYCLE_ALLOCATED_BLOCKS = true;
 };
-}
+} // namespace icon7
 
 #endif

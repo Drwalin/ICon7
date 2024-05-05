@@ -48,8 +48,7 @@ public:
 	Peer &operator=(const Peer &) = delete;
 
 	virtual void Send(ByteBuffer &dataWithoutHeader, Flags flags);
-	virtual void SendLocalThread(ByteBuffer &dataWithoutHeader,
-								 Flags flags);
+	virtual void SendLocalThread(ByteBuffer &dataWithoutHeader, Flags flags);
 	void Disconnect();
 
 	inline bool IsReadyToUse() const { return peerFlags & BIT_READY; }
@@ -119,7 +118,8 @@ protected:
 	inline const static uint32_t BIT_ERROR_CONNECT = 8;
 
 protected:
-	moodycamel::ConcurrentQueue<SendFrameStruct, ConcurrentQueueDefaultTraits> queue;
+	moodycamel::ConcurrentQueue<SendFrameStruct, ConcurrentQueueDefaultTraits>
+		queue;
 	moodycamel::ConsumerToken consumerToken;
 	SendFrameStruct *localQueue;
 	std::atomic<uint32_t> sendingQueueSize;

@@ -80,7 +80,7 @@ public:
 			writer.op(returnId);
 			writer.op(ret);
 			peer->Send(writer._data, ((flags | Flags(6)) ^ Flags(6)) |
-											  FLAGS_CALL_RETURN_FEEDBACK);
+										 FLAGS_CALL_RETURN_FEEDBACK);
 		} else if (returnId) {
 			LOG_WARN(
 				"It should never happen -> it's a bug, where MessegeConverter "
@@ -101,7 +101,7 @@ public:
 			ByteWriter writer(256);
 			writer.op(returnId);
 			peer->Send(writer._data, ((flags | Flags(6)) ^ Flags(6)) |
-											  FLAGS_CALL_RETURN_FEEDBACK);
+										 FLAGS_CALL_RETURN_FEEDBACK);
 		} else if (returnId) {
 			LOG_WARN(
 				"It should never happen -> it's a bug, where MessegeConverter "

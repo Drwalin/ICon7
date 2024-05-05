@@ -28,11 +28,10 @@ namespace icon7
 ByteBufferStorageHeader *ByteBufferStorageHeader::Allocate(uint32_t capacity)
 {
 	const uint32_t S = sizeof(ByteBufferStorageHeader);
-	uint32_t trueCapacity = std::bit_ceil(capacity+S)-S;
+	uint32_t trueCapacity = std::bit_ceil(capacity + S) - S;
 	if (trueCapacity < 64)
 		trueCapacity = 64;
-	void *vptr =
-		MemoryPool::Allocate(trueCapacity);
+	void *vptr = MemoryPool::Allocate(trueCapacity);
 	ByteBufferStorageHeader *ptr = (ByteBufferStorageHeader *)vptr;
 	ptr->refCounter = 1;
 	ptr->size = 0;

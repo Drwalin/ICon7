@@ -24,8 +24,6 @@
 
 #include <atomic>
 
-#include "../include/icon7/Debug.hpp"
-
 namespace icon7
 {
 struct ByteBufferStorageHeader {
@@ -83,14 +81,16 @@ public:
 
 	inline ByteBuffer &operator=(ByteBuffer &&o)
 	{
-		this->~ByteBuffer();
+		if (storage)
+			storage->unref();
 		storage = o.storage;
 		o.storage = nullptr;
 		return *this;
 	}
 	inline ByteBuffer &operator=(ByteBuffer &o)
 	{
-		this->~ByteBuffer();
+		if (storage)
+			storage->unref();
 		storage = o.storage;
 		if (storage)
 			storage->ref();
@@ -99,14 +99,15 @@ public:
 
 	inline void Init(uint32_t initialCapacity)
 	{
-		this->~ByteBuffer();
+		if (storage)
+			storage->unref();
 		storage = ByteBufferStorageHeader::Allocate(initialCapacity);
 	}
-	
+
 	inline void append(const uint8_t *src, uint32_t bytes)
 	{
 		reserve(size() + bytes);
-		memcpy(data()+size(), src, bytes);
+		memcpy(data() + size(), src, bytes);
 		storage->size += bytes;
 	}
 

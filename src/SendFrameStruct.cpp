@@ -22,16 +22,15 @@
 
 namespace icon7
 {
-SendFrameStruct
-SendFrameStruct::Acquire(ByteBuffer &dataWithoutHeader, Flags flags)
+SendFrameStruct SendFrameStruct::Acquire(ByteBuffer &dataWithoutHeader,
+										 Flags flags)
 {
 	return SendFrameStruct(dataWithoutHeader, flags);
 }
 
 void SendFrameStruct::Release(SendFrameStruct &ptr) {}
 
-SendFrameStruct::SendFrameStruct(ByteBuffer &_dataWithoutHeader,
-								 Flags flags)
+SendFrameStruct::SendFrameStruct(ByteBuffer &_dataWithoutHeader, Flags flags)
 	: dataWithoutHeader(_dataWithoutHeader)
 {
 	this->flags = flags;

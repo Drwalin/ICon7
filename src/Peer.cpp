@@ -69,13 +69,11 @@ void Peer::Send(ByteBuffer &dataWithoutHeader, Flags flags)
 		return;
 	}
 	sendingQueueSize++;
-	queue.enqueue(
-		SendFrameStruct::Acquire(dataWithoutHeader, flags));
-// 	host->InsertPeerToFlush(this);
+	queue.enqueue(SendFrameStruct::Acquire(dataWithoutHeader, flags));
+	// host->InsertPeerToFlush(this);
 }
 
-void Peer::SendLocalThread(ByteBuffer &dataWithoutHeader,
-						   Flags flags)
+void Peer::SendLocalThread(ByteBuffer &dataWithoutHeader, Flags flags)
 {
 	if (IsDisconnecting()) {
 		LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
@@ -83,9 +81,8 @@ void Peer::SendLocalThread(ByteBuffer &dataWithoutHeader,
 		return;
 	}
 	sendingQueueSize++;
-	queue.enqueue(
-		SendFrameStruct::Acquire(dataWithoutHeader, flags));
-// 	host->_InternalInsertPeerToFlush(this);
+	queue.enqueue(SendFrameStruct::Acquire(dataWithoutHeader, flags));
+	// host->_InternalInsertPeerToFlush(this);
 }
 
 void Peer::Disconnect()
@@ -101,8 +98,8 @@ void Peer::_InternalOnData(uint8_t *data, uint32_t length)
 	frameDecoder.PushData(data, length, _Internal_static_OnPacket, this);
 }
 
-void Peer::_Internal_static_OnPacket(ByteBuffer &buffer,
-									 uint32_t headerSize, void *peer)
+void Peer::_Internal_static_OnPacket(ByteBuffer &buffer, uint32_t headerSize,
+									 void *peer)
 {
 	((Peer *)peer)->_InternalOnPacket(buffer, headerSize);
 }
@@ -137,8 +134,8 @@ void Peer::_InternalOnPacketWithControllSequence(ByteBuffer &buffer,
 	}
 }
 
-void Peer::_InternalOnPacketWithControllSequenceBackend(
-	ByteBuffer &buffer, uint32_t headerSize)
+void Peer::_InternalOnPacketWithControllSequenceBackend(ByteBuffer &buffer,
+														uint32_t headerSize)
 {
 	uint32_t vectorCall = buffer.data()[headerSize];
 	LOG_WARN("Unhandled packet with controll sequence by backend. Vector call "
