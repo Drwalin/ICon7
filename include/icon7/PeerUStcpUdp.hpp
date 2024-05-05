@@ -61,7 +61,7 @@ protected:
 
 	void _InternalOnUdpPacket(void *data, uint32_t bytes);
 	virtual void
-	_InternalOnPacketWithControllSequenceBackend(std::vector<uint8_t> &buffer,
+	_InternalOnPacketWithControllSequenceBackend(ByteBuffer &buffer,
 												 uint32_t headerSize) override;
 
 	void _InternalOnOpenFinish();

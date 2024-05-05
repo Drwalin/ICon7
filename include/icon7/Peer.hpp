@@ -19,7 +19,6 @@
 #ifndef ICON7_PEER_HPP
 #define ICON7_PEER_HPP
 
-#include <vector>
 #include <atomic>
 #include <memory>
 
@@ -30,6 +29,7 @@
 #include "Command.hpp"
 #include "FrameDecoder.hpp"
 #include "SendFrameStruct.hpp"
+#include "ByteBuffer.hpp"
 
 namespace icon7
 {
@@ -47,8 +47,8 @@ public:
 	Peer &operator=(Peer &) = delete;
 	Peer &operator=(const Peer &) = delete;
 
-	virtual void Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags);
-	virtual void SendLocalThread(std::vector<uint8_t> &&dataWithoutHeader,
+	virtual void Send(ByteBuffer &dataWithoutHeader, Flags flags);
+	virtual void SendLocalThread(ByteBuffer &dataWithoutHeader,
 								 Flags flags);
 	void Disconnect();
 
@@ -98,13 +98,13 @@ protected:
 
 	virtual void _InternalClearInternalDataOnClose();
 
-	static void _Internal_static_OnPacket(std::vector<uint8_t> &buffer,
+	static void _Internal_static_OnPacket(ByteBuffer &buffer,
 										  uint32_t headerSize, void *peer);
-	void _InternalOnPacket(std::vector<uint8_t> &buffer, uint32_t headerSize);
-	void _InternalOnPacketWithControllSequence(std::vector<uint8_t> &buffer,
+	void _InternalOnPacket(ByteBuffer &buffer, uint32_t headerSize);
+	void _InternalOnPacketWithControllSequence(ByteBuffer &buffer,
 											   uint32_t headerSize);
 	virtual void
-	_InternalOnPacketWithControllSequenceBackend(std::vector<uint8_t> &buffer,
+	_InternalOnPacketWithControllSequenceBackend(ByteBuffer &buffer,
 												 uint32_t headerSize);
 
 	friend class Host;

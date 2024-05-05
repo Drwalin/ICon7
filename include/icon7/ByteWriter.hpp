@@ -21,20 +21,26 @@
 
 #include "../../bitscpp/include/bitscpp/ByteWriter.hpp"
 
+#include "ByteBuffer.hpp"
+
 namespace icon7
 {
-class ByteWriter : public bitscpp::ByteWriter<std::vector<uint8_t>>
+class ByteWriter : public bitscpp::ByteWriter<ByteBuffer>
 {
 public:
-	std::vector<uint8_t> _data;
+	ByteBuffer _data;
 
 public:
 	~ByteWriter();
 
 	ByteWriter(ByteWriter &&o)
-		: bitscpp::ByteWriter<std::vector<uint8_t>>(&_data),
-		  _data(std::move(o._data))
+		: bitscpp::ByteWriter<ByteBuffer>(&_data), _data(std::move(o._data))
 	{
+	}
+
+	ByteWriter(uint32_t initialCapacity) : _data(initialCapacity)
+	{
+		Init(&_data);
 	}
 
 	inline ByteWriter &operator=(ByteWriter &&o)

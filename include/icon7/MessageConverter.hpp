@@ -21,7 +21,7 @@
 
 #include <tuple>
 
-#include <bitscpp/ByteWriter.hpp>
+#include "ByteWriter.hpp"
 
 #include "Debug.hpp"
 #include "ByteReader.hpp"
@@ -76,11 +76,10 @@ public:
 	{
 		Tret ret = onReceive(std::get<SeqArgs>(args)...);
 		if (returnId && ((flags & 6) == FLAGS_CALL)) {
-			std::vector<uint8_t> buffer;
-			bitscpp::ByteWriter<std::vector<uint8_t>> writer(buffer);
+			ByteWriter writer(256);
 			writer.op(returnId);
 			writer.op(ret);
-			peer->Send(std::move(buffer), ((flags | Flags(6)) ^ Flags(6)) |
+			peer->Send(writer._data, ((flags | Flags(6)) ^ Flags(6)) |
 											  FLAGS_CALL_RETURN_FEEDBACK);
 		} else if (returnId) {
 			LOG_WARN(
@@ -99,10 +98,9 @@ public:
 	{
 		onReceive(std::get<SeqArgs>(args)...);
 		if (returnId && ((flags & 6) == FLAGS_CALL)) {
-			std::vector<uint8_t> buffer;
-			bitscpp::ByteWriter<std::vector<uint8_t>> writer(buffer);
+			ByteWriter writer(256);
 			writer.op(returnId);
-			peer->Send(std::move(buffer), ((flags | Flags(6)) ^ Flags(6)) |
+			peer->Send(writer._data, ((flags | Flags(6)) ^ Flags(6)) |
 											  FLAGS_CALL_RETURN_FEEDBACK);
 		} else if (returnId) {
 			LOG_WARN(

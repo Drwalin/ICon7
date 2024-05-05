@@ -21,14 +21,13 @@
 
 #include <cstdint>
 
-#include <vector>
-
 #include "Flags.hpp"
+#include "ByteBuffer.hpp"
 
 namespace icon7
 {
 struct SendFrameStruct {
-	std::vector<uint8_t> dataWithoutHeader;
+	ByteBuffer dataWithoutHeader;
 	uint32_t bytesSent = 0;
 	Flags flags = 0;
 	uint8_t header[4] = {0, 0, 0, 0};
@@ -40,11 +39,11 @@ struct SendFrameStruct {
 		return headerSize + dataWithoutHeader.size();
 	}
 
-	static SendFrameStruct Acquire(std::vector<uint8_t> &&dataWithoutHeader,
+	static SendFrameStruct Acquire(ByteBuffer &dataWithoutHeader,
 								   Flags flags);
 	static void Release(SendFrameStruct &ptr);
 
-	SendFrameStruct(std::vector<uint8_t> &&dataWithoutHeader, Flags flags);
+	SendFrameStruct(ByteBuffer &dataWithoutHeader, Flags flags);
 	SendFrameStruct();
 	~SendFrameStruct();
 
