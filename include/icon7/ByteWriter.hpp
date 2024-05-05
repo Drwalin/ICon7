@@ -31,7 +31,7 @@ public:
 	ByteBuffer _data;
 
 public:
-	~ByteWriter();
+	~ByteWriter() = default;
 
 	ByteWriter(ByteWriter &&o)
 		: bitscpp::ByteWriter<ByteBuffer>(&_data), _data(std::move(o._data))
