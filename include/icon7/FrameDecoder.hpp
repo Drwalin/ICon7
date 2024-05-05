@@ -19,17 +19,9 @@
 #ifndef ICON7_FRAME_DECODER_HPP
 #define ICON7_FRAME_DECODER_HPP
 
-#include <cinttypes>
+#include <cstdint>
 
-#include <vector>
-#include <atomic>
-#include <memory>
-#include <queue>
-
-#include "Flags.hpp"
-#include "FramingProtocol.hpp"
-#include "ByteReader.hpp"
-#include "Command.hpp"
+#include "ByteBuffer.hpp"
 
 namespace icon7
 {
@@ -42,12 +34,12 @@ public:
 
 	void Restart();
 	void PushData(uint8_t *data, uint32_t length,
-				  void (*onPacket)(std::vector<uint8_t> &buffer,
+				  void (*onPacket)(ByteBuffer &buffer,
 								   uint32_t headerSize, void *userPtr),
 				  void *userPtr);
 
 private:
-	std::vector<uint8_t> buffer;
+	ByteBuffer buffer;
 	uint32_t headerSize;
 	uint32_t frameSize;
 };

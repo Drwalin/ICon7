@@ -36,11 +36,11 @@ RPCEnvironment::~RPCEnvironment()
 	registeredMessages.clear();
 }
 
-void RPCEnvironment::OnReceive(Peer *peer, std::vector<uint8_t> &frameData,
+void RPCEnvironment::OnReceive(Peer *peer, ByteBuffer &frameData,
 							   uint32_t headerSize, Flags flags)
 {
 	flags = FramingProtocol::GetPacketFlags(frameData.data(), flags);
-	ByteReader reader(std::move(frameData), headerSize);
+	ByteReader reader(frameData, headerSize);
 	OnReceive(peer, reader, flags);
 	std::swap(frameData, reader._data);
 }

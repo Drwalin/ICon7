@@ -61,7 +61,7 @@ Peer::~Peer()
 	delete[] localQueue;
 }
 
-void Peer::Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
+void Peer::Send(ByteBuffer &dataWithoutHeader, Flags flags)
 {
 	if (IsDisconnecting()) {
 		LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
@@ -70,11 +70,11 @@ void Peer::Send(std::vector<uint8_t> &&dataWithoutHeader, Flags flags)
 	}
 	sendingQueueSize++;
 	queue.enqueue(
-		SendFrameStruct::Acquire(std::move(dataWithoutHeader), flags));
+		SendFrameStruct::Acquire(dataWithoutHeader, flags));
 // 	host->InsertPeerToFlush(this);
 }
 
-void Peer::SendLocalThread(std::vector<uint8_t> &&dataWithoutHeader,
+void Peer::SendLocalThread(ByteBuffer &dataWithoutHeader,
 						   Flags flags)
 {
 	if (IsDisconnecting()) {
@@ -84,7 +84,7 @@ void Peer::SendLocalThread(std::vector<uint8_t> &&dataWithoutHeader,
 	}
 	sendingQueueSize++;
 	queue.enqueue(
-		SendFrameStruct::Acquire(std::move(dataWithoutHeader), flags));
+		SendFrameStruct::Acquire(dataWithoutHeader, flags));
 // 	host->_InternalInsertPeerToFlush(this);
 }
 
@@ -101,13 +101,13 @@ void Peer::_InternalOnData(uint8_t *data, uint32_t length)
 	frameDecoder.PushData(data, length, _Internal_static_OnPacket, this);
 }
 
-void Peer::_Internal_static_OnPacket(std::vector<uint8_t> &buffer,
+void Peer::_Internal_static_OnPacket(ByteBuffer &buffer,
 									 uint32_t headerSize, void *peer)
 {
 	((Peer *)peer)->_InternalOnPacket(buffer, headerSize);
 }
 
-void Peer::_InternalOnPacket(std::vector<uint8_t> &buffer, uint32_t headerSize)
+void Peer::_InternalOnPacket(ByteBuffer &buffer, uint32_t headerSize)
 {
 	if (buffer.size() == headerSize) {
 		LOG_ERROR("Protocol doesn't allow for 0 sized packets.");
@@ -123,13 +123,13 @@ void Peer::_InternalOnPacket(std::vector<uint8_t> &buffer, uint32_t headerSize)
 	}
 }
 
-void Peer::_InternalOnPacketWithControllSequence(std::vector<uint8_t> &buffer,
+void Peer::_InternalOnPacketWithControllSequence(ByteBuffer &buffer,
 												 uint32_t headerSize)
 {
-	uint8_t vectorCall = buffer[headerSize];
+	uint8_t vectorCall = buffer.data()[headerSize];
 	if (vectorCall <= 0x7F) {
 		// TODO: decode here future controll sequences
-		uint32_t vectorCall = buffer[headerSize];
+		uint32_t vectorCall = buffer.data()[headerSize];
 		LOG_WARN("Received packet with undefined controll sequence: 0x%X",
 				 vectorCall);
 	} else {
@@ -138,9 +138,9 @@ void Peer::_InternalOnPacketWithControllSequence(std::vector<uint8_t> &buffer,
 }
 
 void Peer::_InternalOnPacketWithControllSequenceBackend(
-	std::vector<uint8_t> &buffer, uint32_t headerSize)
+	ByteBuffer &buffer, uint32_t headerSize)
 {
-	uint32_t vectorCall = buffer[headerSize];
+	uint32_t vectorCall = buffer.data()[headerSize];
 	LOG_WARN("Unhandled packet with controll sequence by backend. Vector call "
 			 "value: 0x%X",
 			 vectorCall);

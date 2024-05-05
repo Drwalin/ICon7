@@ -44,7 +44,7 @@ public:
 	RPCEnvironment();
 	~RPCEnvironment();
 
-	void OnReceive(Peer *peer, std::vector<uint8_t> &frameData,
+	void OnReceive(Peer *peer, ByteBuffer &frameData,
 				   uint32_t headerSize, Flags flags);
 	/*
 	 * expects that reader already filled flags fully and reader is at body
@@ -107,14 +107,13 @@ public:
 	void Send(Peer *peer, Flags flags, const std::string &name,
 			  const Targs &...args)
 	{
-		std::vector<uint8_t> buffer;
-		bitscpp::ByteWriter<std::vector<uint8_t>> writer(buffer);
+		ByteWriter writer(256);
 		SerializeSend(writer, flags, name, args...);
-		peer->Send(std::move(buffer), flags);
+		peer->Send(writer._data, flags);
 	}
 
 	template <typename... Targs>
-	static void SerializeSend(bitscpp::ByteWriter<std::vector<uint8_t>> &writer,
+	static void SerializeSend(ByteWriter &writer,
 							  Flags &flags, const std::string &name,
 							  const Targs &...args)
 	{
@@ -129,10 +128,10 @@ public:
 		CommandCallSend() = default;
 		CommandCallSend(std::shared_ptr<Peer> peer, RPCEnvironment *rpcEnv,
 						OnReturnCallback callback, Flags flags,
-						std::vector<uint8_t> buffer)
+						ByteBuffer &buffer)
 			: ExecuteOnPeer(peer), rpcEnv(rpcEnv),
 			  callback(std::move(callback)), flags(flags),
-			  buffer(std::move(buffer))
+			  buffer(buffer)
 		{
 		}
 		virtual ~CommandCallSend() = default;
@@ -140,7 +139,7 @@ public:
 		RPCEnvironment *rpcEnv;
 		OnReturnCallback callback;
 		Flags flags;
-		std::vector<uint8_t> buffer;
+		ByteBuffer buffer;
 
 		virtual void Execute() override
 		{
@@ -149,7 +148,7 @@ public:
 				bitscpp::HostToNetworkUint<uint32_t>(rcbId);
 			memcpy(buffer.data(), &rcbId_v, sizeof(rcbId_v));
 			rpcEnv->returningCallbacks[rcbId] = std::move(callback);
-			peer->SendLocalThread(std::move(buffer), flags | FLAGS_CALL);
+			peer->SendLocalThread(buffer, flags | FLAGS_CALL);
 		}
 	};
 
@@ -158,16 +157,14 @@ public:
 			  OnReturnCallback &&callback, const std::string &name,
 			  const Targs &...args)
 	{
-		std::vector<uint8_t> buffer;
-
-		bitscpp::ByteWriter<std::vector<uint8_t>> writer(buffer);
+		ByteWriter writer(256);
 		writer.op((uint32_t)0);
 		writer.op(name);
 		(writer.op(args), ...);
 
 		commandsBuffer->EnqueueCommand<CommandCallSend>(
 			peer->shared_from_this(), this, std::move(callback), flags,
-			std::move(buffer));
+			writer._data);
 	}
 
 	template <typename... Targs>
@@ -180,7 +177,7 @@ public:
 		cb->flags = flags;
 		cb->callback = std::move(callback);
 
-		bitscpp::ByteWriter<std::vector<uint8_t>> writer(cb->buffer);
+		ByteWriter writer(256);
 		writer.op((uint32_t)0);
 		writer.op(name);
 		(writer.op(args), ...);

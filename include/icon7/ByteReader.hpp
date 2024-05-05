@@ -21,31 +21,33 @@
 
 #include "../../bitscpp/include/bitscpp/ByteReader.hpp"
 
+#include "ByteBuffer.hpp"
+
 namespace icon7
 {
 class ByteReader : public bitscpp::ByteReader<true>
 {
 public:
-	std::vector<uint8_t> _data;
+	ByteBuffer _data;
 
 public:
-	ByteReader() : bitscpp::ByteReader<true>(nullptr, 0, 0) {}
+	inline ByteReader() : bitscpp::ByteReader<true>(nullptr, 0, 0) {}
 
-	ByteReader(std::vector<uint8_t> &data, uint32_t offset)
+// 	ByteReader(ByteBuffer &data, uint32_t offset)
+// 		: bitscpp::ByteReader<true>(data.data(), offset, data.size()),
+// 		  data(data)
+// 	{
+// 	}
+
+	inline ByteReader(ByteBuffer &data, uint32_t offset)
 		: bitscpp::ByteReader<true>(data.data(), offset, data.size()),
 		  _data(data)
 	{
 	}
 
-	ByteReader(std::vector<uint8_t> &&data, uint32_t offset)
-		: bitscpp::ByteReader<true>(data.data(), offset, data.size()),
-		  _data(std::move(data))
-	{
-	}
-
 	~ByteReader() = default;
 
-	ByteReader(ByteReader &&o)
+	inline ByteReader(ByteReader &&o)
 		: bitscpp::ByteReader<true>(o._buffer, o.get_offset(), o._size),
 		  _data(std::move(o._data))
 	{

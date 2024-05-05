@@ -192,18 +192,22 @@ void Peer::_InternalOnUdpPacket(void *data, uint32_t bytes)
 {
 	LOG_DEBUG(" . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .");
 	bitscpp::ByteReader<true> reader((uint8_t *)data, 0, bytes);
+	
+	LOG_FATAL("Not reimplemented with ByteBuffer");
+	throw "Not reimplemented with ByteBuffe: icon7::uS::tcpudp::Peer::_InternalOnUdpPacket";
 
-	if (bytes == 0) {
-		hasRemoteAddress = true;
-		std::vector<uint8_t> data;
-		data.resize(1);
-		data[0] = 0x81;
-		if (SSL) {
-			memcpy(data.data() + 5, sendingKey, 32);
-		}
-		SendLocalThread(std::move(data),
-						FLAG_UNRELIABLE | FLAGS_PROTOCOL_CONTROLL_SEQUENCE);
-	}
+	/*
+// 	if (bytes == 0) {
+// 		hasRemoteAddress = true;
+// 		std::vector<uint8_t> data;
+// 		data.resize(1);
+// 		data[0] = 0x81;
+// 		if (SSL) {
+// 			memcpy(data.data() + 5, sendingKey, 32);
+// 		}
+// 		SendLocalThread(std::move(data),
+// 						FLAG_UNRELIABLE | FLAGS_PROTOCOL_CONTROLL_SEQUENCE);
+// 	}
 
 	uint32_t packetId = 0;
 	reader.op(packetId);
@@ -243,10 +247,11 @@ void Peer::_InternalOnUdpPacket(void *data, uint32_t bytes)
 			// 			},
 			this);
 	}
+	*/
 }
 
 void Peer::_InternalOnPacketWithControllSequenceBackend(
-	std::vector<uint8_t> &buffer, uint32_t headerSize)
+	ByteBuffer &buffer, uint32_t headerSize)
 {
 	ByteReader reader(buffer, headerSize);
 	uint8_t vectorCall = 0;
@@ -286,15 +291,15 @@ void Peer::_InternalOnOpenFinish()
 	} else {
 		hasPeerThisAddress = true;
 	}
-	std::vector<uint8_t> data;
-	data.resize(5 + (SSL ? 32 : 0));
-	data[0] = 0x80;
-	memcpy(data.data() + 1, &receivingIdentity, 4);
-	if (SSL) {
-		memcpy(data.data() + 5, sendingKey, 32);
-	}
-	SendLocalThread(std::move(data),
-					FLAG_RELIABLE | FLAGS_PROTOCOL_CONTROLL_SEQUENCE);
+// 	std::vector<uint8_t> data;
+// 	data.resize(5 + (SSL ? 32 : 0));
+// 	data[0] = 0x80;
+// 	memcpy(data.data() + 1, &receivingIdentity, 4);
+// 	if (SSL) {
+// 		memcpy(data.data() + 5, sendingKey, 32);
+// 	}
+// 	SendLocalThread(std::move(data),
+// 					FLAG_RELIABLE | FLAGS_PROTOCOL_CONTROLL_SEQUENCE);
 }
 
 } // namespace tcpudp

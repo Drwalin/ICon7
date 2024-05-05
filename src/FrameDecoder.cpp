@@ -16,12 +16,12 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <cstring>
+#include <cstdint>
 
-#include "../include/icon7/Host.hpp"
-#include "../include/icon7/RPCEnvironment.hpp"
-#include "../include/icon7/Command.hpp"
+#include <algorithm>
+
 #include "../include/icon7/FramingProtocol.hpp"
+#include "../include/icon7/Debug.hpp"
 
 #include "../include/icon7/FrameDecoder.hpp"
 
@@ -30,7 +30,7 @@ namespace icon7
 FrameDecoder::FrameDecoder() { Restart(); }
 
 void FrameDecoder::PushData(uint8_t *data, uint32_t length,
-							void (*onPacket)(std::vector<uint8_t> &buffer,
+							void (*onPacket)(ByteBuffer &buffer,
 											 uint32_t headerSize,
 											 void *userPtr),
 							void *userPtr)
@@ -42,7 +42,7 @@ void FrameDecoder::PushData(uint8_t *data, uint32_t length,
 		if (buffer.size() < headerSize) {
 			uint32_t bytes =
 				std::min<uint32_t>(length, headerSize - buffer.size());
-			buffer.insert(buffer.end(), data, data + bytes);
+			buffer.append(data, bytes);
 			length -= bytes;
 			data += bytes;
 		}
@@ -58,7 +58,7 @@ void FrameDecoder::PushData(uint8_t *data, uint32_t length,
 		if (buffer.size() < frameSize) {
 			uint32_t bytes =
 				std::min<uint32_t>(length, frameSize - buffer.size());
-			buffer.insert(buffer.end(), data, data + bytes);
+			buffer.append(data, bytes);
 			length -= bytes;
 			data += bytes;
 		}
@@ -82,6 +82,6 @@ void FrameDecoder::Restart()
 {
 	frameSize = 0;
 	headerSize = 0;
-	buffer.clear();
+	buffer.Init(256);
 }
 } // namespace icon7
