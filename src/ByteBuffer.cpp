@@ -19,6 +19,7 @@
 #include <bit>
 
 #include "../include/icon7/MemoryPool.hpp"
+#include "../include/icon7/Debug.hpp"
 
 #include "../include/icon7/ByteBuffer.hpp"
 
@@ -52,6 +53,7 @@ ByteBufferStorageHeader::Reallocate(ByteBufferStorageHeader *ptr,
 	ByteBufferStorageHeader *ret = Allocate(newCapacity);
 	memcpy(ret, ptr, ptr->size + ptr->offset);
 	ret->capacity = newCapacity;
+	ret->refCounter = 1;
 	ptr->unref();
 	return ret;
 }

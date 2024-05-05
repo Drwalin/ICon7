@@ -128,7 +128,7 @@ public:
 		CommandCallSend() = default;
 		CommandCallSend(std::shared_ptr<Peer> peer, RPCEnvironment *rpcEnv,
 						OnReturnCallback callback, Flags flags,
-						ByteBuffer &buffer)
+						ByteBuffer buffer)
 			: ExecuteOnPeer(peer), rpcEnv(rpcEnv),
 			  callback(std::move(callback)), flags(flags),
 			  buffer(buffer)
