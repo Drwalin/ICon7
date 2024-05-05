@@ -107,7 +107,7 @@ public:
 	void Send(Peer *peer, Flags flags, const std::string &name,
 			  const Targs &...args)
 	{
-		ByteWriter writer(256);
+		ByteWriter writer(100);
 		SerializeSend(writer, flags, name, args...);
 		peer->Send(writer._data, flags);
 	}
@@ -154,7 +154,7 @@ public:
 			  OnReturnCallback &&callback, const std::string &name,
 			  const Targs &...args)
 	{
-		ByteWriter writer(256);
+		ByteWriter writer(100);
 		writer.op((uint32_t)0);
 		writer.op(name);
 		(writer.op(args), ...);
@@ -168,7 +168,7 @@ public:
 	void Call(Peer *peer, Flags flags, OnReturnCallback &&callback,
 			  const std::string &name, const Targs &...args)
 	{
-		ByteWriter writer(256);
+		ByteWriter writer(100);
 		writer.op((uint32_t)0);
 		writer.op(name);
 		(writer.op(args), ...);
