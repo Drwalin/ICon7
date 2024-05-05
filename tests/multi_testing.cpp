@@ -162,8 +162,10 @@ int main()
 					sent++;
 				}
 				commandsBuffer->FlushBuffer();
-				std::this_thread::sleep_for(std::chrono::milliseconds(2));
 				for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
+					if (l%3 == 2) {
+						std::this_thread::sleep_for(std::chrono::milliseconds(1));
+					}
 					for (auto p : validPeers) {
 						auto peer = p.get();
 						rpc2.Send(peer, icon7::FLAG_RELIABLE, "sum", 3, 23);
