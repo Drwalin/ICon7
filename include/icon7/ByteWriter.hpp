@@ -29,6 +29,7 @@ class ByteWriter : public bitscpp::ByteWriter<ByteBuffer>
 {
 public:
 	ByteBuffer _data;
+	using Base = bitscpp::ByteWriter<ByteBuffer>;
 
 public:
 	~ByteWriter() = default;
