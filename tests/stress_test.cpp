@@ -103,8 +103,8 @@ struct TestStruct {
 
 namespace bitscpp
 {
-inline bitscpp::ByteWriter<icon7::ByteBuffer> &
-op(bitscpp::ByteWriter<icon7::ByteBuffer> &s, const TestStruct &v)
+inline icon7::ByteWriter::Base &op(icon7::ByteWriter::Base &s,
+								   const TestStruct &v)
 {
 	s.op(v.id);
 	s.op(v.x);
