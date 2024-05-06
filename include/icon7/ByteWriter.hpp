@@ -34,6 +34,18 @@ public:
 public:
 	~ByteWriter(){};
 
+	ByteWriter(ByteBuffer &&buf) : _data(std::move(buf))
+	{
+		if (_data.storage == nullptr) {
+			_data = ByteBuffer(108);
+		}
+		_data.ResetCurrentStorageCapacitySizeOffset();
+		_data.storage->size = 0;
+		_data.storage->capacity -= 8;
+		_data.storage->offset += 8;
+		Init(&_data);
+	}
+
 	ByteWriter(ByteWriter &&o)
 		: bitscpp::ByteWriter<ByteBuffer>(&_data), _data(std::move(o._data))
 	{

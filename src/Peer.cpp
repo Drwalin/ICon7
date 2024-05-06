@@ -86,7 +86,6 @@ void Peer::SendLocalThread(ByteBuffer &frame)
 	// host->_InternalInsertPeerToFlush(this);
 }
 
-
 void Peer::Send(ByteBuffer &&frame)
 {
 	if (IsDisconnecting()) {

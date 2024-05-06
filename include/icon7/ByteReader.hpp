@@ -39,6 +39,12 @@ public:
 	{
 	}
 
+	inline ByteReader(ByteBuffer &&data, uint32_t offset)
+		: bitscpp::ByteReader<true>(data.data(), offset, data.size()),
+		  _data(std::move(data))
+	{
+	}
+
 	inline ~ByteReader() {}
 
 	inline ByteReader(ByteReader &&o)
