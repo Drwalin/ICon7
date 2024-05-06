@@ -130,6 +130,8 @@ bool IsLogLevelApplicable(LogLevel level);
 
 void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
 		 int line, const char *function, const char *fmt, ...);
+
+void HexDump(void *buf, int bytes);
 } // namespace log
 } // namespace icon7
 

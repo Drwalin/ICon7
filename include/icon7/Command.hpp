@@ -48,7 +48,7 @@ public:
 	Command &operator=(const Command &other) = delete;
 
 	virtual void Execute() = 0;
-	
+
 	uint32_t _commandSize = 0;
 
 	virtual ~Command();
@@ -123,8 +123,8 @@ namespace commands
 class ExecuteOnPeer : public Command
 {
 public:
-	virtual ~ExecuteOnPeer() = default;
-	ExecuteOnPeer() = default;
+	virtual ~ExecuteOnPeer() {}
+	ExecuteOnPeer() {}
 	ExecuteOnPeer(std::shared_ptr<Peer> &peer) : peer(peer) {}
 
 	std::shared_ptr<Peer> peer;
@@ -133,8 +133,8 @@ public:
 class ExecuteOnHost : public Command
 {
 public:
-	virtual ~ExecuteOnHost() = default;
-	ExecuteOnHost() = default;
+	virtual ~ExecuteOnHost() {}
+	ExecuteOnHost() {}
 	ExecuteOnHost(Host *host) : host(host) {}
 
 	Host *host = nullptr;
@@ -143,8 +143,8 @@ public:
 class ExecuteBooleanOnHost : public ExecuteOnHost
 {
 public:
-	virtual ~ExecuteBooleanOnHost() = default;
-	ExecuteBooleanOnHost() = default;
+	virtual ~ExecuteBooleanOnHost() {}
+	ExecuteBooleanOnHost() {}
 	ExecuteBooleanOnHost(Host *host, bool result)
 		: ExecuteOnHost(host), result(result)
 	{
@@ -158,7 +158,7 @@ namespace internal
 class ExecuteRPC : public Command
 {
 public:
-	virtual ~ExecuteRPC() = default;
+	virtual ~ExecuteRPC() {}
 	ExecuteRPC(ByteReader &&reader) : reader(std::move(reader)) {}
 
 	std::shared_ptr<Peer> peer;
@@ -173,8 +173,8 @@ public:
 class ExecuteAddPeerToFlush : public Command
 {
 public:
-	virtual ~ExecuteAddPeerToFlush() = default;
-	ExecuteAddPeerToFlush() = default;
+	virtual ~ExecuteAddPeerToFlush() {}
+	ExecuteAddPeerToFlush() {}
 	ExecuteAddPeerToFlush(std::shared_ptr<Peer> peer, Host *host)
 		: peer(peer), host(host)
 	{
@@ -189,9 +189,9 @@ public:
 class ExecuteListen : public Command
 {
 public:
-	virtual ~ExecuteListen() = default;
+	virtual ~ExecuteListen() {}
 
-	ExecuteListen() = default;
+	ExecuteListen() {}
 
 	std::string address;
 	IPProto ipProto;
@@ -207,8 +207,8 @@ public:
 class ExecuteConnect : public Command
 {
 public:
-	virtual ~ExecuteConnect() = default;
-	ExecuteConnect() = default;
+	virtual ~ExecuteConnect() {}
+	ExecuteConnect() {}
 
 	Host *host = nullptr;
 	std::string address;
@@ -223,8 +223,8 @@ public:
 class ExecuteDisconnect : public Command
 {
 public:
-	virtual ~ExecuteDisconnect() = default;
-	ExecuteDisconnect() = default;
+	virtual ~ExecuteDisconnect() {}
+	ExecuteDisconnect() {}
 
 	std::shared_ptr<Peer> peer;
 

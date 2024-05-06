@@ -25,7 +25,6 @@
 #include "../../concurrentqueue/concurrentqueue.h"
 
 #include "ConcurrentQueueTraits.hpp"
-#include "Flags.hpp"
 #include "Command.hpp"
 #include "FrameDecoder.hpp"
 #include "SendFrameStruct.hpp"
@@ -47,8 +46,8 @@ public:
 	Peer &operator=(Peer &) = delete;
 	Peer &operator=(const Peer &) = delete;
 
-	virtual void Send(ByteBuffer &dataWithoutHeader, Flags flags);
-	virtual void SendLocalThread(ByteBuffer &dataWithoutHeader, Flags flags);
+	virtual void Send(ByteBuffer &frame);
+	virtual void SendLocalThread(ByteBuffer &frame);
 	void Disconnect();
 
 	inline bool IsReadyToUse() const { return peerFlags & BIT_READY; }
@@ -118,7 +117,8 @@ protected:
 	inline const static uint32_t BIT_ERROR_CONNECT = 8;
 
 protected:
-	moodycamel::ConcurrentQueue<SendFrameStruct, ConcurrentQueueDefaultTraits>
+	moodycamel::ConcurrentQueue<ByteBufferStorageHeader *,
+								ConcurrentQueueDefaultTraits>
 		queue;
 	moodycamel::ConsumerToken consumerToken;
 	SendFrameStruct *localQueue;

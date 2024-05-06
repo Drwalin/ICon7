@@ -48,8 +48,8 @@ void ExecuteListen::Execute()
 		class DummyOnListen final : public ExecuteBooleanOnHost
 		{
 		public:
-			DummyOnListen() = default;
-			virtual ~DummyOnListen() = default;
+			DummyOnListen() {}
+			virtual ~DummyOnListen() {}
 			virtual void Execute() override {}
 		};
 		onListen = CommandHandle<DummyOnListen>::Create();

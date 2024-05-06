@@ -32,15 +32,21 @@ public:
 	using Base = bitscpp::ByteWriter<ByteBuffer>;
 
 public:
-	~ByteWriter() = default;
+	~ByteWriter(){};
 
 	ByteWriter(ByteWriter &&o)
 		: bitscpp::ByteWriter<ByteBuffer>(&_data), _data(std::move(o._data))
 	{
 	}
 
-	ByteWriter(uint32_t initialCapacity) : _data(initialCapacity)
+	ByteWriter(uint32_t initialCapacity) : _data(initialCapacity + 8)
 	{
+		_data.storage->size = 0;
+		// additional store in form of:
+		// [4] - icon7::Flags
+		// [4] - max store for header
+		_data.storage->capacity -= 8;
+		_data.storage->offset += 8;
 		Init(&_data);
 	}
 

@@ -109,7 +109,7 @@ public:
 	{
 		ByteWriter writer(100);
 		SerializeSend(writer, flags, name, args...);
-		peer->Send(writer._data, flags);
+		peer->Send(writer._data);
 	}
 
 	template <typename... Targs>
@@ -119,6 +119,10 @@ public:
 		writer.op(name);
 		(writer.op(args), ...);
 		flags |= FLAGS_CALL_NO_FEEDBACK;
+		if (FramingProtocol::WriteHeaderIntoBuffer(writer._data, flags) ==
+			false) {
+			LOG_FATAL("Trying to write header into invalid ByteBuffer.");
+		}
 	}
 
 	class CommandCallSend final : public commands::ExecuteOnPeer
@@ -131,7 +135,7 @@ public:
 			  callback(std::move(callback)), flags(flags), buffer(buffer)
 		{
 		}
-		virtual ~CommandCallSend() = default;
+		virtual ~CommandCallSend() {}
 
 		RPCEnvironment *rpcEnv;
 		OnReturnCallback callback;
@@ -145,7 +149,12 @@ public:
 				bitscpp::HostToNetworkUint<uint32_t>(rcbId);
 			memcpy(buffer.data(), &rcbId_v, sizeof(rcbId_v));
 			rpcEnv->returningCallbacks[rcbId] = std::move(callback);
-			peer->SendLocalThread(buffer, flags | FLAGS_CALL);
+			flags |= FLAGS_CALL;
+			if (FramingProtocol::WriteHeaderIntoBuffer(buffer, flags)) {
+				peer->SendLocalThread(buffer);
+			} else {
+				LOG_FATAL("Trying to write header into invalid ByteBuffer.");
+			}
 		}
 	};
 

@@ -16,32 +16,22 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "../include/icon7/FramingProtocol.hpp"
-
 #include "../include/icon7/SendFrameStruct.hpp"
 
 namespace icon7
 {
-SendFrameStruct SendFrameStruct::Acquire(ByteBuffer &dataWithoutHeader,
-										 Flags flags)
+SendFrameStruct::SendFrameStruct(ByteBuffer &data) : data(data)
 {
-	return SendFrameStruct(dataWithoutHeader, flags);
-}
-
-void SendFrameStruct::Release(SendFrameStruct &ptr) {}
-
-SendFrameStruct::SendFrameStruct(ByteBuffer &_dataWithoutHeader, Flags flags)
-	: dataWithoutHeader(_dataWithoutHeader)
-{
-	this->flags = flags;
+	memcpy(&flags,
+		   ((uint8_t *)this->data.storage) + sizeof(ByteBufferStorageHeader),
+		   4);
 	bytesSent = 0;
-	headerBytesSent = 0;
-	headerSize = FramingProtocol::GetHeaderSize(dataWithoutHeader.size());
-	*(uint32_t *)header = 0;
-	FramingProtocol::WriteHeader(header, headerSize, dataWithoutHeader.size(),
-								 flags);
 }
-SendFrameStruct::SendFrameStruct() {}
-
-SendFrameStruct::~SendFrameStruct() {}
+SendFrameStruct::SendFrameStruct(ByteBuffer &&data) : data(std::move(data))
+{
+	memcpy(&flags,
+		   ((uint8_t *)this->data.storage) + sizeof(ByteBufferStorageHeader),
+		   4);
+	bytesSent = 0;
+}
 } // namespace icon7

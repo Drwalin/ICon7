@@ -19,7 +19,6 @@
 #include <bit>
 
 #include "../include/icon7/MemoryPool.hpp"
-#include "../include/icon7/Debug.hpp"
 
 #include "../include/icon7/ByteBuffer.hpp"
 
@@ -28,7 +27,7 @@ namespace icon7
 ByteBufferStorageHeader *ByteBufferStorageHeader::Allocate(uint32_t capacity)
 {
 	const uint32_t S = sizeof(ByteBufferStorageHeader);
-	uint32_t trueCapacity = std::bit_ceil(capacity + S) - S;
+	uint32_t trueCapacity = std::bit_ceil(capacity + S);
 	if (trueCapacity < 64)
 		trueCapacity = 64;
 	void *vptr = MemoryPool::Allocate(trueCapacity);
@@ -42,14 +41,18 @@ ByteBufferStorageHeader *ByteBufferStorageHeader::Allocate(uint32_t capacity)
 
 void ByteBufferStorageHeader::Deallocate(ByteBufferStorageHeader *ptr)
 {
-	MemoryPool::Release(ptr, ptr->capacity + ptr->offset);
+	if (ptr->refCounter.load() == 0) {
+		MemoryPool::Release(ptr, ptr->capacity + ptr->offset);
+	}
 }
 
 ByteBufferStorageHeader *
 ByteBufferStorageHeader::Reallocate(ByteBufferStorageHeader *ptr,
 									uint32_t newCapacity)
 {
-	ByteBufferStorageHeader *ret = Allocate(newCapacity);
+	ByteBufferStorageHeader *ret =
+		Allocate(newCapacity + ptr->offset - sizeof(ByteBufferStorageHeader));
+	newCapacity = ret->capacity;
 	memcpy(ret, ptr, ptr->size + ptr->offset);
 	ret->capacity = newCapacity;
 	ret->refCounter = 1;

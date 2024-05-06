@@ -18,6 +18,7 @@
 
 #include "../include/icon7/HostUStcp.hpp"
 #include "../include/icon7/Command.hpp"
+#include "icon7/Debug.hpp"
 
 #include "../include/icon7/PeerUStcp.hpp"
 
@@ -41,22 +42,19 @@ bool Peer::_InternalSend(SendFrameStruct &f, bool hasMore)
 		IsClosed()) {
 		return false;
 	}
-	if (f.headerBytesSent < f.headerSize) {
-		f.headerBytesSent +=
-			us_socket_write(SSL, socket, (char *)(f.header + f.headerBytesSent),
-							f.headerSize - f.headerBytesSent,
-							(f.dataWithoutHeader.size() ? 1 : 0) || hasMore);
-		if (f.headerBytesSent < f.headerSize) {
-			return false;
+	if (f.bytesSent < f.data.size()) {
+		int b =
+			us_socket_write(SSL, socket, (char *)(f.data.data() + f.bytesSent),
+							f.data.size() - f.bytesSent, hasMore);
+		if (b < 0) {
+			LOG_ERROR("us_socket_write returned: %i", b);
+		} else if (b > 0) {
+			f.bytesSent += b;
+		} else {
+			// TODO: what to do here?
 		}
 	}
-	if (f.bytesSent < f.dataWithoutHeader.size()) {
-		auto b = us_socket_write(
-			SSL, socket, (char *)(f.dataWithoutHeader.data() + f.bytesSent),
-			f.dataWithoutHeader.size() - f.bytesSent, hasMore);
-		f.bytesSent += b;
-	}
-	if (f.bytesSent < f.dataWithoutHeader.size()) {
+	if (f.bytesSent < f.data.size()) {
 		return false;
 	}
 	return true;

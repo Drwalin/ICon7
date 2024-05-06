@@ -27,32 +27,38 @@
 namespace icon7
 {
 struct SendFrameStruct {
-	ByteBuffer dataWithoutHeader;
-	uint32_t bytesSent = 0;
+	ByteBuffer data;
 	Flags flags = 0;
-	uint8_t header[4] = {0, 0, 0, 0};
-	uint8_t headerBytesSent = 0;
-	uint8_t headerSize = 0;
+	uint32_t bytesSent = 0;
 
-	inline uint32_t GetBytes() const
+	inline uint32_t GetBytes() const { return data.size(); }
+
+	SendFrameStruct(ByteBuffer &dataWithoutHeader);
+	SendFrameStruct(ByteBuffer &&dataWithoutHeader);
+	inline SendFrameStruct() {}
+	inline SendFrameStruct(SendFrameStruct &&o)
+		: data(std::move(o.data)), flags(o.flags), bytesSent(o.bytesSent)
 	{
-		return headerSize + dataWithoutHeader.size();
+		o.data.storage = nullptr;
 	}
-
-	static SendFrameStruct Acquire(ByteBuffer &dataWithoutHeader, Flags flags);
-	static void Release(SendFrameStruct &ptr);
-
-	SendFrameStruct(ByteBuffer &dataWithoutHeader, Flags flags);
-	SendFrameStruct();
-	~SendFrameStruct();
+	inline SendFrameStruct &operator=(SendFrameStruct &&o)
+	{
+		data = std::move(o.data);
+		o.data.storage = nullptr;
+		flags = o.flags;
+		bytesSent = o.bytesSent;
+		return *this;
+	}
+	inline ~SendFrameStruct()
+	{
+		data.~ByteBuffer();
+		data.storage = nullptr;
+	}
 
 	SendFrameStruct(SendFrameStruct &) = delete;
 	SendFrameStruct(const SendFrameStruct &) = delete;
-	SendFrameStruct(SendFrameStruct &&) = default;
-
 	SendFrameStruct &operator=(SendFrameStruct &) = delete;
 	SendFrameStruct &operator=(const SendFrameStruct &) = delete;
-	SendFrameStruct &operator=(SendFrameStruct &&) = default;
 };
 } // namespace icon7
 

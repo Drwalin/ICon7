@@ -39,7 +39,7 @@ public:
 	{
 	}
 
-	~ByteReader() = default;
+	inline ~ByteReader() {}
 
 	inline ByteReader(ByteReader &&o)
 		: bitscpp::ByteReader<true>(o._buffer, o.get_offset(), o._size),

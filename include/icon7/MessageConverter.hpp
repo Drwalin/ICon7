@@ -28,6 +28,7 @@
 #include "PeerFlagsArgumentsReader.hpp"
 #include "Host.hpp"
 #include "Peer.hpp"
+#include "FramingProtocol.hpp"
 
 namespace icon7
 {
@@ -43,7 +44,7 @@ public:
 		getExecutionQueue = nullptr;
 		_executionQueue = nullptr;
 	}
-	virtual ~MessageConverter() = default;
+	virtual ~MessageConverter() {}
 
 	virtual void Call(Peer *peer, ByteReader &reader, Flags flags,
 					  uint32_t returnId) = 0;
@@ -79,8 +80,13 @@ public:
 			ByteWriter writer(100);
 			writer.op(returnId);
 			writer.op(ret);
-			peer->Send(writer._data, ((flags | Flags(6)) ^ Flags(6)) |
-										 FLAGS_CALL_RETURN_FEEDBACK);
+			if (FramingProtocol::WriteHeaderIntoBuffer(
+					writer._data, ((flags | Flags(6)) ^ Flags(6)) |
+									  FLAGS_CALL_RETURN_FEEDBACK)) {
+				peer->Send(writer._data);
+			} else {
+				LOG_FATAL("Trying to write header into invalid ByteBuffer.");
+			}
 		} else if (returnId) {
 			LOG_WARN(
 				"It should never happen -> it's a bug, where MessegeConverter "
@@ -100,8 +106,13 @@ public:
 		if (returnId && ((flags & 6) == FLAGS_CALL)) {
 			ByteWriter writer(100);
 			writer.op(returnId);
-			peer->Send(writer._data, ((flags | Flags(6)) ^ Flags(6)) |
-										 FLAGS_CALL_RETURN_FEEDBACK);
+			if (FramingProtocol::WriteHeaderIntoBuffer(
+					writer._data, ((flags | Flags(6)) ^ Flags(6)) |
+									  FLAGS_CALL_RETURN_FEEDBACK)) {
+				peer->Send(writer._data);
+			} else {
+				LOG_FATAL("Trying to write header into invalid ByteBuffer.");
+			}
 		} else if (returnId) {
 			LOG_WARN(
 				"It should never happen -> it's a bug, where MessegeConverter "
@@ -122,7 +133,7 @@ public:
 	{
 	}
 
-	virtual ~MessageConverterSpec() = default;
+	virtual ~MessageConverterSpec() {}
 
 	virtual void Call(Peer *peer, ByteReader &reader, Flags flags,
 					  uint32_t returnId) override
@@ -161,7 +172,7 @@ public:
 	{
 	}
 
-	virtual ~MessageConverterSpecStdFunction() = default;
+	virtual ~MessageConverterSpecStdFunction() {}
 
 	virtual void Call(Peer *peer, ByteReader &reader, Flags flags,
 					  uint32_t returnId) override
@@ -200,7 +211,7 @@ public:
 	{
 	}
 
-	virtual ~MessageConverterSpecMethodOfObject() = default;
+	virtual ~MessageConverterSpecMethodOfObject() {}
 
 	virtual void Call(Peer *peer, ByteReader &reader, Flags flags,
 					  uint32_t returnId) override

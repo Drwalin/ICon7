@@ -147,14 +147,28 @@ std::string CorrectFilePath(std::string path)
 	auto oldSize = path.size() + 1;
 	while (oldSize != path.size()) {
 		oldSize = path.size();
-
-		auto pos = path.find("../");
+		const auto pos = path.find("./");
 		if (pos != std::string::npos) {
-			if (pos == 0 || path[pos - 1] == '/') {
-				auto pos2 = path.find('/', pos + 3);
-				if (pos2 != std::string::npos) {
-					path.replace(pos, pos2 - pos, "");
+			if (pos >= 0) {
+				if ((pos > 0 && path[pos - 1] == '/') || pos == 0) {
+					path.replace(pos, 2, "");
 				}
+			}
+		}
+	}
+
+	oldSize = path.size() + 1;
+	while (oldSize != path.size()) {
+		oldSize = path.size();
+
+		const auto pos = path.find("/../");
+		if (pos != std::string::npos) {
+			if (pos > 0) {
+				auto pos2 = path.rfind('/', pos - 1);
+				if (pos2 == std::string::npos) {
+					pos2 = 0;
+				}
+				path.replace(pos2, pos + 3 - pos2, "");
 			}
 		}
 	}
@@ -260,6 +274,28 @@ void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
 
 	std::lock_guard lock(mutex);
 	fwrite(buf, 1, offset, stdout);
+	fflush(stdout);
+}
+
+void HexDump(void *buf, int bytes)
+{
+	std::lock_guard lock(mutex);
+	printf("Hex dump from [%p] bytes %i\n", buf, bytes);
+	for (int i = 0; i < bytes; i += 16) {
+		for (int j = 0; j < 16 && j + i < bytes; ++j) {
+			char c = ((char *)buf)[i + j];
+			if (c >= ' ' && c < 127) {
+				printf("  %c", c);
+			} else {
+				printf("   ");
+			}
+		}
+		printf("\n");
+		for (int j = 0; j < 16 && j + i < bytes; ++j) {
+			printf(" %2.2X", (unsigned int)(((unsigned char *)buf)[i + j]));
+		}
+		printf("\n");
+	}
 	fflush(stdout);
 }
 } // namespace log
