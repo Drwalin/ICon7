@@ -111,9 +111,25 @@ public:
 
 	inline void Init(uint32_t initialCapacity)
 	{
-		if (storage)
-			storage->unref();
+		if (storage) {
+			if (storage->refCounter.load() == 1) {
+				ResetCurrentStorageCapacitySizeOffset();
+				return;
+			} else {
+				storage->unref();
+			}
+		}
 		storage = ByteBufferStorageHeader::Allocate(initialCapacity);
+	}
+
+	inline void ResetCurrentStorageCapacitySizeOffset()
+	{
+		if (storage) {
+			storage->capacity +=
+				storage->offset - sizeof(ByteBufferStorageHeader);
+			storage->offset = sizeof(ByteBufferStorageHeader);
+			storage->size = 0;
+		}
 	}
 
 	inline void append(const uint8_t *src, uint32_t bytes)

@@ -40,7 +40,7 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteBuffer &frameData,
 							   uint32_t headerSize, Flags flags)
 {
 	flags = FramingProtocol::GetPacketFlags(frameData.data(), flags);
-	ByteReader reader(frameData, headerSize);
+	ByteReader reader(std::move(frameData), headerSize);
 	OnReceive(peer, reader, flags);
 	std::swap(frameData, reader._data);
 }

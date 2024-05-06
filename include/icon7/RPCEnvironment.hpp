@@ -125,6 +125,24 @@ public:
 		}
 	}
 
+	template <typename... Targs>
+	static void SerializeSend(ByteBuffer &buffer, Flags flags,
+							  const std::string &name, const Targs &...args)
+	{
+		ByteWriter writer(std::move(buffer));
+		SerializeSend(writer, flags, name, args...);
+		buffer = std::move(writer._data);
+	}
+
+	template <typename... Targs>
+	static ByteBuffer SerializeSend(Flags flags, const std::string &name,
+									const Targs &...args)
+	{
+		ByteWriter writer(100);
+		SerializeSend(writer, flags, name, args...);
+		return std::move(writer._data);
+	}
+
 	class CommandCallSend final : public commands::ExecuteOnPeer
 	{
 	public:

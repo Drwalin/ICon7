@@ -68,12 +68,12 @@ void FrameDecoder::PushData(uint8_t *data, uint32_t length,
 				onPacket(buffer, headerSize, userPtr);
 			}
 			Restart();
-		} else if (buffer.size() >= frameSize) {
+		} else if (buffer.size() > frameSize) {
 			LOG_ERROR("FrameDecoder::PushData push to frame more than frame "
 					  "size was.");
 			throw;
 		} else {
-			continue;
+			break;
 		}
 	}
 }
