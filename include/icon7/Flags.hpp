@@ -35,6 +35,8 @@ enum FlagsValues : uint32_t {
 	FLAGS_PROTOCOL_CONTROLL_SEQUENCE = 6,
 };
 
+static_assert(sizeof(Flags) == 4);
+
 enum IPProto { IPinvalid = 0, IPv4 = 4, IPv6 = 6 };
 } // namespace icon7
 

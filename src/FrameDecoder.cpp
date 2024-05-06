@@ -82,6 +82,10 @@ void FrameDecoder::Restart()
 {
 	frameSize = 0;
 	headerSize = 0;
-	buffer.Init(256);
+	if (buffer.storage && buffer.storage->refCounter.load() == 1) {
+		buffer.storage->size = 0;
+	} else {
+		buffer.Init(256);
+	}
 }
 } // namespace icon7

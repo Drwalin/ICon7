@@ -28,8 +28,8 @@ namespace icon7
 class MemoryPool
 {
 public:
-	MemoryPool() = default;
-	~MemoryPool() = default;
+	MemoryPool(){};
+	~MemoryPool(){};
 
 	static void *Allocate(uint32_t bytes);
 	static void Release(void *ptr, uint32_t bytes);

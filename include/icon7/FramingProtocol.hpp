@@ -19,9 +19,10 @@
 #ifndef ICON7_FRAMING_PROTOCOL_HPP
 #define ICON7_FRAMING_PROTOCOL_HPP
 
-#include <cinttypes>
+#include <cstdint>
 
 #include "Flags.hpp"
+#include "ByteBuffer.hpp"
 
 namespace icon7
 {
@@ -73,6 +74,28 @@ public:
 			h |= ((uint32_t)header[i]) << (i << 3);
 		}
 		return (h >> 4) + 1;
+	}
+
+	/*
+	 * returns false for invalid ByteBuffer object
+	 */
+	[[nodiscard]] static bool WriteHeaderIntoBuffer(ByteBuffer &buffer,
+													Flags flags)
+	{
+		if (buffer.storage->offset != sizeof(ByteBufferStorageHeader) + 8 ||
+			buffer.size() == 0) {
+			return false;
+		}
+
+		memcpy(((uint8_t *)buffer.storage) + sizeof(ByteBufferStorageHeader),
+			   &flags, 4);
+		uint32_t headerSize = FramingProtocol::GetHeaderSize(buffer.size());
+		uint8_t *header = buffer.data() - headerSize;
+		FramingProtocol::WriteHeader(header, headerSize, buffer.size(), flags);
+		buffer.storage->capacity += headerSize;
+		buffer.storage->size += headerSize;
+		buffer.storage->offset -= headerSize;
+		return true;
 	}
 };
 } // namespace icon7

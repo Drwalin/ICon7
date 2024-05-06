@@ -75,11 +75,11 @@ void Host::_InternalDestroy()
 
 void Host::DisconnectAllAsync()
 {
-	class CommandDisconnectAll : public commands::ExecuteOnHost
+	class CommandDisconnectAll final : public commands::ExecuteOnHost
 	{
 	public:
-		CommandDisconnectAll() = default;
-		~CommandDisconnectAll() = default;
+		CommandDisconnectAll() {}
+		virtual ~CommandDisconnectAll() {}
 		virtual void Execute() override { host->DisconnectAll(); }
 	};
 	auto com = CommandHandle<CommandDisconnectAll>::Create();
@@ -97,11 +97,11 @@ void Host::DisconnectAll()
 concurrent::future<std::shared_ptr<Peer>>
 Host::ConnectPromise(std::string address, uint16_t port)
 {
-	class CommandConnectPromise : public commands::ExecuteOnPeer
+	class CommandConnectPromise final : public commands::ExecuteOnPeer
 	{
 	public:
-		CommandConnectPromise() = default;
-		virtual ~CommandConnectPromise() = default;
+		CommandConnectPromise() {}
+		virtual ~CommandConnectPromise() {}
 
 		concurrent::promise<std::shared_ptr<Peer>> promise;
 
@@ -157,11 +157,11 @@ void Host::_Internal_on_close_Finish(std::shared_ptr<Peer> peer)
 concurrent::future<bool> Host::ListenOnPort(const std::string &address,
 											uint16_t port, IPProto ipProto)
 {
-	class CommandListnePromise : public commands::ExecuteBooleanOnHost
+	class CommandListnePromise final : public commands::ExecuteBooleanOnHost
 	{
 	public:
-		CommandListnePromise() = default;
-		virtual ~CommandListnePromise() = default;
+		CommandListnePromise() {}
+		virtual ~CommandListnePromise() {}
 
 		concurrent::promise<bool> promise;
 

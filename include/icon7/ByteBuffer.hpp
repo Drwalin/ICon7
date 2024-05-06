@@ -35,8 +35,8 @@ struct ByteBufferStorageHeader {
 	inline void ref() { refCounter++; }
 	inline void unref()
 	{
-		uint32_t n = refCounter.fetch_add(-1);
-		if (n == 1) {
+		uint32_t n = --refCounter;
+		if (n == 0) {
 			Deallocate(this);
 		}
 	}
@@ -52,14 +52,17 @@ struct ByteBufferStorageHeader {
 class ByteBuffer
 {
 public:
-	ByteBuffer(const ByteBuffer &) = delete;
-	ByteBuffer &operator=(const ByteBuffer &) = delete;
-
 	inline ByteBuffer() { storage = nullptr; }
 	inline ByteBuffer(ByteBuffer &&o)
 	{
 		storage = o.storage;
 		o.storage = nullptr;
+	}
+	inline ByteBuffer(const ByteBuffer &o)
+	{
+		storage = o.storage;
+		if (storage)
+			storage->ref();
 	}
 	inline ByteBuffer(ByteBuffer &o)
 	{
@@ -85,6 +88,15 @@ public:
 			storage->unref();
 		storage = o.storage;
 		o.storage = nullptr;
+		return *this;
+	}
+	inline ByteBuffer &operator=(const ByteBuffer &o)
+	{
+		if (storage)
+			storage->unref();
+		storage = o.storage;
+		if (storage)
+			storage->ref();
 		return *this;
 	}
 	inline ByteBuffer &operator=(ByteBuffer &o)
@@ -129,7 +141,7 @@ public:
 		}
 	}
 
-private:
+public:
 	ByteBufferStorageHeader *storage = nullptr;
 };
 } // namespace icon7

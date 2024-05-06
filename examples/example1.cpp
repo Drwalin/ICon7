@@ -41,11 +41,12 @@ int main()
 	hosta->RunAsync();
 
 	{
-		class CommandPrintStatus : public icon7::commands::ExecuteBooleanOnHost
+		class CommandPrintStatus final
+			: public icon7::commands::ExecuteBooleanOnHost
 		{
 		public:
-			CommandPrintStatus() = default;
-			~CommandPrintStatus() = default;
+			CommandPrintStatus() {}
+			virtual ~CommandPrintStatus() {}
 			virtual void Execute() override
 			{
 				printf(" %s\n", result ? "Listening" : "Fail to listen");
@@ -62,14 +63,15 @@ int main()
 	hostb->RunAsync();
 
 	{
-		class CommandPrintStatus : public icon7::commands::ExecuteOnPeer
+		class CommandDisconnectOnConnect final
+			: public icon7::commands::ExecuteOnPeer
 		{
 		public:
-			CommandPrintStatus() = default;
-			~CommandPrintStatus() = default;
+			CommandDisconnectOnConnect() {}
+			virtual ~CommandDisconnectOnConnect() {}
 			virtual void Execute() override { peer->Disconnect(); }
 		};
-		auto com = icon7::CommandHandle<CommandPrintStatus>::Create();
+		auto com = icon7::CommandHandle<CommandDisconnectOnConnect>::Create();
 		hostb->Connect("127.0.0.1", port, std::move(com), nullptr);
 	}
 

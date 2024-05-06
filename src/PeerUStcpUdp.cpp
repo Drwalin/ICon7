@@ -70,6 +70,8 @@ bool Peer::_InternalSend(SendFrameStruct &dataFrame, bool hasMore)
 
 void Peer::_InternalFlushQueuedSends()
 {
+	LOG_FATAL("Not implemented yet.");
+	/*
 	Host *host = (Host *)(this->host);
 	icon7::uS::tcp::Peer::_InternalFlushQueuedSends();
 
@@ -93,7 +95,8 @@ void Peer::_InternalFlushQueuedSends()
 				LOG_DEBUG(" first, last: %i %i", host->firstFilledSendPacketId,
 						  host->lastFilledSendPacketId);
 			} else {
-				// 				LOG_DEBUG("333333333333333333333333333333333333333");
+				//
+	LOG_DEBUG("333333333333333333333333333333333333333");
 			}
 		} else {
 			LOG_DEBUG("2222222222222222222222222222222222222");
@@ -163,6 +166,7 @@ void Peer::_InternalFlushQueuedSends()
 		tmpUdpPacketCollection.clear();
 		tmpUdpPacketCollectionSizes.clear();
 	}
+	*/
 }
 
 void Peer::_InternalDisconnect()
@@ -192,9 +196,10 @@ void Peer::_InternalOnUdpPacket(void *data, uint32_t bytes)
 {
 	LOG_DEBUG(" . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .");
 	bitscpp::ByteReader<true> reader((uint8_t *)data, 0, bytes);
-	
+
 	LOG_FATAL("Not reimplemented with ByteBuffer");
-	throw "Not reimplemented with ByteBuffe: icon7::uS::tcpudp::Peer::_InternalOnUdpPacket";
+	throw "Not reimplemented with ByteBuffe: "
+		  "icon7::uS::tcpudp::Peer::_InternalOnUdpPacket";
 
 	/*
 // 	if (bytes == 0) {
@@ -250,8 +255,8 @@ void Peer::_InternalOnUdpPacket(void *data, uint32_t bytes)
 	*/
 }
 
-void Peer::_InternalOnPacketWithControllSequenceBackend(
-	ByteBuffer &buffer, uint32_t headerSize)
+void Peer::_InternalOnPacketWithControllSequenceBackend(ByteBuffer &buffer,
+														uint32_t headerSize)
 {
 	ByteReader reader(buffer, headerSize);
 	uint8_t vectorCall = 0;
@@ -291,15 +296,15 @@ void Peer::_InternalOnOpenFinish()
 	} else {
 		hasPeerThisAddress = true;
 	}
-// 	std::vector<uint8_t> data;
-// 	data.resize(5 + (SSL ? 32 : 0));
-// 	data[0] = 0x80;
-// 	memcpy(data.data() + 1, &receivingIdentity, 4);
-// 	if (SSL) {
-// 		memcpy(data.data() + 5, sendingKey, 32);
-// 	}
-// 	SendLocalThread(std::move(data),
-// 					FLAG_RELIABLE | FLAGS_PROTOCOL_CONTROLL_SEQUENCE);
+	// 	std::vector<uint8_t> data;
+	// 	data.resize(5 + (SSL ? 32 : 0));
+	// 	data[0] = 0x80;
+	// 	memcpy(data.data() + 1, &receivingIdentity, 4);
+	// 	if (SSL) {
+	// 		memcpy(data.data() + 5, sendingKey, 32);
+	// 	}
+	// 	SendLocalThread(std::move(data),
+	// 					FLAG_RELIABLE | FLAGS_PROTOCOL_CONTROLL_SEQUENCE);
 }
 
 } // namespace tcpudp

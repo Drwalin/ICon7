@@ -49,8 +49,8 @@ void CommandExecutionQueue::EnqueueCommandsBuffer(CommandsBuffer &&buffer)
 	class CommandExecuteCommandsBuffer final : public Command
 	{
 	public:
-		CommandExecuteCommandsBuffer() = default;
-		virtual ~CommandExecuteCommandsBuffer() = default;
+		CommandExecuteCommandsBuffer() {}
+		virtual ~CommandExecuteCommandsBuffer() {}
 		CommandsBuffer buffer;
 		virtual void Execute() override { buffer.ExecuteAll(); }
 	};

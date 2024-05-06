@@ -28,8 +28,8 @@ namespace icon7
 class ExecuteReturnCallbackBase : public commands::ExecuteOnPeer
 {
 public:
-	ExecuteReturnCallbackBase() = default;
-	virtual ~ExecuteReturnCallbackBase() = default;
+	ExecuteReturnCallbackBase() {}
+	virtual ~ExecuteReturnCallbackBase() {}
 
 	ByteReader reader;
 	Flags flags = 0;
@@ -40,8 +40,8 @@ template <typename Tret>
 class ExecuteReturnCallback : public ExecuteReturnCallbackBase
 {
 public:
-	ExecuteReturnCallback() = default;
-	virtual ~ExecuteReturnCallback() = default;
+	ExecuteReturnCallback() {}
+	virtual ~ExecuteReturnCallback() {}
 
 	virtual void Execute() override final
 	{
@@ -60,8 +60,8 @@ public:
 template <> class ExecuteReturnCallback<void> : public ExecuteReturnCallbackBase
 {
 public:
-	ExecuteReturnCallback() = default;
-	virtual ~ExecuteReturnCallback() = default;
+	ExecuteReturnCallback() {}
+	virtual ~ExecuteReturnCallback() {}
 
 	virtual void Execute() override final
 	{
@@ -80,8 +80,8 @@ class ExecuteReturnCallbackStdfunction final
 	: public ExecuteReturnCallback<Tret>
 {
 public:
-	ExecuteReturnCallbackStdfunction() = default;
-	virtual ~ExecuteReturnCallbackStdfunction() = default;
+	ExecuteReturnCallbackStdfunction() {}
+	virtual ~ExecuteReturnCallbackStdfunction() {}
 
 	std::function<void(Peer *, Flags, Tret &)> onReturned;
 	std::function<void(Peer *)> onTimeout;
@@ -103,8 +103,8 @@ class ExecuteReturnCallbackStdfunction<void> final
 	: public ExecuteReturnCallback<void>
 {
 public:
-	ExecuteReturnCallbackStdfunction() = default;
-	virtual ~ExecuteReturnCallbackStdfunction() = default;
+	ExecuteReturnCallbackStdfunction() {}
+	virtual ~ExecuteReturnCallbackStdfunction() {}
 
 	std::function<void(Peer *, Flags)> onReturned;
 	std::function<void(Peer *)> onTimeout;
@@ -125,15 +125,27 @@ public:
 class OnReturnCallback
 {
 public:
-	~OnReturnCallback() = default;
+	~OnReturnCallback() {}
 
-	OnReturnCallback() = default;
-	OnReturnCallback(OnReturnCallback &&) = default;
+	OnReturnCallback() {}
+	OnReturnCallback(OnReturnCallback &&o)
+		: callback(std::move(o.callback)), executionQueue(o.executionQueue),
+		  timeoutTimePoint(o.timeoutTimePoint)
+	{
+		o.executionQueue = nullptr;
+	}
 
 	OnReturnCallback(OnReturnCallback &) = delete;
 	OnReturnCallback(const OnReturnCallback &) = delete;
 
-	OnReturnCallback &operator=(OnReturnCallback &&) = default;
+	OnReturnCallback &operator=(OnReturnCallback &&o)
+	{
+		callback = std::move(o.callback);
+		executionQueue = o.executionQueue;
+		timeoutTimePoint = o.timeoutTimePoint;
+		o.executionQueue = nullptr;
+		return *this;
+	}
 
 	OnReturnCallback &operator=(OnReturnCallback &) = delete;
 	OnReturnCallback &operator=(const OnReturnCallback &) = delete;

@@ -39,11 +39,11 @@ Host::~Host() {}
 
 void Host::_InternalDestroy()
 {
-	class CommandCloseAllSockets : public commands::ExecuteOnHost
+	class CommandCloseAllSockets final : public commands::ExecuteOnHost
 	{
 	public:
-		CommandCloseAllSockets() = default;
-		~CommandCloseAllSockets() = default;
+		CommandCloseAllSockets() {}
+		virtual ~CommandCloseAllSockets() {}
 		virtual void Execute() override
 		{
 			Host *host = (Host *)(this->host);
@@ -306,11 +306,11 @@ void Host::WakeUp() { us_wakeup_loop(loop); }
 
 void Host::StopListening()
 {
-	class CommandStopListening : public commands::ExecuteOnHost
+	class CommandStopListening final : public commands::ExecuteOnHost
 	{
 	public:
-		CommandStopListening() = default;
-		~CommandStopListening() = default;
+		CommandStopListening() {}
+		virtual ~CommandStopListening() {}
 		virtual void Execute() override
 		{
 			for (us_listen_socket_t *s : ((tcp::Host *)host)->listenSockets) {
