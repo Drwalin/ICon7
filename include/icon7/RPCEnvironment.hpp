@@ -151,7 +151,7 @@ public:
 			rpcEnv->returningCallbacks[rcbId] = std::move(callback);
 			flags |= FLAGS_CALL;
 			if (FramingProtocol::WriteHeaderIntoBuffer(buffer, flags)) {
-				peer->SendLocalThread(buffer);
+				peer->SendLocalThread(std::move(buffer));
 			} else {
 				LOG_FATAL("Trying to write header into invalid ByteBuffer.");
 			}
