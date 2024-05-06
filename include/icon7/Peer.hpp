@@ -21,6 +21,7 @@
 
 #include <atomic>
 #include <memory>
+#include <vector>
 
 #include "../../concurrentqueue/concurrentqueue.h"
 
@@ -48,6 +49,8 @@ public:
 
 	virtual void Send(ByteBuffer &frame);
 	virtual void SendLocalThread(ByteBuffer &frame);
+	virtual void Send(ByteBuffer &&frame);
+	virtual void SendLocalThread(ByteBuffer &&frame);
 	void Disconnect();
 
 	inline bool IsReadyToUse() const { return peerFlags & BIT_READY; }
@@ -121,14 +124,13 @@ protected:
 								ConcurrentQueueDefaultTraits>
 		queue;
 	moodycamel::ConsumerToken consumerToken;
-	SendFrameStruct *localQueue;
+	std::vector<SendFrameStruct> localQueue;
 	std::atomic<uint32_t> sendingQueueSize;
 	std::atomic<uint32_t> peerFlags;
 
 	void (*onDisconnect)(Peer *);
 
 	FrameDecoder frameDecoder;
-	uint32_t localQueueSize;
 	uint32_t localQueueOffset;
 	const static inline uint32_t MAX_LOCAL_QUEUE_SIZE = 128;
 };

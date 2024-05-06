@@ -35,18 +35,17 @@ Peer::Peer(Host *host) : host(host), queue(), consumerToken(queue)
 	onDisconnect = nullptr;
 	peerFlags = 0;
 	sendingQueueSize = 0;
-	localQueueSize = 0;
+	localQueue.reserve(192);
 	localQueueOffset = 0;
-	localQueue = new SendFrameStruct[MAX_LOCAL_QUEUE_SIZE];
 }
 
 Peer::~Peer()
 {
-	for (int i = 0; i < MAX_LOCAL_QUEUE_SIZE; ++i) {
-		localQueue[i].~SendFrameStruct();
+	for (int i = localQueueOffset; i < localQueue.size(); ++i) {
+		localQueue[localQueueOffset].data.storage->unref();
+		localQueue[localQueueOffset].data.storage = nullptr;
 	}
 	localQueueOffset = 0;
-	localQueueSize = 0;
 	ByteBufferStorageHeader *ar[MAX_LOCAL_QUEUE_SIZE];
 	for (int i = 0; i < 16; ++i) {
 		while (true) {
@@ -60,7 +59,6 @@ Peer::~Peer()
 			}
 		}
 	}
-	delete[] localQueue;
 }
 
 void Peer::Send(ByteBuffer &frame)
@@ -84,9 +82,33 @@ void Peer::SendLocalThread(ByteBuffer &frame)
 		return;
 	}
 	sendingQueueSize++;
-	frame.storage->ref();
-	// replace with push to local queue
+	localQueue.push_back(frame);
+	// host->_InternalInsertPeerToFlush(this);
+}
+
+
+void Peer::Send(ByteBuffer &&frame)
+{
+	if (IsDisconnecting()) {
+		LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
+		// TODO: inform about dropping packets
+		return;
+	}
+	sendingQueueSize++;
 	queue.enqueue(frame.storage);
+	frame.storage = nullptr;
+	// host->InsertPeerToFlush(this);
+}
+
+void Peer::SendLocalThread(ByteBuffer &&frame)
+{
+	if (IsDisconnecting()) {
+		LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
+		// TODO: inform about dropping packets
+		return;
+	}
+	sendingQueueSize++;
+	localQueue.emplace_back(std::move(frame));
 	// host->_InternalInsertPeerToFlush(this);
 }
 
@@ -175,14 +197,15 @@ void Peer::SetReadyToUse() { peerFlags |= BIT_READY; }
 
 void Peer::DequeueToLocalQueue()
 {
-	if (localQueueSize != localQueueOffset) {
+	if (localQueue.size() != localQueueOffset) {
 		return;
 	}
 
 	ByteBufferStorageHeader *ar[MAX_LOCAL_QUEUE_SIZE];
-	localQueueSize =
+	uint32_t dequeued =
 		queue.try_dequeue_bulk(consumerToken, ar, MAX_LOCAL_QUEUE_SIZE);
-	for (int i = 0; i < localQueueSize; ++i) {
+	localQueue.resize(dequeued);
+	for (int i = 0; i < dequeued; ++i) {
 		ByteBuffer buffer;
 		buffer.storage = ar[i];
 		localQueue[i] = std::move(buffer);
@@ -192,21 +215,16 @@ void Peer::DequeueToLocalQueue()
 
 void Peer::_InternalFlushQueuedSends()
 {
+	const uint32_t queuedFrames = sendingQueueSize.load();
+	uint32_t sentFrames = 0;
 	for (uint32_t i = 0; i < 16; ++i) {
 		DequeueToLocalQueue();
-		if (localQueueSize == localQueueOffset) {
+		if (localQueue.size() == localQueueOffset) {
 			break;
 		}
-
-		auto &frame = localQueue[localQueueOffset].data;
-		if (frame.size() > 17) {
-			LOG_DEBUG("Trying to send invalid frame: "
-					  "size %i   cap %i   ref %i   off %i",
-					  frame.size(), frame.capacity(),
-					  frame.storage->refCounter.load(), frame.storage->offset);
-		}
-		if (_InternalSend(localQueue[localQueueOffset], sendingQueueSize > 1)) {
-			sendingQueueSize--;
+		const bool hasAnyMore = queuedFrames - sentFrames > 1;
+		if (_InternalSend(localQueue[localQueueOffset], hasAnyMore)) {
+			sentFrames++;
 			localQueue[localQueueOffset].data.storage->unref();
 			localQueue[localQueueOffset].data.storage = nullptr;
 			localQueueOffset++;
@@ -214,6 +232,7 @@ void Peer::_InternalFlushQueuedSends()
 			break;
 		}
 	}
+	sendingQueueSize -= sentFrames;
 }
 
 void Peer::_InternalClearInternalDataOnClose()
