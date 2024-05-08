@@ -1,7 +1,4 @@
 #include <cstdio>
-#include <cstring>
-#include <algorithm>
-#include <cmath>
 
 #include <chrono>
 #include <thread>
@@ -14,6 +11,8 @@
 #include <icon7/Flags.hpp>
 #include <icon7/PeerUStcp.hpp>
 #include <icon7/HostUStcp.hpp>
+
+#include "utility.hpp"
 
 std::atomic<int> sent = 0, received = 0, returned = 0;
 
@@ -29,83 +28,35 @@ int Mul(int a, int b)
 	return a * b;
 }
 
-struct DataStats {
-	double mean;
-	double stddev;
-	double p0;
-	double p1;
-	double p5;
-	double p10;
-	double p25;
-	double p50;
-	double p80;
-	double p90;
-	double p95;
-	double p99;
-	double p999;
-	double p100;
-};
-
-DataStats CalcDataStats(double *ar, size_t count)
-{
-	DataStats stats;
-	memset(&stats, 0, sizeof(stats));
-	if (count < 3) {
-		return stats;
-	}
-	std::sort(ar, ar + count);
-	stats.mean = 0;
-	for (size_t i = 0; i < count; ++i) {
-		stats.mean += ar[i];
-	}
-	stats.mean /= (double)count;
-
-	stats.stddev = 0;
-	for (size_t i = 0; i < count; ++i) {
-		double d = ar[i] - stats.mean;
-		stats.stddev += d * d;
-	}
-	stats.stddev = sqrt(stats.stddev / (double)count);
-
-	size_t last = count - 1;
-	stats.p0 = ar[(last * 0) / 100];
-	stats.p1 = ar[(last * 1) / 100];
-	stats.p5 = ar[(last * 5) / 100];
-	stats.p10 = ar[(last * 10) / 100];
-	stats.p25 = ar[(last * 25) / 100];
-	stats.p50 = ar[(last * 50) / 100];
-	stats.p80 = ar[(last * 80) / 100];
-	stats.p90 = ar[(last * 90) / 100];
-	stats.p95 = ar[(last * 95) / 100];
-	stats.p99 = ar[(last * 99) / 100];
-	stats.p999 = ar[(last * 999) / 1000];
-	stats.p100 = ar[last];
-
-	return stats;
-}
-
 int main(int argc, char **argv)
 {
-	uint16_t port = 7312;
-
+	const ArgsParser args(argc, argv);
+	
 	icon7::Initialize();
 
 	int notPassedTests = 0;
-	const int testsCount = std::clamp(argc >= 2 ? atoi(argv[1]) : 1, 1, 10000);
-	const int testsPerHostsPairCount = std::clamp(argc >= 3 ? atoi(argv[2]) : 7, 1, 10000);
-	const int sendsMoreThanCalls = std::clamp(argc >= 4 ? atoi(argv[3]) : 2, 117, 100000);
-	const int totalSends = std::clamp(argc >= 5 ? atoi(argv[4]) : 371, 1, 1000000);
-	const int connectionsCount = std::clamp(argc >= 6 ? atoi(argv[5]) : 171, 1, 100000);
-
-	int delayBetweeEachTotalSendMilliseconds = 50;
+	const int testsCount = args.GetInt({"-tests", "-t"}, 1, 1, 10000);
+	const int testsPerHostsPairCount = args.GetInt({"-pairs-per-test", "-p"}, 7, 1, 10000);
+	const int sendsMoreThanCalls = args.GetInt({"-sends-per-send", "-ss"}, 117, 2, 100000);
+	const int totalSends = args.GetInt({"-sends", "-s"}, 371, 1, 1000000);
+	const int connectionsCount = args.GetInt({"-connections", "-con"}, 171, 1, 100000);
+	int delayBetweeEachTotalSendMilliseconds = args.GetInt({"-delay", "-d"}, 50, 0, 10000);
+	const int64_t maxWaitAfterPayloadDone =  args.GetInt({"-max-wait-after-payload"}, 3*60*1000, 0, 1000ll*3600ll*24ll*365ll);
+	
+	uint16_t port = args.GetInt({"-port"}, 7312, 1, 65535);
+	
+	bool printMoreStats = args.GetFlag({"-verbose-stats", "-stats"});
+	
+	const int serializeSendsModulo = args.GetInt({"-serialize-modulo"}, 5, 1, 1000000);
+	const int serializeSendsFract = args.GetInt({"-serialize-load"}, 4, 1, 1000000);
+	
+	const bool alwaysReturn0 = args.GetFlag({"-return-zero"});
 
 	int toReturnCount = 0;
 	int totalToReturnCount = 0;
 
 	std::vector<double> arrayOfLatency;
 	arrayOfLatency.reserve(totalSends * connectionsCount);
-
-	bool printMoreStats = true;
 
 	for (int i = 0; i < testsCount; ++i) {
 		uint32_t totalReceived = 0, totalSent = 0, totalReturned = 0;
@@ -274,7 +225,7 @@ int main(int argc, char **argv)
 					sendFrameSize = buffer.size();
 
 					for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
-						if (l % 5 <= 3) {
+						if (l % serializeSendsModulo < serializeSendsFract) {
 							for (auto p : validPeers) {
 								auto peer = p.get();
 								peer->Send(buffer);
@@ -295,11 +246,6 @@ int main(int argc, char **argv)
 				}
 			}
 
-			totalSent += sent;
-			totalReceived += received;
-			totalReturned += returned;
-			totalToReturnCount += toReturnCount;
-
 			auto _E = std::chrono::steady_clock::now();
 			double _sec = std::chrono::duration<double>(_E - _S).count();
 			double kops = (received.load() + returned.load()) / _sec / 1000.0;
@@ -310,7 +256,8 @@ int main(int argc, char **argv)
 			_sec = std::chrono::duration<double>(
 					   _E - beginingBeforeConnectingInIteration)
 					   .count();
-			kops = (totalReceived + totalReturned) / _sec / 1000.0;
+			kops = (totalReceived + totalReturned + received.load() +
+					returned.load()) / _sec / 1000.0;
 			mibps = kops * sendFrameSize * 1000.0 / 1024.0 / 1024.0;
 			LOG_INFO("Total throughput: %f Kops (%f MiBps)", kops, mibps,
 					 sumTim * 1000.0 / ((double)returned.load()));
@@ -333,21 +280,11 @@ int main(int argc, char **argv)
 						 stats.p95, stats.p99, stats.p999, stats.p100);
 			}
 
-			for (int i = 0; i < 3 * 60 * 1000; ++i) {
+			for (int64_t i = 0; i < maxWaitAfterPayloadDone; ++i) {
 				if (sent == received && returned == toReturnCount) {
 					break;
 				}
 				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			}
-
-			for (int _i = 0; _i < 10; ++_i) {
-				for (auto p : validPeers) {
-					if (p->_InternalHasQueuedSends()) {
-						std::this_thread::sleep_for(
-							std::chrono::microseconds(1));
-					}
-				}
-				std::this_thread::sleep_for(std::chrono::microseconds(1));
 			}
 
 			for (auto &p : validPeers) {
@@ -364,14 +301,19 @@ int main(int argc, char **argv)
 			}
 
 			validPeers.clear();
+
+			if (sent < 8) {
+				notPassedTests++;
+			}
+			
+			totalSent += sent;
+			totalReceived += received;
+			totalReturned += returned;
+			totalToReturnCount += toReturnCount;
 		}
 
 		hosta->_InternalDestroy();
 		hostb->_InternalDestroy();
-
-		if (sent < 8) {
-			notPassedTests++;
-		}
 
 		if (totalSent != totalReceived || totalReturned != totalToReturnCount ||
 			notPassedTests) {
@@ -395,7 +337,9 @@ int main(int argc, char **argv)
 
 	if (notPassedTests) {
 		LOG_DEBUG("Failed: %i/%i tests", notPassedTests, testsCount);
-		return -1;
+		if (alwaysReturn0 == false) {
+			return 1;
+		}
 	} else {
 		LOG_DEBUG("Success");
 	}
