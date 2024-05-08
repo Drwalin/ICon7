@@ -76,12 +76,7 @@ public:
 				std::string s = argv[i];
 				auto pos = s.find('=');
 				if (pos == std::string::npos) {
-					++i;
-					if (i < argc) {
-						if (argv[i][0] != '-') {
-							args.emplace_back(s, argv[i]);
-						}
-					}
+					args.emplace_back(s, "");
 				} else {
 					std::string key = s.substr(0, pos);
 					std::string value = s.substr(pos+1);

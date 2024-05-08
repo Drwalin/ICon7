@@ -278,13 +278,38 @@ int main(int argc, char **argv)
 						 stats.mean, stats.stddev, stats.p0, stats.p1, stats.p5,
 						 stats.p10, stats.p25, stats.p50, stats.p80, stats.p90,
 						 stats.p95, stats.p99, stats.p999, stats.p100);
+				LOG_INFO("received/sent = %i/%i ; "
+						 "returned/called = %i/%i",
+						 received.load(), sent.load(), returned.load(),
+						 toReturnCount);
+				LOG_INFO("Waiting to finish message transmission");
 			}
 
-			for (int64_t i = 0; i < maxWaitAfterPayloadDone; ++i) {
+			uint32_t oldSent = sent.load(), oldReturned = returned.load();
+			auto startWaitTimepoint = std::chrono::steady_clock::now();
+			for (int64_t i = 0; i < maxWaitAfterPayloadDone*100; ++i) {
 				if (sent == received && returned == toReturnCount) {
 					break;
 				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				if (oldSent != sent.load() || oldReturned != returned.load()) {
+					const auto now = std::chrono::steady_clock::now();
+					if ((now-startWaitTimepoint) > std::chrono::seconds(10)) {
+						notPassedTests++;
+						break;
+					}
+				} else {
+					startWaitTimepoint = std::chrono::steady_clock::now();
+					oldSent = sent.load();
+					oldReturned = returned.load();
+				}
+				std::this_thread::sleep_for(std::chrono::microseconds(10));
+			}
+
+			if (printMoreStats) {
+				LOG_INFO("received/sent = %i/%i ; "
+						 "returned/called = %i/%i",
+						 received.load(), sent.load(), returned.load(),
+						 toReturnCount);
 			}
 
 			for (auto &p : validPeers) {

@@ -259,7 +259,7 @@ void Host::_InternalSingleLoopIteration()
 {
 	commandQueue.Execute(128 * 1024);
 	for (auto &p : peers) {
-		if (p->_InternalHasQueuedSends()) {
+		if (p->_InternalHasBufferedSends() || p->_InternalHasQueuedSends()) {
 			p->_InternalOnWritable();
 		}
 	}
