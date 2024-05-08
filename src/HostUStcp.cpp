@@ -88,7 +88,7 @@ bool Host::Init(bool useSSL, const char *key_file_name,
 void Host::_InternalOnTimerWakup(us_timer_t *timer)
 {
 	Host *host = *(Host **)us_timer_ext(timer);
-	host->_InternalSingleLoopIteration();
+	host->_InternalSingleLoopIteration(false);
 }
 
 template <bool _SSL> void Host::SetUSocketContextCallbacks()
@@ -166,25 +166,25 @@ void Host::_InternalListen(const std::string &address, IPProto ipProto,
 void Host::SingleLoopIteration()
 {
 	us_loop_run(loop);
-	_InternalSingleLoopIteration();
+	_InternalSingleLoopIteration(true);
 }
 
 void Host::_Internal_wakeup_cb(struct us_loop_t *loop)
 {
 	Host *host = HostFromUsLoop(loop);
-	host->_InternalSingleLoopIteration();
+	host->_InternalSingleLoopIteration(true);
 }
 
 void Host::_Internal_pre_cb(struct us_loop_t *loop)
 {
 	Host *host = HostFromUsLoop(loop);
-	host->_InternalSingleLoopIteration();
+	host->_InternalSingleLoopIteration(false);
 }
 
 void Host::_Internal_post_cb(struct us_loop_t *loop)
 {
 	Host *host = HostFromUsLoop(loop);
-	host->_InternalSingleLoopIteration();
+	host->_InternalSingleLoopIteration(false);
 }
 
 void Host::_InternalConnect(commands::internal::ExecuteConnect &com)
@@ -259,6 +259,10 @@ us_socket_t *Host::_Internal_on_data(struct us_socket_t *socket, char *data,
 {
 	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
 
+	if (peer == nullptr) {
+		return socket;
+	}
+
 	peer->_InternalOnData((uint8_t *)data, length);
 	return socket;
 }
@@ -267,6 +271,10 @@ template <bool SSL>
 us_socket_t *Host::_Internal_on_writable(struct us_socket_t *socket)
 {
 	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
+
+	if (peer == nullptr) {
+		return socket;
+	}
 
 	peer->_InternalOnWritable();
 	return socket;
@@ -277,7 +285,19 @@ us_socket_t *Host::_Internal_on_timeout(struct us_socket_t *socket)
 {
 	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
 
-	peer->_InternalOnTimeout();
+	if (peer) {
+		peer->_InternalOnTimeout();
+	}
+	
+	if (!us_socket_is_established(SSL, socket) || peer == nullptr) {
+		us_socket_shutdown(SSL, socket);
+		return us_socket_close(SSL, socket, 0, nullptr);
+	}
+	
+	if (us_socket_is_shut_down(SSL, socket)) {
+		return us_socket_close(SSL, socket, 0, nullptr);
+	}
+	
 	return socket;
 }
 
@@ -285,6 +305,10 @@ template <bool SSL>
 us_socket_t *Host::_Internal_on_long_timeout(struct us_socket_t *socket)
 {
 	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
+
+	if (peer == nullptr) {
+		return socket;
+	}
 
 	peer->_InternalOnLongTimeout();
 	return socket;
@@ -296,6 +320,11 @@ us_socket_t *Host::_Internal_on_connect_error(struct us_socket_t *socket,
 {
 	icon7::uS::tcp::Peer *peer =
 		*(icon7::uS::tcp::Peer **)us_socket_ext(SSL, socket);
+	
+	if (peer == nullptr) {
+		return socket;
+	}
+	
 	Host *host = (Host *)peer->host;
 
 	peer->_InternalClearInternalDataOnClose();
@@ -319,7 +348,8 @@ us_socket_t *Host::_Internal_on_end(struct us_socket_t *socket)
 	std::shared_ptr<icon7::Peer> _peer = peer->shared_from_this();
 	host->_Internal_on_close_Finish(_peer);
 
-	return socket;
+	us_socket_shutdown(SSL, socket);
+	return us_socket_close(SSL, socket, 0, nullptr);
 }
 
 void Host::WakeUp() { us_wakeup_loop(loop); }
