@@ -69,11 +69,15 @@ public:
 public: // thread unsafe, safe only in hosts loop thread
 	void _InternalOnData(uint8_t *data, uint32_t length);
 	void _InternalOnDisconnect();
-	void _InternalOnWritable();
+	bool _InternalOnWritable();
 	void _InternalOnTimeout();
 	void _InternalOnLongTimeout();
 
 	virtual bool _InternalHasQueuedSends() const;
+	virtual bool _InternalHasBufferedSends() const = 0;
+	
+	// returns false for cork/error
+	virtual bool _InternalFlushBufferedSends(bool hasMore) = 0;
 
 public:
 	uint64_t userData;
@@ -88,7 +92,8 @@ public:
 	inline uint32_t GetPeerStateFlags() const { return peerFlags.load(); }
 
 protected:
-	virtual void _InternalFlushQueuedSends();
+	// returns false for cork/error
+	virtual bool _InternalFlushQueuedSends();
 	void DequeueToLocalQueue();
 	/*
 	 * return true if successfully whole dataFrame has been sent.

@@ -131,6 +131,13 @@ public:
 			storage->size = 0;
 		}
 	}
+	
+	inline void clear()
+	{
+		if (storage) {
+			storage->size = 0;
+		}
+	}
 
 	inline void append(const uint8_t *src, uint32_t bytes)
 	{

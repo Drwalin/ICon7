@@ -52,7 +52,7 @@ protected:
 	 */
 	virtual bool _InternalSend(SendFrameStruct &dataFrame,
 							   bool hasMore) override;
-	virtual void _InternalFlushQueuedSends() override;
+	virtual bool _InternalFlushQueuedSends() override;
 	virtual void _InternalDisconnect() override;
 
 	virtual void _InternalClearInternalDataOnClose() override;

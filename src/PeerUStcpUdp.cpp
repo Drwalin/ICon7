@@ -68,9 +68,10 @@ bool Peer::_InternalSend(SendFrameStruct &dataFrame, bool hasMore)
 	}
 }
 
-void Peer::_InternalFlushQueuedSends()
+bool Peer::_InternalFlushQueuedSends()
 {
 	LOG_FATAL("Not implemented yet.");
+	return false;
 	/*
 	Host *host = (Host *)(this->host);
 	icon7::uS::tcp::Peer::_InternalFlushQueuedSends();

@@ -171,12 +171,19 @@ void Peer::_InternalOnPacketWithControllSequenceBackend(ByteBuffer &buffer,
 			 vectorCall);
 }
 
-void Peer::_InternalOnWritable()
+bool Peer::_InternalOnWritable()
 {
-	if (IsClosed()) {
-		return;
+	if (!IsReadyToUse() || IsDisconnecting() || IsClosed()) {
+		return false;
 	}
-	_InternalFlushQueuedSends();
+	bool ret = true;
+	if (_InternalHasQueuedSends()) {
+		ret = _InternalFlushQueuedSends();
+	}
+	if (_InternalHasBufferedSends()) {
+		ret &= _InternalFlushBufferedSends(false);
+	}
+	return ret;
 }
 
 void Peer::_InternalOnDisconnect()
@@ -214,15 +221,17 @@ void Peer::DequeueToLocalQueue()
 	localQueueOffset = 0;
 }
 
-void Peer::_InternalFlushQueuedSends()
+bool Peer::_InternalFlushQueuedSends()
 {
+	bool ret = true;
 	const uint32_t queuedFrames = sendingQueueSize.load();
 	uint32_t sentFrames = 0;
-	for (uint32_t i = 0; i < 16; ++i) {
+	for (uint32_t i = 0; i < 300; ++i) {
 		if (localQueue.size() == localQueueOffset) {
 			DequeueToLocalQueue();
 		}
 		if (localQueue.size() == localQueueOffset) {
+			ret = true;
 			break;
 		}
 		const bool hasAnyMore = queuedFrames - sentFrames > 1;
@@ -232,10 +241,12 @@ void Peer::_InternalFlushQueuedSends()
 			localQueue[localQueueOffset].data.storage = nullptr;
 			localQueueOffset++;
 		} else {
+			ret = false;
 			break;
 		}
 	}
 	sendingQueueSize -= sentFrames;
+	return ret;
 }
 
 void Peer::_InternalClearInternalDataOnClose() { peerFlags |= BIT_CLOSED; }

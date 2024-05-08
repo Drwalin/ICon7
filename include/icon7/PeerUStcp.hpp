@@ -45,12 +45,19 @@ protected:
 	virtual void _InternalDisconnect() override;
 
 	virtual void _InternalClearInternalDataOnClose() override;
+	
+	virtual bool _InternalHasBufferedSends() const override;
+	
+	virtual bool _InternalFlushBufferedSends(bool hasMore) override;
 
 	friend class Host;
 
 protected:
 	us_socket_t *socket;
 	int SSL;
+	
+	ByteBuffer writeBuffer;
+	uint32_t writeBufferOffset = 0;
 };
 } // namespace tcp
 } // namespace uS
