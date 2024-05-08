@@ -78,10 +78,10 @@ void Host::_InternalListen(const std::string &address, IPProto ipProto,
 	}
 }
 
-void Host::_InternalSingleLoopIteration()
+void Host::_InternalSingleLoopIteration(bool forceExecution)
 {
 	_InternalPerformSend();
-	icon7::uS::tcp::Host::_InternalSingleLoopIteration();
+	icon7::uS::tcp::Host::_InternalSingleLoopIteration(forceExecution);
 	_InternalPerformSend();
 }
 

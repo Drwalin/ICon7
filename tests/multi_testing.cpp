@@ -178,8 +178,8 @@ int main(int argc, char **argv)
 				validPeers.emplace_back(f.get());
 			}
 
-			LOG_INFO("Connected peers: %lu / %lu", validPeers.size(),
-					 peers.size());
+			LOG_INFO("Hosts pair %i | failed %i | connected peers: %lu / %lu",
+					 pq, notPassedTests, validPeers.size(), peers.size());
 
 			peers.clear();
 
@@ -314,15 +314,6 @@ int main(int argc, char **argv)
 
 			for (auto &p : validPeers) {
 				p->Disconnect();
-			}
-			hosta->DisconnectAllAsync();
-			hostb->DisconnectAllAsync();
-			hostb->WakeUp();
-
-			for (auto &p : validPeers) {
-				if (p->IsDisconnecting() == false || p->IsClosed() == false) {
-					std::this_thread::sleep_for(std::chrono::microseconds(1));
-				}
 			}
 
 			validPeers.clear();

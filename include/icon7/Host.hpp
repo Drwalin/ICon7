@@ -19,6 +19,7 @@
 #ifndef ICON7_HOST_HPP
 #define ICON7_HOST_HPP
 
+#include <chrono>
 #include <string>
 #include <unordered_set>
 #include <functional>
@@ -90,7 +91,7 @@ public: // thread unsafe, safe only in hosts loop thread
 	void DisconnectAll();
 
 	virtual void SingleLoopIteration() = 0;
-	virtual void _InternalSingleLoopIteration();
+	virtual void _InternalSingleLoopIteration(bool forceExecution);
 
 	void _InternalInsertPeerToFlush(Peer *peer);
 	virtual void
@@ -126,6 +127,10 @@ protected:
 
 protected:
 	std::vector<std::shared_ptr<Peer>> toRemoveFromQueue;
+	std::chrono::steady_clock::time_point timePointToExecuteLoop;
+	
+public:
+	decltype(std::chrono::microseconds()) minimumSingleLoopExecutionPeriod;
 };
 
 void Initialize();

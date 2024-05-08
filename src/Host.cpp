@@ -36,6 +36,8 @@ Host::Host()
 	onDisconnect = nullptr;
 	asyncRunnerFlags = 0;
 	rpcEnvironment = nullptr;
+	timePointToExecuteLoop = std::chrono::steady_clock::now();
+	minimumSingleLoopExecutionPeriod = std::chrono::microseconds(700);
 }
 
 Host::~Host()
@@ -255,8 +257,12 @@ bool Host::IsQueuedStopAsync() { return asyncRunnerFlags & QUEUE_STOP; }
 
 bool Host::IsRunningAsync() { return asyncRunnerFlags & RUNNING; }
 
-void Host::_InternalSingleLoopIteration()
+void Host::_InternalSingleLoopIteration(bool forceExecution)
 {
+	if (forceExecution==false && timePointToExecuteLoop > std::chrono::steady_clock::now()) {
+		return;
+	}
+	timePointToExecuteLoop = std::chrono::steady_clock::now() + minimumSingleLoopExecutionPeriod;
 	commandQueue.Execute(128 * 1024);
 	for (auto &p : peers) {
 		if (p->_InternalHasBufferedSends() || p->_InternalHasQueuedSends()) {

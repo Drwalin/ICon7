@@ -53,7 +53,7 @@ public:
 		const std::string &address, IPProto ipProto, uint16_t port,
 		CommandHandle<commands::ExecuteBooleanOnHost> &com) override;
 
-	virtual void _InternalSingleLoopIteration() override;
+	virtual void _InternalSingleLoopIteration(bool forceExecution) override;
 
 	virtual void StopListening() override;
 
