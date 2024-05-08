@@ -22,6 +22,7 @@
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/Peer.hpp"
 #include "../include/icon7/RPCEnvironment.hpp"
+#include "../include/icon7/Debug.hpp"
 
 #include "../include/icon7/Host.hpp"
 
@@ -89,7 +90,8 @@ void Host::DisconnectAllAsync()
 
 void Host::DisconnectAll()
 {
-	for (auto &p : peers) {
+	std::vector<std::shared_ptr<Peer>> copy(peers.begin(), peers.end());
+	for (auto &p : copy) {
 		p->_InternalDisconnect();
 	}
 }
@@ -151,7 +153,6 @@ void Host::_Internal_on_close_Finish(std::shared_ptr<Peer> peer)
 	peer->_InternalOnDisconnect();
 	peer->_InternalClearInternalDataOnClose();
 	peers.erase(peer);
-	peersToFlush.erase(peer);
 }
 
 concurrent::future<bool> Host::ListenOnPort(const std::string &address,
@@ -257,7 +258,7 @@ bool Host::IsRunningAsync() { return asyncRunnerFlags & RUNNING; }
 void Host::_InternalSingleLoopIteration()
 {
 	commandQueue.Execute(128 * 1024);
-	for (auto p : peers) {
+	for (auto &p : peers) {
 		if (p->_InternalHasQueuedSends()) {
 			p->_InternalOnWritable();
 		}
