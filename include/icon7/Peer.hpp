@@ -124,11 +124,12 @@ protected:
 								ConcurrentQueueDefaultTraits>
 		queue;
 	moodycamel::ConsumerToken consumerToken;
-	std::vector<SendFrameStruct> localQueue;
 	std::atomic<uint32_t> sendingQueueSize;
 	std::atomic<uint32_t> peerFlags;
 
 	void (*onDisconnect)(Peer *);
+
+	std::vector<SendFrameStruct> localQueue;
 
 	FrameDecoder frameDecoder;
 	uint32_t localQueueOffset;

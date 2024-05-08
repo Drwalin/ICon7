@@ -42,8 +42,10 @@ Peer::Peer(Host *host) : host(host), queue(), consumerToken(queue)
 Peer::~Peer()
 {
 	for (int i = localQueueOffset; i < localQueue.size(); ++i) {
-		localQueue[localQueueOffset].data.storage->unref();
-		localQueue[localQueueOffset].data.storage = nullptr;
+		if (localQueue[localQueueOffset].data.storage) {
+			localQueue[localQueueOffset].data.storage->unref();
+			localQueue[localQueueOffset].data.storage = nullptr;
+		}
 	}
 	localQueueOffset = 0;
 	ByteBufferStorageHeader *ar[MAX_LOCAL_QUEUE_SIZE];
@@ -186,7 +188,7 @@ void Peer::_InternalOnDisconnect()
 	}
 }
 
-void Peer::_InternalOnTimeout() {}
+void Peer::_InternalOnTimeout() { _InternalDisconnect(); }
 
 void Peer::_InternalOnLongTimeout() { _InternalDisconnect(); }
 
@@ -204,8 +206,8 @@ void Peer::DequeueToLocalQueue()
 	uint32_t dequeued =
 		queue.try_dequeue_bulk(consumerToken, ar, MAX_LOCAL_QUEUE_SIZE);
 	localQueue.resize(dequeued);
+	ByteBuffer buffer;
 	for (int i = 0; i < dequeued; ++i) {
-		ByteBuffer buffer;
 		buffer.storage = ar[i];
 		localQueue[i] = std::move(buffer);
 	}
@@ -217,7 +219,9 @@ void Peer::_InternalFlushQueuedSends()
 	const uint32_t queuedFrames = sendingQueueSize.load();
 	uint32_t sentFrames = 0;
 	for (uint32_t i = 0; i < 16; ++i) {
-		DequeueToLocalQueue();
+		if (localQueue.size() == localQueueOffset) {
+			DequeueToLocalQueue();
+		}
 		if (localQueue.size() == localQueueOffset) {
 			break;
 		}
@@ -234,9 +238,6 @@ void Peer::_InternalFlushQueuedSends()
 	sendingQueueSize -= sentFrames;
 }
 
-void Peer::_InternalClearInternalDataOnClose()
-{
-	this->peerFlags |= BIT_CLOSED;
-}
+void Peer::_InternalClearInternalDataOnClose() { peerFlags |= BIT_CLOSED; }
 
 } // namespace icon7

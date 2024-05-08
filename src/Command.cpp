@@ -67,13 +67,7 @@ void ExecuteListen::Execute()
 	}
 }
 
-void ExecuteDisconnect::Execute()
-{
-	if (peer->IsClosed() == false) {
-		peer->_InternalDisconnect();
-	} else {
-	}
-}
+void ExecuteDisconnect::Execute() { peer->_InternalDisconnect(); }
 
 } // namespace internal
 } // namespace commands

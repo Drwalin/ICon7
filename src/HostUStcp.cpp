@@ -236,7 +236,15 @@ template <bool SSL>
 us_socket_t *Host::_Internal_on_close(struct us_socket_t *socket, int code,
 									  void *reason)
 {
+	// closed locally
 	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
+
+	if (peer == nullptr) {
+		return socket;
+	}
+
+	// at the following line, sometimes error happens due to invalid peer
+	// pointer
 	Host *host = (Host *)peer->host;
 
 	std::shared_ptr<icon7::Peer> _peer = peer->shared_from_this();
@@ -299,6 +307,18 @@ us_socket_t *Host::_Internal_on_connect_error(struct us_socket_t *socket,
 template <bool SSL>
 us_socket_t *Host::_Internal_on_end(struct us_socket_t *socket)
 {
+	// closed by the other side
+	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
+
+	if (peer == nullptr) {
+		return socket;
+	}
+
+	Host *host = (Host *)peer->host;
+
+	std::shared_ptr<icon7::Peer> _peer = peer->shared_from_this();
+	host->_Internal_on_close_Finish(_peer);
+
 	return socket;
 }
 

@@ -69,8 +69,8 @@ void Peer::_InternalDisconnect()
 void Peer::_InternalClearInternalDataOnClose()
 {
 	icon7::Peer::_InternalClearInternalDataOnClose();
+	*(icon7::Peer **)us_socket_ext(SSL, socket) = nullptr;
 	socket = nullptr;
-	peerFlags |= BIT_CLOSED;
 	SSL = 0;
 }
 
