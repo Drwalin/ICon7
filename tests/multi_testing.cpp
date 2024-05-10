@@ -14,7 +14,7 @@
 
 #include "utility.hpp"
 
-std::atomic<int> sent = 0, received = 0, returned = 0;
+std::atomic<int64_t> sent = 0, received = 0, returned = 0;
 
 int Sum(int a, int b)
 {
@@ -52,14 +52,14 @@ int main(int argc, char **argv)
 	
 	const bool alwaysReturn0 = args.GetFlag({"-return-zero"});
 
-	int toReturnCount = 0;
-	int totalToReturnCount = 0;
+	int64_t toReturnCount = 0;
+	int64_t totalToReturnCount = 0;
 
 	std::vector<double> arrayOfLatency;
 	arrayOfLatency.reserve(totalSends * connectionsCount);
 
 	for (int i = 0; i < testsCount; ++i) {
-		uint32_t totalReceived = 0, totalSent = 0, totalReturned = 0;
+		uint64_t totalReceived = 0, totalSent = 0, totalReturned = 0;
 		LOG_INFO("Iteration: %i started", i);
 		port++;
 		if (port <= 1024) {
@@ -219,13 +219,12 @@ int main(int argc, char **argv)
 					}
 					commandsBuffer->FlushBuffer();
 
-					icon7::ByteBuffer buffer(100);
-					rpc2.SerializeSend(buffer, icon7::FLAG_RELIABLE, "sum", 3,
-									   23);
-					sendFrameSize = buffer.size();
-
 					for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
 						if (l % serializeSendsModulo < serializeSendsFract) {
+							icon7::ByteBuffer buffer(100);
+							rpc2.SerializeSend(buffer, icon7::FLAG_RELIABLE,
+											   "sum", 3, 23);
+							sendFrameSize = buffer.size();
 							for (auto p : validPeers) {
 								auto peer = p.get();
 								peer->Send(buffer);
@@ -278,8 +277,8 @@ int main(int argc, char **argv)
 						 stats.mean, stats.stddev, stats.p0, stats.p1, stats.p5,
 						 stats.p10, stats.p25, stats.p50, stats.p80, stats.p90,
 						 stats.p95, stats.p99, stats.p999, stats.p100);
-				LOG_INFO("received/sent = %i/%i ; "
-						 "returned/called = %i/%i",
+				LOG_INFO("received/sent = %li/%li ; "
+						 "returned/called = %li/%li",
 						 received.load(), sent.load(), returned.load(),
 						 toReturnCount);
 				LOG_INFO("Waiting to finish message transmission");
@@ -306,8 +305,8 @@ int main(int argc, char **argv)
 			}
 
 			if (printMoreStats) {
-				LOG_INFO("received/sent = %i/%i ; "
-						 "returned/called = %i/%i",
+				LOG_INFO("received/sent = %li/%li ; "
+						 "returned/called = %li/%li",
 						 received.load(), sent.load(), returned.load(),
 						 toReturnCount);
 			}
@@ -333,14 +332,14 @@ int main(int argc, char **argv)
 
 		if (totalSent != totalReceived || totalReturned != totalToReturnCount ||
 			notPassedTests) {
-			LOG_INFO("Iteration: %i FAILED: received/sent = %i/%i ; "
-					 "returned/called = %i/%i",
+			LOG_INFO("Iteration: %i FAILED: received/sent = %li/%li ; "
+					 "returned/called = %li/%li",
 					 i, totalReceived, totalSent, totalReturned,
 					 totalToReturnCount);
 			notPassedTests++;
 		} else {
-			LOG_INFO("Iteration: %i finished: received/sent = %i/%i ; "
-					 "returned/called = %i/%i",
+			LOG_INFO("Iteration: %i finished: received/sent = %li/%li ; "
+					 "returned/called = %li/%li",
 					 i, totalReceived, totalSent, totalReturned,
 					 totalToReturnCount);
 		}
