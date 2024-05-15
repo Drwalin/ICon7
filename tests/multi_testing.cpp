@@ -35,11 +35,11 @@ int main(int argc, char **argv)
 	icon7::Initialize();
 
 	int notPassedTests = 0;
-	const int testsCount = args.GetInt({"-tests", "-t"}, 1, 1, 10000);
-	const int testsPerHostsPairCount = args.GetInt({"-pairs-per-test", "-p"}, 7, 1, 10000);
-	const int sendsMoreThanCalls = args.GetInt({"-sends-per-send", "-ss"}, 117, 2, 100000);
-	const int totalSends = args.GetInt({"-sends", "-s"}, 371, 1, 1000000);
-	const int connectionsCount = args.GetInt({"-connections", "-con"}, 171, 1, 100000);
+	const int testsCount = args.GetInt({"-tests", "-t"}, 1, 1, 1000000000);
+	const int testsPerHostsPairCount = args.GetInt({"-pairs-per-test", "-p"}, 7, 1, 1000000000);
+	const int sendsMoreThanCalls = args.GetInt({"-sends-per-send", "-ss"}, 117, 2, 1000000000);
+	const int totalSends = args.GetInt({"-sends", "-s"}, 371, 1, 1000000000);
+	const int connectionsCount = args.GetInt({"-connections", "-con"}, 171, 1, 1000000);
 	int delayBetweeEachTotalSendMilliseconds = args.GetInt({"-delay", "-d"}, 50, 0, 10000);
 	const int64_t maxWaitAfterPayloadDone =  args.GetInt({"-max-wait-after-payload"}, 3*60*1000, 0, 1000ll*3600ll*24ll*365ll);
 	
@@ -262,6 +262,7 @@ int main(int argc, char **argv)
 					 sumTim * 1000.0 / ((double)returned.load()));
 
 			if (printMoreStats) {
+				icon7::MemoryPool::PrintStats();
 				DataStats stats =
 					CalcDataStats(arrayOfLatency.data(), returned.load());
 				{
@@ -284,21 +285,20 @@ int main(int argc, char **argv)
 				LOG_INFO("Waiting to finish message transmission");
 			}
 
-			uint32_t oldSent = sent.load(), oldReturned = returned.load();
+			uint32_t oldReceived = received.load(), oldReturned = returned.load();
 			auto startWaitTimepoint = std::chrono::steady_clock::now();
 			for (int64_t i = 0; i < maxWaitAfterPayloadDone*100; ++i) {
-				if (sent == received && returned == toReturnCount) {
+				if (received >= sent && returned >= toReturnCount) {
 					break;
 				}
-				if (oldSent != sent.load() || oldReturned != returned.load()) {
+				if (oldReceived != received.load() || oldReturned != returned.load()) {
 					const auto now = std::chrono::steady_clock::now();
 					if ((now-startWaitTimepoint) > std::chrono::seconds(10)) {
 						notPassedTests++;
 						break;
 					}
-				} else {
-					startWaitTimepoint = std::chrono::steady_clock::now();
-					oldSent = sent.load();
+					startWaitTimepoint = now;
+					oldReceived = received.load();
 					oldReturned = returned.load();
 				}
 				std::this_thread::sleep_for(std::chrono::microseconds(10));
@@ -309,6 +309,7 @@ int main(int argc, char **argv)
 						 "returned/called = %li/%li",
 						 received.load(), sent.load(), returned.load(),
 						 toReturnCount);
+				icon7::MemoryPool::PrintStats();
 			}
 
 			for (auto &p : validPeers) {

@@ -41,20 +41,14 @@ int main()
 	hosta->RunAsync();
 
 	{
-		class CommandPrintStatus final
-			: public icon7::commands::ExecuteBooleanOnHost
-		{
-		public:
-			CommandPrintStatus() {}
-			virtual ~CommandPrintStatus() {}
-			virtual void Execute() override
-			{
-				printf(" %s\n", result ? "Listening" : "Fail to listen");
-			}
-		};
-		auto com = icon7::CommandHandle<CommandPrintStatus>::Create();
-		hosta->ListenOnPort("127.0.0.1", port, icon7::IPv4, std::move(com),
-							nullptr);
+		auto f = hosta->ListenOnPort("127.0.0.1", port, icon7::IPv4);
+		f.wait_for(std::chrono::milliseconds(150));
+		if (f.finished()) {
+			printf("Listening\n");
+		} else {
+			printf("Fail to listen\n");
+			return 0;
+		}
 	}
 
 	icon7::uS::tcp::Host *hostb = new icon7::uS::tcp::Host();

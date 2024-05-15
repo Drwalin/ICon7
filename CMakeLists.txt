@@ -14,6 +14,8 @@ endif()
 
 option(ICON7_BUILD_EXAMPLES "Build icon7 examples" ON)
 option(ICON7_BUILD_TEST "Build icon7 tests" ON)
+option(ICON7_USE_RPMALLOC "Use rpmalloc. Otherwise use object pool" OFF)
+option(ICON7_MEMORY_COLLECT_STATS "Enable memory statistics collection" OFF)
 
 add_subdirectory(bitscpp)
 
@@ -48,6 +50,19 @@ add_library(icon7 STATIC
 )
 target_link_libraries(icon7 uSockets)
 
+if (ICON7_USE_RPMALLOC)
+	target_link_libraries(icon7 rpmalloc)
+	add_library(rpmalloc STATIC
+		rpmalloc/rpmalloc/rpmalloc.c
+	)
+	target_compile_definitions(rpmalloc PUBLIC ENABLE_OVERRIDE=0)
+	include_directories(rpmalloc/rpmalloc/)
+	
+	target_compile_definitions(icon7 PUBLIC ICON7_USE_RPMALLOC=1)
+else()
+	target_compile_definitions(icon7 PUBLIC ICON7_USE_THREAD_CACHED_POOL=0)
+endif()
+
 if (NOT DEFINED ICON7_IGNORE_COMMON_LOG_PATH)
 target_compile_definitions(icon7 PUBLIC ICON7_LOG_IGNORE_COMMON_PATH="${PROJECT_SOURCE_DIR}")
 endif()
@@ -57,6 +72,10 @@ if(NOT DEFINED ICON7_LOG_DEFAULT_LOG_LEVEL)
 	else()
 		target_compile_definitions(icon7 PUBLIC ICON7_LOG_DEFAULT_LOG_LEVEL=IGNORE)
 	endif()
+endif()
+
+if(ICON7_MEMORY_COLLECT_STATS)
+	target_compile_definitions(icon7 PUBLIC ICON7_MEMORY_COLLECT_STATS=1)
 endif()
 
 if(ICON7_BUILD_TEST)

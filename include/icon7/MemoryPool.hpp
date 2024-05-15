@@ -25,19 +25,29 @@
 
 namespace icon7
 {
+template<typename T>
+struct AllocatedObject
+{
+	T *object;
+	uint32_t capacity;
+};
 class MemoryPool
 {
 public:
 	MemoryPool(){};
 	~MemoryPool(){};
 
-	static void *Allocate(uint32_t bytes);
-	static void Release(void *ptr, uint32_t bytes);
+	__attribute__((noinline)) static AllocatedObject<void> Allocate(uint32_t bytes);
+	__attribute__((noinline)) static void Release(void *ptr, uint32_t bytes);
 
 	template <typename T, typename... Args>
 	static T *AllocateTyped(Args &&...args)
 	{
-		return new (Allocate(sizeof(T))) T(std::move(args)...);
+		AllocatedObject<void> v = Allocate(sizeof(T));
+		AllocatedObject<T> ret;
+		ret.capacity = v.capacity;
+		ret.object = new (v.object) T(std::move(args)...);
+		return ret.object;
 	}
 
 	template <typename T> static void ReleaseTyped(T *ptr, uint32_t bytes)
@@ -45,6 +55,16 @@ public:
 		ptr->~T();
 		Release(ptr, bytes);
 	}
+	
+	static void PrintStats();
+	
+#if ICON7_USE_RPMALLOC
+#else
+private:
+	static uint32_t RoundSize(uint32_t bytes);
+	static uint32_t GetBits(uint32_t bytes);
+	static uint32_t GetPoolId(uint32_t *bytes);
+#endif
 };
 } // namespace icon7
 
