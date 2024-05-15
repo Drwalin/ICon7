@@ -37,9 +37,8 @@ CommandsBuffer::CommandsBuffer(uint32_t size)
 	if ((size & 0x3F) != 0) {
 		LOG_FATAL("CommandsBuffer needs to have size of multiple of 64");
 	}
-	// TODO: use pool allocator
 	totalBytes = size;
-	commandsBufferData = (uint8_t *)MemoryPool::Allocate(totalBytes);
+	commandsBufferData =(uint8_t *)MemoryPool::Allocate(totalBytes).object;
 	countCommands = 0;
 	commandsExecuted = 0;
 	offsetOfFree = 0;

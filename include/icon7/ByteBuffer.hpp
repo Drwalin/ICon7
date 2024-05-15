@@ -28,6 +28,8 @@ namespace icon7
 {
 struct ByteBufferStorageHeader {
 	std::atomic<uint32_t> refCounter;
+	uint8_t __padding[64-4];
+	
 	uint32_t size;
 	uint32_t offset;
 	uint32_t capacity;
@@ -113,8 +115,12 @@ public:
 	{
 		if (storage) {
 			if (storage->refCounter.load() == 1) {
-				ResetCurrentStorageCapacitySizeOffset();
-				return;
+				if (storage->capacity >= initialCapacity) {
+					ResetCurrentStorageCapacitySizeOffset();
+					return;
+				} else {
+					storage->unref();
+				}
 			} else {
 				storage->unref();
 			}
