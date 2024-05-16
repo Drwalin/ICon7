@@ -16,7 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <mutex>
 #if !defined(ICON7_USE_RPMALLOC) and !defined(ICON7_USE_THREAD_CACHED_POOL)
 // Current default configuration
 # define ICON7_USE_THREAD_CACHED_POOL 0
@@ -39,17 +38,39 @@
 # include "../rpmalloc/rpmalloc/rpmalloc.h"
 #else
 # include <bit>
-#include <chrono>
 
 # include "../concurrentqueue/concurrentqueue.h"
 
 # include "../include/icon7/ConcurrentQueueTraits.hpp"
 #endif
 
+#if ICON7_MEMORY_COLLECT_STATS
+#include <cstdio>
+
+# include <atomic>
+#endif
+
+#if ICON7_USE_MALLOC_TRIM
+#include <malloc.h>
+#endif
+
 #include "../include/icon7/MemoryPool.hpp"
 
 namespace icon7
 {
+#if ICON7_USE_MALLOC_TRIM
+# define ICON7_MALLOC_TRIM() MallocTrim()
+static void MallocTrim()
+{
+	static uint32_t i = 0;
+	if (((++i) & 1023) == 63) {
+		malloc_trim(0);
+	}
+}
+#else
+# define ICON7_MALLOC_TRIM()
+#endif
+
 #if ICON7_MEMORY_COLLECT_STATS
 alignas(64) std::atomic<uint64_t> acquiredObjects = 0;
 alignas(64) std::atomic<uint64_t> releasedObjects = 0;
@@ -119,6 +140,7 @@ struct PoolDestrctor {
 				}
 			}
 		}
+		ICON7_MALLOC_TRIM();
 	}
 } _staticPoolsDestruction;
 
@@ -241,7 +263,6 @@ static SizedPool sizedQueues[NUMBER_OF_POOLS] = {
 struct PoolDestrctor {
 	~PoolDestrctor()
 	{
-		auto a = std::chrono::steady_clock::now();
 		for (int _i = 0; _i < 3; ++_i) {
 			for (int i = 0; i < NUMBER_OF_POOLS; ++i) {
 				while (true) {
@@ -258,32 +279,14 @@ struct PoolDestrctor {
 				}
 			}
 		}
-		auto b = std::chrono::steady_clock::now();
-		double diff = std::chrono::duration<double>(b-a).count();
-		printf("\n freeing took: %f ms\n\n", diff*1000.0);
+		ICON7_MALLOC_TRIM();
 	}
 } _staticPoolsDestruction;
 # endif
 #endif
 
-std::mutex mutex;
-
 AllocatedObject<void> MemoryPool::Allocate(uint32_t bytes)
 {
-# if ICON7_MEMORY_COLLECT_STATS
-	acquiredObjects++;
-	allocatedObjects++;
-	acquiredMemory += bytes;
-	allocatedMemory += bytes;
-# endif
-	std::lock_guard lock(mutex);
-	return {malloc(bytes), bytes};
-	
-	
-	
-	
-	
-	
 #if ICON7_USE_RPMALLOC
 # if ICON7_MEMORY_COLLECT_STATS
 	acquiredObjects++;
@@ -291,7 +294,25 @@ AllocatedObject<void> MemoryPool::Allocate(uint32_t bytes)
 	acquiredMemory += bytes;
 	allocatedMemory += bytes;
 # endif
-	return {rpmalloc(bytes), bytes};
+	static int ____staticInitilizeRpmalloc = (rpmalloc_initialize(), 0);
+	class __RpMallocThreadLocalDestructor final
+	{
+		public:
+			__RpMallocThreadLocalDestructor()
+			{
+				rpmalloc_thread_initialize();
+			}
+			~__RpMallocThreadLocalDestructor()
+			{
+				rpmalloc_thread_finalize(1);
+			}
+	};
+	thread_local __RpMallocThreadLocalDestructor ____staticThreadLocalDestructorRpmalloc;
+	if (bytes >= 256) {
+		return {rpaligned_alloc(64, bytes), bytes};
+	} else {
+		return {rpmalloc(bytes), bytes};
+	}
 #else
 	if (bytes > BIGGEST_OBJECT_SIZE) {
 # if ICON7_MEMORY_COLLECT_STATS
@@ -329,21 +350,6 @@ AllocatedObject<void> MemoryPool::Allocate(uint32_t bytes)
 
 void MemoryPool::Release(void *ptr, uint32_t bytes)
 {
-# if ICON7_MEMORY_COLLECT_STATS
-	releasedObjects++;
-	freedObjects++;
-	releasedMemory += bytes;
-	freedMemory += bytes;
-# endif
-	std::lock_guard lock(mutex);
-	free(ptr);
-	return;
-	
-	
-	
-	
-	
-	
 #if ICON7_USE_RPMALLOC
 # if ICON7_MEMORY_COLLECT_STATS
 	releasedObjects++;
@@ -362,38 +368,42 @@ void MemoryPool::Release(void *ptr, uint32_t bytes)
 		freedMemory += bytes;
 # endif
 		free(ptr);
+		ICON7_MALLOC_TRIM();
 		return;
 	}
 
 	uint32_t poolId = GetPoolId(&bytes);
 	
-#if ICON7_MEMORY_COLLECT_STATS
+# if ICON7_MEMORY_COLLECT_STATS
 	releasedObjects++;
 	releasedMemory += bytes;
-#endif
+# endif
 	
 # if ICON7_USE_THREAD_CACHED_POOL
 		PoolsTLS &tls = objectPoolTLS;
 		tls.pools[poolId].ReleaseObject(ptr);
 # else
 		if (sizedQueues[poolId].size_approx() > (MAX_OBJECTS_STORED_MEMORY/objectSizes[poolId])) {
-#if ICON7_MEMORY_COLLECT_STATS
+#  if ICON7_MEMORY_COLLECT_STATS
 			freedObjects++;
 			freedMemory += bytes;
-#endif
+#  endif
 			free(ptr);
+			ICON7_MALLOC_TRIM();
 			return;
 		} else if (sizedQueues[poolId].enqueue(ptr) == false) {
-#if ICON7_MEMORY_COLLECT_STATS
+#  if ICON7_MEMORY_COLLECT_STATS
 			freedObjects++;
 			freedMemory += bytes;
-#endif
+#  endif
 			free(ptr);
+			ICON7_MALLOC_TRIM();
 			return;
 		}
 // 		if (sizedQueues[poolId].enqueue(ptr) == false) {
 // 			printf("f");
 // 			free(ptr);
+// 			ICON7_MALLOC_TRIM();
 // 			return;
 // 		}
 # endif
