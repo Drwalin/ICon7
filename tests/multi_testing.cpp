@@ -119,7 +119,7 @@ int main(int argc, char **argv)
 				v = 0.0;
 			}
 			if (printMoreStats) {
-				printf("\n");
+				printf("\n\n");
 			}
 
 			std::vector<concurrent::future<std::shared_ptr<icon7::Peer>>> peers;

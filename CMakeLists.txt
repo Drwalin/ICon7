@@ -14,8 +14,9 @@ endif()
 
 option(ICON7_BUILD_EXAMPLES "Build icon7 examples" ON)
 option(ICON7_BUILD_TEST "Build icon7 tests" ON)
-option(ICON7_USE_RPMALLOC "Use rpmalloc. Otherwise use object pool" OFF)
+option(ICON7_USE_RPMALLOC "Use rpmalloc. Otherwise use object pool" ON)
 option(ICON7_MEMORY_COLLECT_STATS "Enable memory statistics collection" OFF)
+option(ICON7_USE_MALLOC_TRIM "Enable malloc trimming with each call to free()" OFF)
 
 add_subdirectory(bitscpp)
 
@@ -76,6 +77,10 @@ endif()
 
 if(ICON7_MEMORY_COLLECT_STATS)
 	target_compile_definitions(icon7 PUBLIC ICON7_MEMORY_COLLECT_STATS=1)
+endif()
+
+if(ICON7_USE_MALLOC_TRIM)
+	target_compile_definitions(icon7 PUBLIC ICON7_USE_MALLOC_TRIM=1)
 endif()
 
 if(ICON7_BUILD_TEST)
