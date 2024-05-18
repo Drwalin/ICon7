@@ -144,6 +144,8 @@ public:
 			storage->size = 0;
 		}
 	}
+	
+	inline bool valid() const { return storage != nullptr; }
 
 	inline void append(const uint8_t *src, uint32_t bytes)
 	{
