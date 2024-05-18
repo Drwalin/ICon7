@@ -45,14 +45,14 @@
 #endif
 
 #if ICON7_MEMORY_COLLECT_STATS
-#include <cstdio>
-
 # include <atomic>
 #endif
 
 #if ICON7_USE_MALLOC_TRIM
 #include <malloc.h>
 #endif
+
+#include <cstdio>
 
 #include "../include/icon7/MemoryPool.hpp"
 

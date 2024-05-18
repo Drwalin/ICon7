@@ -50,6 +50,8 @@ public:
 		: bitscpp::ByteWriter<ByteBuffer>(&_data), _data(std::move(o._data))
 	{
 	}
+	
+	inline ByteBuffer &Buffer() { return _data; }
 
 	ByteWriter(uint32_t initialCapacity) : _data(initialCapacity + 8)
 	{

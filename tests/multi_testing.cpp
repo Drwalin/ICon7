@@ -193,6 +193,10 @@ int main(int argc, char **argv)
 					hostb->GetCommandExecutionQueue()->GetThreadLocalBuffer();
 
 				for (int k = 0; k < totalSends; ++k) {
+					if (k > 0) {
+					std::this_thread::sleep_for(std::chrono::microseconds(
+						delayBetweeEachTotalSendMilliseconds*500ll));
+					}
 					for (auto p : validPeers) {
 						auto peer = p.get();
 						auto curTim = std::chrono::steady_clock::now();
@@ -218,6 +222,8 @@ int main(int argc, char **argv)
 						sent++;
 					}
 					commandsBuffer->FlushBuffer();
+					std::this_thread::sleep_for(std::chrono::microseconds(
+						delayBetweeEachTotalSendMilliseconds*500ll));
 
 					for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
 						if (l % serializeSendsModulo < serializeSendsFract) {
@@ -240,8 +246,6 @@ int main(int argc, char **argv)
 						}
 					}
 					commandsBuffer->FlushBuffer();
-					std::this_thread::sleep_for(std::chrono::milliseconds(
-						delayBetweeEachTotalSendMilliseconds));
 				}
 			}
 
