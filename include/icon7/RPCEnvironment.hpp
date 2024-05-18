@@ -23,8 +23,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <bitscpp/ByteWriter.hpp>
-
+#include "ByteWriter.hpp"
 #include "Util.hpp"
 #include "Flags.hpp"
 #include "Host.hpp"
@@ -107,17 +106,17 @@ public:
 	void Send(Peer *peer, Flags flags, const std::string &name,
 			  const Targs &...args)
 	{
-		ByteWriter writer(100);
-		SerializeSend(writer, flags, name, args...);
-		peer->Send(writer._data);
+		ByteBuffer buffer(100);
+		SerializeSend(buffer, flags, name, args...);
+		peer->Send(buffer);
 	}
-
-	template <typename... Targs>
-	static void SerializeSend(ByteWriter &writer, Flags &flags,
-							  const std::string &name, const Targs &...args)
+	
+	static void InitializeSerializeSend(ByteWriter &writer, const std::string &name)
 	{
 		writer.op(name);
-		(writer.op(args), ...);
+	}
+	
+	static void FinalizeSerializeSend(ByteWriter &writer, Flags &flags) {
 		flags |= FLAGS_CALL_NO_FEEDBACK;
 		if (FramingProtocol::WriteHeaderIntoBuffer(writer._data, flags) ==
 			false) {
@@ -130,7 +129,9 @@ public:
 							  const std::string &name, const Targs &...args)
 	{
 		ByteWriter writer(std::move(buffer));
-		SerializeSend(writer, flags, name, args...);
+		InitializeSerializeSend(writer, name);
+		(writer.op(args), ...);
+		FinalizeSerializeSend(writer, flags);
 		buffer = std::move(writer._data);
 	}
 
@@ -138,9 +139,9 @@ public:
 	static ByteBuffer SerializeSend(Flags flags, const std::string &name,
 									const Targs &...args)
 	{
-		ByteWriter writer(100);
-		SerializeSend(writer, flags, name, args...);
-		return std::move(writer._data);
+		ByteBuffer buffer(100);
+		SerializeSend(buffer, flags, name, args...);
+		return buffer;
 	}
 
 	class CommandCallSend final : public commands::ExecuteOnPeer

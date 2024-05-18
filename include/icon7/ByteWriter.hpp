@@ -63,6 +63,15 @@ public:
 		_data.storage->offset += 8;
 		Init(&_data);
 	}
+	
+	void Reinit(uint32_t capacity)
+	{
+		_data.Init(capacity);
+		_data.storage->size = 0;
+		_data.storage->capacity -= 8;
+		_data.storage->offset += 8;
+		Init(&_data);
+	}
 
 	inline ByteWriter &operator=(ByteWriter &&o)
 	{

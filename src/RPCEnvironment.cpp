@@ -19,7 +19,6 @@
 #include <chrono>
 
 #include "../include/icon7/ByteReader.hpp"
-#include "../include/icon7/CommandExecutionQueue.hpp"
 #include "../include/icon7/FramingProtocol.hpp"
 
 #include "../include/icon7/RPCEnvironment.hpp"
