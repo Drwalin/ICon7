@@ -19,13 +19,19 @@
 #ifndef ICON7_DEBUG_HPP
 #define ICON7_DEBUG_HPP
 
+#ifdef ICON7_LOG_USE_PRETTY_FUNCTION
+# define __FUNCTION_NAME__ __PRETTY_FUNCTION__
+#else
+# define __FUNCTION_NAME__ __FUNCTION__
+#endif
+
 #define DEBUG(...)                                                             \
 	icon7::log::Log(icon7::log::DEBUG, true, true, __FILE__, __LINE__,         \
-					__PRETTY_FUNCTION__, __VA_ARGS__)
+					__FUNCTION_NAME__, __VA_ARGS__)
 
 #define LOG_FULL(LEVEL, USE_TIME, PRINT_FILE, ...)                             \
 	icon7::log::Log(icon7::log::LogLevel::LEVEL, USE_TIME, PRINT_FILE,         \
-					__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__)
+					__FILE__, __LINE__, __FUNCTION_NAME__, __VA_ARGS__)
 
 #define LOG(LEVEL, ...) LOG_FULL(LEVEL, true, true, __VA_ARGS__)
 #define LOG_(LEVEL, ...) LOG_FULL(LEVEL, false, false, __VA_ARGS__)

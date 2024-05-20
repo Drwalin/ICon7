@@ -23,19 +23,34 @@
 #include <mutex>
 #include <regex>
 #include <unordered_map>
-#include <atomic>
 
 #include "../include/icon7/Time.hpp"
 
 #include "../include/icon7/Debug.hpp"
 
 #ifdef __unix__
-#include <sys/syscall.h>
-#ifdef SYS_gettid
-#define gettid() syscall(SYS_gettid)
-#else
-#define gettid() 0
+# include <sys/syscall.h>
+# include <unistd.h>
+# ifdef SYS_gettid
+static uint64_t GenThreadId()
+{
+	return syscall(SYS_gettid);
+}
+#  define GEN_THREAD_ID() GenThreadId()
+# endif
 #endif
+#if !defined(GEN_THREAD_ID)
+# include <atomic>
+static uint64_t GenThreadId()
+{
+	static std::atomic<uint64_t> globID = 1;
+	return globID++;
+}
+# define GEN_THREAD_ID() GenThreadId()
+#endif
+
+#ifndef ICON7_LOG_DATETIME_SUBSECONDS_DIGITS
+# define ICON7_LOG_DATETIME_SUBSECONDS_DIGITS 5
 #endif
 
 namespace icon7
@@ -43,13 +58,13 @@ namespace icon7
 namespace log
 {
 #ifndef ICON7_LOG_IGNORE_COMMON_PATH
-#define ICON7_LOG_IGNORE_COMMON_PATH ""
+# define ICON7_LOG_IGNORE_COMMON_PATH ""
 #endif
 inline const static std::string IGNORE_COMMON_PATH =
 	ICON7_LOG_IGNORE_COMMON_PATH;
 
 #ifndef ICON7_LOG_DEFAULT_LOG_LEVEL
-#define ICON7_LOG_DEFAULT_LOG_LEVEL icon7::log::IGNORE
+# define ICON7_LOG_DEFAULT_LOG_LEVEL icon7::log::IGNORE
 #endif
 
 static LogLevel globalLogLevel = ICON7_LOG_DEFAULT_LOG_LEVEL;
@@ -102,6 +117,27 @@ bool IsLogLevelApplicable(LogLevel level)
 
 const char *LogLevelToName(LogLevel level)
 {
+#ifdef ICON7_LOG_LEVEL_SINGLE_CHARACTER
+	static char ar[256][4];
+	switch (level) {
+	case FATAL:
+		return "F";
+	case ERROR:
+		return "E";
+	case WARN:
+		return "W";
+	case INFO:
+		return "I";
+	case DEBUG:
+		return "D";
+	case TRACE:
+		return "T";
+	default:
+		sprintf(ar[level], "%5u", (int)level);
+		return ar[level];
+	}
+	return "UNDEF";
+#else
 	static char ar[256][4];
 	switch (level) {
 	case FATAL:
@@ -121,10 +157,28 @@ const char *LogLevelToName(LogLevel level)
 		return ar[level];
 	}
 	return "UNDEF";
+#endif
 }
 
 std::string CorrectFilePath(std::string path)
 {
+#ifdef ICON7_LOG_USE_FILENAME_WITHOUT_PATH
+	auto it = path.rfind("\\");
+	if (it == std::string::npos) {
+		it = 0;
+	}
+	auto it2 = path.rfind("/");
+	if (it2 == std::string::npos) {
+		it2 = 0;
+	}
+	if (it < it2) {
+		it = it2;
+	}
+	if (it != 0) {
+		return path.substr(it+1);
+	}
+	return path;
+#else
 	auto pos = path.find(IGNORE_COMMON_PATH);
 	if (pos == 0) {
 		path.replace(pos, IGNORE_COMMON_PATH.size(), "");
@@ -179,6 +233,7 @@ std::string CorrectFilePath(std::string path)
 		}
 	}
 	return path;
+#endif
 }
 
 static bool enablePrintingTime = false;
@@ -190,6 +245,7 @@ void GlobalDisablePrintingTime(bool disableTime)
 
 std::string GetPrettyFunctionName(const std::string function)
 {
+#ifdef ICON7_LOG_USE_PRETTY_FUNCTION
 	thread_local std::unordered_map<std::string, std::string> names;
 	auto it = names.find(function);
 	if (it != names.end()) {
@@ -212,20 +268,12 @@ std::string GetPrettyFunctionName(const std::string function)
 	funcName += "()";
 	names[function] = funcName;
 	return funcName;
+#else
+	return function + "()";
+#endif
 }
 
-#ifdef __unix__
-#ifdef SYS_gettid
-static uint64_t GenThreadId() { return syscall(SYS_gettid); }
-#else
-static uint64_t GenThreadId()
-{
-	static std::atomic<uint64_t> globID = 1;
-	return globID++;
-}
-#endif
-#endif
-static thread_local uint64_t threadId = GenThreadId();
+static thread_local uint64_t threadId = GEN_THREAD_ID();
 static std::mutex mutex;
 
 void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
@@ -238,7 +286,7 @@ void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
 
 	std::string timestamp;
 	if (printTime) {
-		timestamp = icon7::time::GetCurrentTimestampString(9);
+		timestamp = icon7::time::GetCurrentTimestampString(ICON7_LOG_DATETIME_SUBSECONDS_DIGITS);
 	}
 
 	std::string funcName = GetPrettyFunctionName(function);
@@ -254,18 +302,17 @@ void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
 
 	if (printTime) {
 		offset = strlen(buf);
-		snprintf(buf + offset, BYTES - offset, "%s ", timestamp.c_str());
+		snprintf(buf + offset, BYTES - offset, "%s [%3lu] ", timestamp.c_str(), threadId);
 	}
 
 	if (file != nullptr) {
 		std::string filePath = file != nullptr ? CorrectFilePath(file) : "";
 		offset = strlen(buf);
-		snprintf(buf + offset, BYTES - offset, "%s:%i\t", filePath.c_str(),
+		snprintf(buf + offset, BYTES - offset, "%s:%i ", filePath.c_str(),
 				 line);
 	}
 	offset = strlen(buf);
-	snprintf(buf + offset, BYTES - offset, "%s\t [%3lu] \t ", funcName.c_str(),
-			 threadId);
+	snprintf(buf + offset, BYTES - offset, "%s : ", funcName.c_str());
 	offset = strlen(buf);
 	vsnprintf(buf + offset, BYTES - offset, fmt, va);
 	offset = strlen(buf);
