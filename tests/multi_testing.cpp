@@ -40,8 +40,9 @@ int main(int argc, char **argv)
 	const int sendsMoreThanCalls = args.GetInt({"-sends-per-send", "-ss"}, 117, 2, 1000000000);
 	const int totalSends = args.GetInt({"-sends", "-s"}, 371, 1, 1000000000);
 	const int connectionsCount = args.GetInt({"-connections", "-con"}, 171, 1, 1000000);
-	int delayBetweeEachTotalSendMilliseconds = args.GetInt({"-delay", "-d"}, 50, 0, 10000);
+	int delayBetweeEachTotalSendMilliseconds = args.GetInt({"-delay", "-d"}, 0, 0, 10000);
 	const int64_t maxWaitAfterPayloadDone =  args.GetInt({"-max-wait-after-payload"}, 3*60*1000, 0, 1000ll*3600ll*24ll*365ll);
+	const int useSSL = args.GetFlag({"-ssl"});
 	
 	uint16_t port = args.GetInt({"-port"}, 7312, 1, 65535);
 	
@@ -72,6 +73,12 @@ int main(int argc, char **argv)
 		icon7::uS::tcp::Host *hosta = new icon7::uS::tcp::Host();
 		hosta->SetRpcEnvironment(&rpc);
 		hosta->Init();
+		hosta->Init(useSSL, "../cert/user.key", "../cert/user.crt", "", nullptr,
+					"../cert/rootca.crt",
+					"ECDHE-ECDSA-AES256-GCM-SHA384:"
+					"ECDHE-ECDSA-AES128-GCM-SHA256:"
+					"ECDHE-ECDSA-CHACHA20-POLY1305:"
+					"DHE-RSA-AES256-GCM-SHA384:");
 		hosta->RunAsync();
 		auto listenFuture = hosta->ListenOnPort("127.0.0.1", port, icon7::IPv4);
 
@@ -80,7 +87,7 @@ int main(int argc, char **argv)
 		rpc2.RegisterMessage("mul", Mul);
 		icon7::uS::tcp::Host *hostb = new icon7::uS::tcp::Host();
 		hostb->SetRpcEnvironment(&rpc2);
-		hostb->Init();
+		hostb->Init(useSSL);
 		hostb->RunAsync();
 
 		listenFuture.wait_for(std::chrono::milliseconds(150));
