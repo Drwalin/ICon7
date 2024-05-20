@@ -186,7 +186,7 @@ std::string TimestampToString(uint64_t timestamp, int subsecondDigits)
 
 	str += subsecondsStr;
 	char tmp[32];
-	sprintf(tmp, "UTC%+i", -(int)glob.hoursOffset);
+	sprintf(tmp, "U%+i", -(int)glob.hoursOffset);
 	str += tmp;
 	return str;
 }
@@ -202,12 +202,12 @@ uint64_t StringToTimestamp(std::string str)
 	sscanf(str.c_str(), "%d-%d-%d+%d:%d:%d", &years, &months, &days, &hours,
 		   &minutes, &seconds);
 	std::string subsecondsStr = str.c_str() + 20;
-	auto utcPos = subsecondsStr.find("UTC");
+	auto utcPos = subsecondsStr.find("U");
 	int utcOffset = 0;
 	if (utcPos != std::string::npos) {
 		std::string utcStr = subsecondsStr.c_str() + utcPos;
 		subsecondsStr.resize(utcPos);
-		sscanf(utcStr.c_str(), "UTC%d", &utcOffset);
+		sscanf(utcStr.c_str(), "U%d", &utcOffset);
 		utcOffset = -utcOffset;
 	}
 	if (subsecondsStr.size() > 7)

@@ -17,6 +17,10 @@ option(ICON7_BUILD_TEST "Build icon7 tests" ON)
 option(ICON7_USE_RPMALLOC "Use rpmalloc. Otherwise use object pool" ON)
 option(ICON7_MEMORY_COLLECT_STATS "Enable memory statistics collection" OFF)
 option(ICON7_USE_MALLOC_TRIM "Enable malloc trimming with each call to free()" OFF)
+option(ICON7_LOG_LEVEL_SINGLE_CHARACTER "Write single character for ICon7 log level" ON)
+option(ICON7_LOG_USE_FILENAME_WITHOUT_PATH "Write file names without full path to ICon7 log" ON)
+option(ICON7_LOG_USE_PRETTY_FUNCTION "Use pretty function name for ICon7 log" ON)
+set(ICON7_LOG_DATETIME_SUBSECONDS_DIGITS 5 CACHE STRING "Number of sub-second digits in ICon7 log date-time")
 
 add_subdirectory(bitscpp)
 
@@ -82,6 +86,22 @@ endif()
 if(ICON7_USE_MALLOC_TRIM)
 	target_compile_definitions(icon7 PUBLIC ICON7_USE_MALLOC_TRIM=1)
 endif()
+
+if(ICON7_LOG_LEVEL_SINGLE_CHARACTER)
+	target_compile_definitions(icon7 PUBLIC ICON7_LOG_LEVEL_SINGLE_CHARACTER=1)
+endif()
+
+if(ICON7_LOG_USE_FILENAME_WITHOUT_PATH)
+	target_compile_definitions(icon7 PUBLIC
+		ICON7_LOG_USE_FILENAME_WITHOUT_PATH=1)
+endif()
+
+if(ICON7_LOG_USE_PRETTY_FUNCTION)
+	target_compile_definitions(icon7 PUBLIC ICON7_LOG_USE_PRETTY_FUNCTION=1)
+endif()
+
+target_compile_definitions(icon7 PUBLIC
+	ICON7_LOG_DATETIME_SUBSECONDS_DIGITS=${ICON7_LOG_DATETIME_SUBSECONDS_DIGITS})
 
 if(ICON7_BUILD_TEST)
 	add_executable(stress_test
