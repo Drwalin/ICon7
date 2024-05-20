@@ -20,6 +20,7 @@ option(ICON7_USE_MALLOC_TRIM "Enable malloc trimming with each call to free()" O
 option(ICON7_LOG_LEVEL_SINGLE_CHARACTER "Write single character for ICon7 log level" ON)
 option(ICON7_LOG_USE_FILENAME_WITHOUT_PATH "Write file names without full path to ICon7 log" ON)
 option(ICON7_LOG_USE_PRETTY_FUNCTION "Use pretty function name for ICon7 log" ON)
+option(USOCKETS_USE_OPENSSL "Use OpenSSL instead of BoringSSL" ON)
 set(ICON7_LOG_DATETIME_SUBSECONDS_DIGITS 5 CACHE STRING "Number of sub-second digits in ICon7 log date-time")
 
 add_subdirectory(bitscpp)
@@ -27,24 +28,37 @@ add_subdirectory(bitscpp)
 include_directories(include/)
 include_directories(uSockets/src/)
 include_directories(bitscpp/include/)
-include_directories(${OPENSSL_INCLUDE_DIR})
 include_directories(${ZLIB_INCLUDE_DIRS})
+if(USOCKETS_USE_OPENSSL)
+	include_directories(${OPENSSL_INCLUDE_DIR})
+	
+	find_package(OpenSSL REQUIRED)
+else()
+	add_subdirectory(uSockets/boringssl EXCLUDE_FROM_ALL)
+	include_directories(uSockets/boringssl/include)
+endif()
 
 find_package(ZLIB REQUIRED)
-find_package(OpenSSL REQUIRED)
 
 aux_source_directory(uSockets/src/ usockets_files)
 aux_source_directory(uSockets/src/eventing usockets_files_eventing)
-aux_source_directory(uSockets/src/crypto usockets_files_crypto)
 add_library(uSockets STATIC
+	uSockets/src/crypto/openssl.c
+	uSockets/src/crypto/sni_tree.cpp
 	${usockets_files}
 	${usockets_files_eventing}
-	${usockets_files_crypto}
 )
-target_link_libraries(uSockets ${OPENSSL_LIBRARIES} crypto pthread ${ZLIB_LIBRARIES})
+target_link_libraries(uSockets pthread ${ZLIB_LIBRARIES})
+
+if(USOCKETS_USE_OPENSSL)
+	target_link_libraries(uSockets ${OPENSSL_LIBRARIES} crypto)
+	target_compile_definitions(uSockets PRIVATE WITH_OPENSSL)
+else()
+	target_compile_definitions(uSockets PRIVATE WITH_BORINGSSL)
+	target_link_libraries(uSockets crypto ssl)
+endif()
 
 target_compile_definitions(uSockets PRIVATE LIBUS_USE_OPENSSL)
-
 
 aux_source_directory(./include/icon7/ header_files)
 aux_source_directory(./src source_files)
