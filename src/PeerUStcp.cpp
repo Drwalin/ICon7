@@ -102,7 +102,11 @@ bool Peer::_InternalSend(SendFrameStruct &f, bool hasMore)
 void Peer::_InternalDisconnect()
 {
 	peerFlags |= BIT_DISCONNECTING;
-	us_socket_close(SSL, socket, 0, nullptr);
+	if (socket) {
+		us_socket_close(SSL, socket, 0, nullptr);
+	} else {
+		peerFlags |= BIT_CLOSED;
+	}
 }
 
 void Peer::_InternalClearInternalDataOnClose()
