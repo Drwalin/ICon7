@@ -95,21 +95,32 @@ bool CommandExecutionQueue::IsRunningAsync() const
 }
 
 void CommandExecutionQueue::RunAsyncExecution(
-	uint32_t sleepMicrosecondsOnNoActions)
+	uint32_t sleepMicrosecondsOnNoActions, uint32_t maxSleepDuration)
 {
 	std::thread(&CommandExecutionQueue::ExecuteLoop, this,
-				sleepMicrosecondsOnNoActions)
+				sleepMicrosecondsOnNoActions, maxSleepDuration)
 		.detach();
 }
 
-void CommandExecutionQueue::ExecuteLoop(uint32_t sleepMicrosecondsOnNoActions)
+void CommandExecutionQueue::ExecuteLoop(uint32_t sleepMicrosecondsOnNoActions,
+										uint32_t maxSleepDuration)
 {
 	asyncExecutionFlags = IS_RUNNING;
+	uint32_t accumulativeNopCounter = 0;
 	while (asyncExecutionFlags.load() == IS_RUNNING) {
 		uint32_t dequeued = Execute(128);
 		if (dequeued == 0) {
+			uint64_t sleepTime =
+				sleepMicrosecondsOnNoActions + accumulativeNopCounter * 64;
+			accumulativeNopCounter++;
+			if (sleepTime < 1)
+				sleepTime = 1;
+			if (sleepTime > maxSleepDuration)
+				sleepTime = maxSleepDuration;
 			std::this_thread::sleep_for(
 				std::chrono::microseconds(sleepMicrosecondsOnNoActions));
+		} else {
+			accumulativeNopCounter = 0;
 		}
 	}
 	asyncExecutionFlags = STOPPED;

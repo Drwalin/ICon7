@@ -46,13 +46,20 @@ public:
 
 	bool HasAny() const;
 
-	void RunAsyncExecution(uint32_t sleepMicrosecondsOnNoActions);
-	void ExecuteLoop(uint32_t sleepMicrosecondsOnNoActions);
+	void RunAsyncExecution(uint32_t sleepMicrosecondsOnNoActions,
+						   uint32_t maxSleepDuration);
+	void ExecuteLoop(uint32_t sleepMicrosecondsOnNoActions,
+					 uint32_t maxSleepDuration);
 	uint32_t Execute(uint32_t maxToDequeue);
 
 	CommandsBufferHandler *GetThreadLocalBuffer();
 	std::unique_ptr<CommandsBufferHandler> CreateCommandBufferHandler();
 	void FlushThreadLocalCommandsBuffer();
+	
+public:
+	void *userPtr = nullptr;
+	std::shared_ptr<void> userSmartPtr;
+	uint64_t userData = 0;
 
 private:
 	enum AsyncExecutionFlags {
