@@ -118,7 +118,7 @@ void CommandExecutionQueue::ExecuteLoop(uint32_t sleepMicrosecondsOnNoActions,
 			if (sleepTime > maxSleepDuration)
 				sleepTime = maxSleepDuration;
 			std::this_thread::sleep_for(
-				std::chrono::microseconds(sleepMicrosecondsOnNoActions));
+				std::chrono::microseconds(sleepTime));
 		} else {
 			accumulativeNopCounter = 0;
 		}
