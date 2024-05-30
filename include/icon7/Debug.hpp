@@ -48,7 +48,7 @@
 #define LOG_FATAL_TF(...) LOG_FATAL_ARGS(true, true, __VA_ARGS__)
 
 #define LOG_ERROR_ARGS(USE_TIME, USE_FILE, ...)                                \
-	LOG_FULL(ERROR, USE_TIME, USE_FILE, __VA_ARGS__)
+	LOG_FULL(LL_ERROR, USE_TIME, USE_FILE, __VA_ARGS__)
 #define LOG_ERROR(...) LOG_ERROR_ARGS(true, true, __VA_ARGS__)
 #define LOG_ERROR_(...) LOG_ERROR_ARGS(false, false, __VA_ARGS__)
 #define LOG_ERROR_T(...) LOG_ERROR_ARGS(true, false, __VA_ARGS__)
@@ -112,13 +112,13 @@ namespace log
 {
 enum LogLevel : unsigned char {
 	FATAL = 1,
-	ERROR = 2,
+	LL_ERROR = 2,
 	WARN = 3,
 	INFO = 4,
 	DEBUG = 5,
 	TRACE = 6,
 
-	IGNORE = 127
+	LL_IGNORE = 127
 };
 
 void GlobalDisablePrintinTime(bool disableTime);
