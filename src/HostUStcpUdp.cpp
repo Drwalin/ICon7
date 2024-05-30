@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#ifdef ICON7_ENBALE_EXPERIMENTAL_UDP
 #include <cstring>
 
 #include "../include/icon7/HostUStcp.hpp"
@@ -241,3 +242,4 @@ uint32_t Host::GenerateNewReceivingIdentityForPeer(std::shared_ptr<Peer> peer)
 } // namespace tcpudp
 } // namespace uS
 } // namespace icon7
+#endif

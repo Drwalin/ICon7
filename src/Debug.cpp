@@ -64,12 +64,12 @@ inline const static std::string IGNORE_COMMON_PATH =
 	ICON7_LOG_IGNORE_COMMON_PATH;
 
 #ifndef ICON7_LOG_DEFAULT_LOG_LEVEL
-# define ICON7_LOG_DEFAULT_LOG_LEVEL icon7::log::IGNORE
+# define ICON7_LOG_DEFAULT_LOG_LEVEL icon7::log::LL_IGNORE
 #endif
 
 static LogLevel globalLogLevel = ICON7_LOG_DEFAULT_LOG_LEVEL;
 #ifndef ICON7_LOG_IGNORE_THREAD_LOCAL_LOG_LEVEL
-static thread_local LogLevel threadLocalLogLevel = IGNORE;
+static thread_local LogLevel threadLocalLogLevel = LL_IGNORE;
 #else
 #endif
 
@@ -82,7 +82,7 @@ LogLevel GetThreadLocalLogLevel()
 #ifndef ICON7_LOG_IGNORE_THREAD_LOCAL_LOG_LEVEL
 	return threadLocalLogLevel;
 #else
-	return IGNORE;
+	return LL_IGNORE;
 #endif
 }
 
@@ -99,7 +99,7 @@ bool SetThreadLocalLogLevel(LogLevel level)
 void RemoveThreadLocalLogLevel()
 {
 #ifndef ICON7_LOG_IGNORE_THREAD_LOCAL_LOG_LEVEL
-	threadLocalLogLevel = IGNORE;
+	threadLocalLogLevel = LL_IGNORE;
 #else
 #endif
 }
@@ -108,7 +108,7 @@ bool IsLogLevelApplicable(LogLevel level)
 {
 #ifndef ICON7_LOG_IGNORE_THREAD_LOCAL_LOG_LEVEL
 	LogLevel tlsl = GetThreadLocalLogLevel();
-	if (tlsl != IGNORE) {
+	if (tlsl != LL_IGNORE) {
 		return level <= tlsl;
 	}
 #endif
@@ -122,7 +122,7 @@ const char *LogLevelToName(LogLevel level)
 	switch (level) {
 	case FATAL:
 		return "F";
-	case ERROR:
+	case LL_ERROR:
 		return "E";
 	case WARN:
 		return "W";
@@ -142,7 +142,7 @@ const char *LogLevelToName(LogLevel level)
 	switch (level) {
 	case FATAL:
 		return "FATAL";
-	case ERROR:
+	case LL_ERROR:
 		return "ERROR";
 	case WARN:
 		return "WARN ";

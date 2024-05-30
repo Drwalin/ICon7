@@ -41,7 +41,11 @@ struct DayTimeBegin {
 		secs = std::time(nullptr);
 		struct tm local = *localtime(&secs);
 
+#ifdef tm_gmtoff
 		hoursOffset = -local.tm_gmtoff / 3600;
+#else
+		hoursOffset = 0;
+#endif
 		hoursOffsetNanoseconds =
 			hoursOffset * 3600ll * 1000ll * 1000ll * 1000ll;
 	}

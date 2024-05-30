@@ -48,7 +48,12 @@ add_library(uSockets STATIC
 	${usockets_files}
 	${usockets_files_eventing}
 )
-target_link_libraries(uSockets pthread ${ZLIB_LIBRARIES})
+target_link_libraries(uSockets pthread ${ZLIB_LIBRARIES} uv m)
+
+if(UNIX)
+else()
+	target_link_libraries(uSockets ws2_32)
+endif()
 
 if(USOCKETS_USE_OPENSSL)
 	target_link_libraries(uSockets ${OPENSSL_LIBRARIES} crypto)
@@ -89,7 +94,7 @@ if(NOT DEFINED ICON7_LOG_DEFAULT_LOG_LEVEL)
 	if(CMAKE_BUILD_TYPE STREQUAL "Release")
 		target_compile_definitions(icon7 PUBLIC ICON7_LOG_DEFAULT_LOG_LEVEL=INFO)
 	else()
-		target_compile_definitions(icon7 PUBLIC ICON7_LOG_DEFAULT_LOG_LEVEL=IGNORE)
+		target_compile_definitions(icon7 PUBLIC ICON7_LOG_DEFAULT_LOG_LEVEL=LL_IGNORE)
 	endif()
 endif()
 
