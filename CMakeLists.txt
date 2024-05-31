@@ -96,6 +96,8 @@ if(NOT DEFINED ICON7_LOG_DEFAULT_LOG_LEVEL)
 	else()
 		target_compile_definitions(icon7 PUBLIC ICON7_LOG_DEFAULT_LOG_LEVEL=LL_IGNORE)
 	endif()
+else()
+	target_compile_definitions(icon7 PUBLIC ICON7_LOG_DEFAULT_LOG_LEVEL=${ICON7_LOG_DEFAULT_LOG_LEVEL})
 endif()
 
 if(ICON7_MEMORY_COLLECT_STATS)
@@ -123,11 +125,6 @@ target_compile_definitions(icon7 PUBLIC
 	ICON7_LOG_DATETIME_SUBSECONDS_DIGITS=${ICON7_LOG_DATETIME_SUBSECONDS_DIGITS})
 
 if(ICON7_BUILD_TEST)
-	add_executable(stress_test
-		tests/stress_test
-	)
-	target_link_libraries(stress_test icon7)
-	
 	add_executable(multi_test
 		tests/multi_testing
 	)
