@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#ifdef ICON7_ENBALE_EXPERIMENTAL_UDP
 #ifndef ICON7_PEER_US_TCPUDP_HPP
 #define ICON7_PEER_US_TCPUDP_HPP
 
@@ -95,4 +96,5 @@ private:
 } // namespace uS
 } // namespace icon7
 
+#endif
 #endif
