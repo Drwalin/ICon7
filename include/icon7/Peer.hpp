@@ -23,13 +23,31 @@
 #include <memory>
 #include <vector>
 
-#include "../../concurrentqueue/concurrentqueue.h"
-
 #include "ConcurrentQueueTraits.hpp"
 #include "Command.hpp"
 #include "FrameDecoder.hpp"
 #include "SendFrameStruct.hpp"
 #include "ByteBuffer.hpp"
+#include "Forward.hpp"
+
+#ifndef MOODYCAMEL_CONSTEXPR_IF
+namespace moodycamel
+{
+namespace details
+{
+class ConcurrentQueueProducerTypelessBase;
+}
+struct ConsumerToken
+{
+private: // but shared with ConcurrentQueue
+	std::uint32_t initialOffset;
+	std::uint32_t lastKnownGlobalOffset;
+	std::uint32_t itemsConsumedFromCurrent;
+	details::ConcurrentQueueProducerTypelessBase* currentProducer;
+	details::ConcurrentQueueProducerTypelessBase* desiredProducer;
+};
+}
+#endif
 
 namespace icon7
 {
@@ -127,7 +145,7 @@ protected:
 protected:
 	moodycamel::ConcurrentQueue<ByteBufferStorageHeader *,
 								ConcurrentQueueDefaultTraits>
-		queue;
+		* queue;
 	moodycamel::ConsumerToken consumerToken;
 	std::atomic<uint32_t> sendingQueueSize;
 	std::atomic<uint32_t> peerFlags;

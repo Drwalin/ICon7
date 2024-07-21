@@ -27,8 +27,8 @@
 #include "../../concurrent/future.hpp"
 
 #include "Flags.hpp"
-#include "Command.hpp"
 #include "CommandExecutionQueue.hpp"
+#include "Forward.hpp"
 
 namespace icon7
 {
@@ -57,8 +57,8 @@ public:
 					  CommandHandle<commands::ExecuteBooleanOnHost> &&callback,
 					  CommandExecutionQueue *queue = nullptr);
 
-	void SetOnConnect(void (*callback)(Peer *)) { onConnect = callback; }
-	void SetOnDisconnect(void (*callback)(Peer *)) { onDisconnect = callback; }
+	void SetOnConnect(void (*callback)(Peer *));
+	void SetOnDisconnect(void (*callback)(Peer *));
 
 	concurrent::future<std::shared_ptr<Peer>>
 	ConnectPromise(std::string address, uint16_t port);

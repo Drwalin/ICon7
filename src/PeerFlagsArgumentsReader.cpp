@@ -16,34 +16,34 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef ICON7_PEER_FLAGS_ARGUMENTS_READER_HPP
-#define ICON7_PEER_FLAGS_ARGUMENTS_READER_HPP
+#include "../include/icon7/Flags.hpp"
+#include "../include/icon7/Host.hpp"
 
-#include "ByteReader.hpp"
-#include "Flags.hpp"
-#include "Peer.hpp"
+#include "../include/icon7/PeerFlagsArgumentsReader.hpp"
 
 namespace icon7
 {
-class Peer;
-class Host;
-
-class PeerFlagsArgumentsReader
+void PeerFlagsArgumentsReader::ReadType(Peer *peer, Flags flags,
+										ByteReader &reader, Flags &value)
 {
-public:
-	static void ReadType(Peer *peer, Flags flags, ByteReader &reader, Flags &v);
-	static void ReadType(Peer *peer, Flags flags, ByteReader &reader, Host *&v);
-	static void ReadType(Peer *peer, Flags flags, ByteReader &reader, Peer *&v);
-	static void ReadType(Peer *peer, Flags flags, ByteReader &reader,
-						 ByteReader *&v);
+	value = flags;
+}
 
-	template <typename T>
-	inline static void ReadType(Peer *peer, Flags flags, ByteReader &reader,
-								T &value)
-	{
-		reader.op(value);
-	}
-};
+void PeerFlagsArgumentsReader::ReadType(Peer *peer, Flags flags,
+										ByteReader &reader, Host *&value)
+{
+	value = peer->host;
+}
+
+void PeerFlagsArgumentsReader::ReadType(Peer *peer, Flags flags,
+										ByteReader &reader, Peer *&value)
+{
+	value = peer;
+}
+
+void PeerFlagsArgumentsReader::ReadType(Peer *peer, Flags flags,
+										ByteReader &reader, ByteReader *&value)
+{
+	value = &reader;
+}
 } // namespace icon7
-
-#endif
