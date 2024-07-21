@@ -16,10 +16,12 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "../../concurrentqueue/concurrentqueue.h"
+#include "../concurrentqueue/concurrentqueue.h"
 
+#include "../include/icon7/ConcurrentQueueTraits.hpp"
 #include "../include/icon7/Host.hpp"
 #include "../include/icon7/RPCEnvironment.hpp"
+#include "../include/icon7/SendFrameStruct.hpp"
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/FramingProtocol.hpp"
 #include "../include/icon7/Debug.hpp"
@@ -34,7 +36,7 @@ Peer::Peer(Host *host)
 	: host(host),
 	  queue(new moodycamel::ConcurrentQueue<ByteBufferStorageHeader *,
 											ConcurrentQueueDefaultTraits>()),
-	  consumerToken(*queue)
+	  consumerToken(new moodycamel::ConsumerToken(*queue))
 {
 	userData = 0;
 	userPointer = nullptr;
@@ -57,7 +59,7 @@ Peer::~Peer()
 	ByteBufferStorageHeader *ar[MAX_LOCAL_QUEUE_SIZE];
 	for (int i = 0; i < 16; ++i) {
 		while (true) {
-			size_t dequeued = queue->try_dequeue_bulk(consumerToken, ar,
+			size_t dequeued = queue->try_dequeue_bulk(*consumerToken, ar,
 													  MAX_LOCAL_QUEUE_SIZE);
 			if (dequeued == 0) {
 				break;
@@ -70,6 +72,8 @@ Peer::~Peer()
 
 	delete queue;
 	queue = nullptr;
+	delete consumerToken;
+	consumerToken = nullptr;
 }
 
 void Peer::Send(ByteBuffer &frame)
@@ -220,7 +224,7 @@ void Peer::DequeueToLocalQueue()
 
 	ByteBufferStorageHeader *ar[MAX_LOCAL_QUEUE_SIZE];
 	uint32_t dequeued =
-		queue->try_dequeue_bulk(consumerToken, ar, MAX_LOCAL_QUEUE_SIZE);
+		queue->try_dequeue_bulk(*consumerToken, ar, MAX_LOCAL_QUEUE_SIZE);
 	localQueue.resize(dequeued);
 	ByteBuffer buffer;
 	for (int i = 0; i < dequeued; ++i) {

@@ -20,7 +20,8 @@
 
 #include "../include/icon7/HostUStcp.hpp"
 #include "../include/icon7/Command.hpp"
-#include "icon7/Debug.hpp"
+#include "../include/icon7/Debug.hpp"
+#include "../include/icon7/SendFrameStruct.hpp"
 
 #include "../include/icon7/PeerUStcp.hpp"
 

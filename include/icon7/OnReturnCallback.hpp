@@ -19,6 +19,7 @@
 #ifndef ICON7_ON_RETURN_CALLBACK_HPP
 #define ICON7_ON_RETURN_CALLBACK_HPP
 
+#include "Command.hpp"
 #include "Host.hpp"
 #include "Peer.hpp"
 
