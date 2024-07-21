@@ -23,31 +23,8 @@
 #include <memory>
 #include <vector>
 
-#include "ConcurrentQueueTraits.hpp"
-#include "Command.hpp"
 #include "FrameDecoder.hpp"
-#include "SendFrameStruct.hpp"
-#include "ByteBuffer.hpp"
 #include "Forward.hpp"
-
-#ifndef MOODYCAMEL_CONSTEXPR_IF
-namespace moodycamel
-{
-namespace details
-{
-class ConcurrentQueueProducerTypelessBase;
-}
-struct ConsumerToken
-{
-private: // but shared with ConcurrentQueue
-	std::uint32_t initialOffset;
-	std::uint32_t lastKnownGlobalOffset;
-	std::uint32_t itemsConsumedFromCurrent;
-	details::ConcurrentQueueProducerTypelessBase* currentProducer;
-	details::ConcurrentQueueProducerTypelessBase* desiredProducer;
-};
-}
-#endif
 
 namespace icon7
 {
@@ -93,7 +70,7 @@ public: // thread unsafe, safe only in hosts loop thread
 
 	virtual bool _InternalHasQueuedSends() const;
 	virtual bool _InternalHasBufferedSends() const = 0;
-	
+
 	// returns false for cork/error
 	virtual bool _InternalFlushBufferedSends(bool hasMore) = 0;
 
@@ -143,20 +120,21 @@ protected:
 	inline const static uint32_t BIT_ERROR_CONNECT = 8;
 
 protected:
-	moodycamel::ConcurrentQueue<ByteBufferStorageHeader *,
-								ConcurrentQueueDefaultTraits>
-		* queue;
-	moodycamel::ConsumerToken consumerToken;
 	std::atomic<uint32_t> sendingQueueSize;
 	std::atomic<uint32_t> peerFlags;
 
-	void (*onDisconnect)(Peer *);
+	alignas(64) void (*onDisconnect)(Peer *);
 
 	std::vector<SendFrameStruct> localQueue;
 
 	FrameDecoder frameDecoder;
 	uint32_t localQueueOffset;
 	const static inline uint32_t MAX_LOCAL_QUEUE_SIZE = 128;
+	
+	moodycamel::ConcurrentQueue<ByteBufferStorageHeader *,
+								ConcurrentQueueDefaultTraits> *queue;
+	moodycamel::ConsumerToken *consumerToken;
+
 };
 } // namespace icon7
 

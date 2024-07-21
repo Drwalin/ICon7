@@ -22,6 +22,8 @@
 namespace moodycamel
 {
 template <typename T, typename Traits> class ConcurrentQueue;
+struct ConsumerToken;
+struct ProducerToken;
 }
 
 namespace bitscpp
@@ -34,6 +36,7 @@ namespace icon7
 {
 class ByteWriter;
 class ByteReader;
+struct ByteBufferStorageHeader;
 class ByteBuffer;
 class CommandExecutionQueue;
 class Peer;

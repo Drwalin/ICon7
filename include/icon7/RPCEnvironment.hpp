@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "ByteWriter.hpp"
+#include "Debug.hpp"
 #include "ByteReader.hpp"
 #include "Util.hpp"
 #include "Flags.hpp"
