@@ -20,12 +20,9 @@
 #define ICON7_COMMAND_EXECUTION_QUEUE_HPP
 
 #include <atomic>
+#include <memory>
 
-#include "../../concurrentqueue/concurrentqueue.h"
-
-#include "ConcurrentQueueTraits.hpp"
-#include "Command.hpp"
-#include "CommandsBufferHandler.hpp"
+#include "Forward.hpp"
 
 namespace icon7
 {
@@ -55,7 +52,7 @@ public:
 	CommandsBufferHandler *GetThreadLocalBuffer();
 	std::unique_ptr<CommandsBufferHandler> CreateCommandBufferHandler();
 	void FlushThreadLocalCommandsBuffer();
-	
+
 public:
 	void *userPtr = nullptr;
 	std::shared_ptr<void> userSmartPtr;
@@ -75,8 +72,7 @@ private:
 
 private:
 	moodycamel::ConcurrentQueue<CommandHandle<Command>,
-								ConcurrentQueueDefaultTraits>
-		queue;
+								ConcurrentQueueDefaultTraits> *queue;
 };
 } // namespace icon7
 

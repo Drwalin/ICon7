@@ -98,6 +98,9 @@ void Host::DisconnectAll()
 	}
 }
 
+void Host::SetOnConnect(void (*callback)(Peer *)) { onConnect = callback; }
+void Host::SetOnDisconnect(void (*callback)(Peer *)) { onDisconnect = callback; }
+
 concurrent::future<std::shared_ptr<Peer>>
 Host::ConnectPromise(std::string address, uint16_t port)
 {

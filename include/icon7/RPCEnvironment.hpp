@@ -24,17 +24,17 @@
 #include <vector>
 
 #include "ByteWriter.hpp"
+#include "ByteReader.hpp"
 #include "Util.hpp"
 #include "Flags.hpp"
-#include "Host.hpp"
 #include "Peer.hpp"
+#include "Host.hpp"
 #include "CommandsBufferHandler.hpp"
 #include "OnReturnCallback.hpp"
 #include "MessageConverter.hpp"
 
 namespace icon7
 {
-
 class CommandExecutionQueue;
 
 class RPCEnvironment

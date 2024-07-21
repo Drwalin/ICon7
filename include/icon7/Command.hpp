@@ -67,6 +67,8 @@ public:
 	CommandHandle(CommandHandle &o) = delete;
 	CommandHandle(const CommandHandle &o) = delete;
 
+	inline ~CommandHandle() {}
+
 	CommandHandle &operator=(CommandHandle &o) = delete;
 	CommandHandle &operator=(const CommandHandle &o) = delete;
 	template <typename T2> CommandHandle &operator=(CommandHandle<T2> &&o)
@@ -105,8 +107,6 @@ public:
 
 	inline bool IsValid() const { return _com != nullptr; }
 
-	inline ~CommandHandle();
-
 	inline T &operator*(int) { return *_com; }
 	inline T *operator->() { return _com; }
 
@@ -115,8 +115,6 @@ public:
 public:
 	T *_com = nullptr;
 };
-
-template <typename T> inline CommandHandle<T>::~CommandHandle() { Destroy(); }
 
 namespace commands
 {

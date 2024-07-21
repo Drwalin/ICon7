@@ -22,24 +22,37 @@
 #include <utility>
 #include <unordered_map>
 
+#include "../concurrentqueue/concurrentqueue.h"
+
+#include "../include/icon7/ConcurrentQueueTraits.hpp"
+#include "../include/icon7/Command.hpp"
+#include "../include/icon7/CommandsBufferHandler.hpp"
+
 #include "../include/icon7/Debug.hpp"
 #include "../include/icon7/CommandExecutionQueue.hpp"
 
 namespace icon7
 {
-CommandExecutionQueue::CommandExecutionQueue() : queue()
+CommandExecutionQueue::CommandExecutionQueue()
 {
 	asyncExecutionFlags = STOPPED;
+	queue = new moodycamel::ConcurrentQueue<CommandHandle<Command>,
+											ConcurrentQueueDefaultTraits>();
 }
 
-CommandExecutionQueue::~CommandExecutionQueue() { WaitStopAsyncExecution(); }
+CommandExecutionQueue::~CommandExecutionQueue()
+{
+	WaitStopAsyncExecution();
+	delete queue;
+	queue = nullptr;
+}
 
 void CommandExecutionQueue::EnqueueCommand(CommandHandle<Command> &&command)
 {
 	if (command.IsValid() == false) {
 		LOG_ERROR("Trying to enqueue empty command");
 	} else {
-		queue.enqueue(std::move(command));
+		queue->enqueue(std::move(command));
 		command._com = nullptr;
 	}
 }
@@ -67,7 +80,7 @@ void CommandExecutionQueue::QueueStopAsyncExecution()
 bool CommandExecutionQueue::TryDequeue(CommandHandle<Command> &command)
 {
 	command.~CommandHandle();
-	if (queue.try_dequeue(command)) {
+	if (queue->try_dequeue(command)) {
 		return true;
 	} else {
 		command._com = nullptr;
@@ -78,7 +91,7 @@ bool CommandExecutionQueue::TryDequeue(CommandHandle<Command> &command)
 size_t CommandExecutionQueue::TryDequeueBulk(CommandHandle<Command> *commands,
 											 size_t max)
 {
-	return queue.try_dequeue_bulk(commands, max);
+	return queue->try_dequeue_bulk(commands, max);
 }
 
 void CommandExecutionQueue::WaitStopAsyncExecution()
@@ -117,8 +130,7 @@ void CommandExecutionQueue::ExecuteLoop(uint32_t sleepMicrosecondsOnNoActions,
 				sleepTime = 1;
 			if (sleepTime > maxSleepDuration)
 				sleepTime = maxSleepDuration;
-			std::this_thread::sleep_for(
-				std::chrono::microseconds(sleepTime));
+			std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
 		} else {
 			accumulativeNopCounter = 0;
 		}
@@ -147,7 +159,7 @@ uint32_t CommandExecutionQueue::Execute(uint32_t maxToDequeue)
 	return total;
 }
 
-bool CommandExecutionQueue::HasAny() const { return queue.size_approx() != 0; }
+bool CommandExecutionQueue::HasAny() const { return queue->size_approx() != 0; }
 
 CommandsBufferHandler *CommandExecutionQueue::GetThreadLocalBuffer()
 {
