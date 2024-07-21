@@ -19,7 +19,7 @@
 #ifndef ICON7_RANDOM_HPP
 #define ICON7_RANDOM_HPP
 
-#include <cinttypes>
+#include <cstdint>
 
 namespace icon7
 {
