@@ -13,3 +13,6 @@
 [submodule "rpmalloc"]
 	path = rpmalloc
 	url = https://github.com/mjansson/rpmalloc.git
+[submodule "libuv"]
+	path = libuv
+	url = https://github.com/libuv/libuv.git

@@ -25,6 +25,8 @@ set(ICON7_LOG_DATETIME_SUBSECONDS_DIGITS 5 CACHE STRING "Number of sub-second di
 
 add_subdirectory(bitscpp)
 
+add_subdirectory(libuv)
+
 include_directories(include/)
 include_directories(uSockets/src/)
 include_directories(bitscpp/include/)
@@ -48,7 +50,7 @@ add_library(uSockets STATIC
 	${usockets_files}
 	${usockets_files_eventing}
 )
-target_link_libraries(uSockets pthread ${ZLIB_LIBRARIES} uv m)
+target_link_libraries(uSockets pthread ${ZLIB_LIBRARIES} uv_a m)
 
 if(UNIX)
 else()
