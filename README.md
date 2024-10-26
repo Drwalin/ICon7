@@ -13,6 +13,8 @@ reimplemented as wrapper around RPC.
 
 ## Limits
 
+Unreliable messages are not implemented yet!
+
 Unreliable message size is limited to MTU, which usually is around 1500 bytes,
 but for safety reasons it shouldn't be more than around 768 or 1024 bytes.
 
@@ -153,7 +155,7 @@ Then there may be optional returned values.
 
 ### uSockets tcp
 
-### uSocket tcp+udp
+### uSocket tcp+udp (not implemented yet)
 
 Custom protocol for controll sequence:
 
