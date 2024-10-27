@@ -71,11 +71,11 @@ int main(int argc, char **argv)
 
 	std::vector<char> additionalPayload;
 	additionalPayload.resize(additionalPayloadSize);
-	for (int i=0; i<additionalPayload.size(); ++i) {
+	for (int i = 0; i < additionalPayload.size(); ++i) {
 		static const char chars[] =
 			"1234567890-=qwertyuiop[]\\asdfghjkl;'zxcvbnm,./"
 			"`~!@#$%^&*()_+QWERTYUIOP{}|ASDFGHJKL:\"ZXCVBNM<>? ";
-		additionalPayload[i] = chars[((uint32_t)rand()) % (sizeof(chars)-1)];
+		additionalPayload[i] = chars[((uint32_t)rand()) % (sizeof(chars) - 1)];
 	}
 	additionalPayload.back() = 0;
 
@@ -259,7 +259,7 @@ int main(int argc, char **argv)
 							icon7::ByteBuffer buffer(100);
 							rpc2.SerializeSend(buffer, icon7::FLAG_RELIABLE,
 											   "sum", 3, 23,
-											   (const char*)additionalPayload.data());
+											   additionalPayload.data());
 							sendFrameSize = buffer.size();
 							for (auto p : validPeers) {
 								auto peer = p.get();
@@ -270,7 +270,7 @@ int main(int argc, char **argv)
 							for (auto p : validPeers) {
 								auto peer = p.get();
 								rpc2.Send(peer, icon7::FLAG_RELIABLE, "sum", 3,
-										  23, (const char*)additionalPayload.data());
+										  23, additionalPayload.data());
 								sent++;
 							}
 						}
