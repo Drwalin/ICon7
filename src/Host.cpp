@@ -99,7 +99,10 @@ void Host::DisconnectAll()
 }
 
 void Host::SetOnConnect(void (*callback)(Peer *)) { onConnect = callback; }
-void Host::SetOnDisconnect(void (*callback)(Peer *)) { onDisconnect = callback; }
+void Host::SetOnDisconnect(void (*callback)(Peer *))
+{
+	onDisconnect = callback;
+}
 
 concurrent::future<std::shared_ptr<Peer>>
 Host::ConnectPromise(std::string address, uint16_t port)
@@ -262,10 +265,12 @@ bool Host::IsRunningAsync() { return asyncRunnerFlags & RUNNING; }
 
 void Host::_InternalSingleLoopIteration(bool forceExecution)
 {
-	if (forceExecution==false && timePointToExecuteLoop > std::chrono::steady_clock::now()) {
+	if (forceExecution == false &&
+		timePointToExecuteLoop > std::chrono::steady_clock::now()) {
 		return;
 	}
-	timePointToExecuteLoop = std::chrono::steady_clock::now() + minimumSingleLoopExecutionPeriod;
+	timePointToExecuteLoop =
+		std::chrono::steady_clock::now() + minimumSingleLoopExecutionPeriod;
 	commandQueue.Execute(128 * 1024);
 	for (auto &p : peers) {
 		if (p->_InternalHasBufferedSends() || p->_InternalHasQueuedSends()) {

@@ -132,11 +132,10 @@ protected:
 	FrameDecoder frameDecoder;
 	uint32_t localQueueOffset;
 	const static inline uint32_t MAX_LOCAL_QUEUE_SIZE = 128;
-	
+
 	moodycamel::ConcurrentQueue<ByteBufferStorageHeader *,
 								ConcurrentQueueDefaultTraits> *queue;
 	moodycamel::ConsumerToken *consumerToken;
-
 };
 } // namespace icon7
 

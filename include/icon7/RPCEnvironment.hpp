@@ -222,8 +222,7 @@ protected:
 	std::unordered_map<std::string, MessageConverter *> registeredMessages;
 	Host *host = nullptr;
 
-	std::unordered_map<uint32_t,
-							std::unordered_map<Peer *, OnReturnCallback>>
+	std::unordered_map<uint32_t, std::unordered_map<Peer *, OnReturnCallback>>
 		returningCallbacks;
 	uint32_t lastCheckedId = 1;
 
