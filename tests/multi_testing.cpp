@@ -16,16 +16,16 @@
 
 std::atomic<int64_t> sent = 0, received = 0, returned = 0;
 
-int Sum(int a, int b)
+int Sum(int a, int b, std::string str)
 {
 	received++;
-	return a + b;
+	return a + b + strlen(str.c_str());
 }
 
-int Mul(int a, int b)
+int Mul(int a, int b, std::string str)
 {
 	received++;
-	return a * b;
+	return a * b + strlen(str.c_str());
 }
 
 int main(int argc, char **argv)
@@ -41,6 +41,8 @@ int main(int argc, char **argv)
 	const int sendsMoreThanCalls =
 		args.GetInt({"-sends-per-send", "-ss"}, 117, 2, 1000000000);
 	const int totalSends = args.GetInt({"-sends", "-s"}, 371, 1, 1000000000);
+	const int additionalPayloadSize = args.GetInt(
+		{"-additional-payload", "-payload"}, 1, 1, 256 * 1024 * 1024);
 	const int connectionsCount =
 		args.GetInt({"-connections", "-con"}, 171, 1, 1000000);
 	int delayBetweeEachTotalSendMilliseconds =
@@ -66,6 +68,16 @@ int main(int argc, char **argv)
 
 	std::vector<double> arrayOfLatency;
 	arrayOfLatency.reserve(totalSends * connectionsCount);
+
+	std::vector<char> additionalPayload;
+	additionalPayload.resize(additionalPayloadSize);
+	for (int i=0; i<additionalPayload.size(); ++i) {
+		static const char chars[] =
+			"1234567890-=qwertyuiop[]\\asdfghjkl;'zxcvbnm,./"
+			"`~!@#$%^&*()_+QWERTYUIOP{}|ASDFGHJKL:\"ZXCVBNM<>? ";
+		additionalPayload[i] = chars[((uint32_t)rand()) % (sizeof(chars)-1)];
+	}
+	additionalPayload.back() = 0;
 
 	for (int i = 0; i < testsCount; ++i) {
 		uint64_t totalReceived = 0, totalSent = 0, totalReturned = 0;
@@ -235,7 +247,7 @@ int main(int argc, char **argv)
 										  printf(" Multiplication timeout\n");
 									  },
 									  24 * 3600 * 1000, peer),
-								  "mul", 5, 13);
+								  "mul", 5, 13, additionalPayload.data());
 						sent++;
 					}
 					commandsBuffer->FlushBuffer();
@@ -246,7 +258,8 @@ int main(int argc, char **argv)
 						if (l % serializeSendsModulo < serializeSendsFract) {
 							icon7::ByteBuffer buffer(100);
 							rpc2.SerializeSend(buffer, icon7::FLAG_RELIABLE,
-											   "sum", 3, 23);
+											   "sum", 3, 23,
+											   (const char*)additionalPayload.data());
 							sendFrameSize = buffer.size();
 							for (auto p : validPeers) {
 								auto peer = p.get();
@@ -257,7 +270,7 @@ int main(int argc, char **argv)
 							for (auto p : validPeers) {
 								auto peer = p.get();
 								rpc2.Send(peer, icon7::FLAG_RELIABLE, "sum", 3,
-										  23);
+										  23, (const char*)additionalPayload.data());
 								sent++;
 							}
 						}
