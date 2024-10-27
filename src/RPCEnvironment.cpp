@@ -81,11 +81,17 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader, Flags flags)
 		OnReturnCallback callback;
 		bool found = false;
 		{
-			auto it2 = returningCallbacks.find(id);
-			if (it2 != returningCallbacks.end()) {
-				callback = std::move(it2->second);
-				returningCallbacks.erase(it2);
-				found = true;
+			auto it = returningCallbacks.find(id);
+			if (it != returningCallbacks.end()) {
+				auto it2 = it->second.find(peer);
+				if (it2 != it->second.end()) {
+					callback = std::move(it2->second);
+					it->second.erase(it2);
+					found = true;
+				}
+				if (it->second.empty()) {
+					returningCallbacks.erase(it);
+				}
 			}
 		}
 		if (found) {
@@ -93,8 +99,8 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader, Flags flags)
 		} else {
 			LOG_WARN(
 				"Remote function call returned value but OnReturnedCallback "
-				"already expired. returnId = %u/%u",
-				id, this->returnCallCallbackIdGenerator);
+				"already expired. returnId = %u",
+				id);
 		}
 	} break;
 	default:
@@ -104,23 +110,22 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader, Flags flags)
 
 void RPCEnvironment::CheckForTimeoutFunctionCalls(uint32_t maxChecks)
 {
-	timeouts.clear();
 	auto now = std::chrono::steady_clock::now();
 	auto it = returningCallbacks.find(lastCheckedId);
 	if (it == returningCallbacks.end())
 		it = returningCallbacks.begin();
-	for (int i = 0; i < maxChecks && it != returningCallbacks.end(); ++i) {
+	for (int i = 0; i < maxChecks && it != returningCallbacks.end();++i) {
 		lastCheckedId = it->first;
-		if (it->second.IsExpired(now)) {
-			std::unordered_map<uint32_t, OnReturnCallback>::iterator next = it;
-			++next;
-			uint32_t nextId = 0;
-			if (next != returningCallbacks.end()) {
-				nextId = next->first;
+		for (auto it2 = it->second.begin(); it2 != it->second.end(); ++i) {
+			if (it2->second.IsExpired(now)) {
+				timeouts.push_back(std::move(it2->second));
+				it2 = it->second.erase(it2);
+			} else {
+				++it2;
 			}
-			timeouts.push_back(std::move(it->second));
-			returningCallbacks.erase(lastCheckedId);
-			it = returningCallbacks.find(nextId);
+		}
+		if (it->second.empty()) {
+			it = returningCallbacks.erase(it);
 		} else {
 			++it;
 		}
@@ -128,6 +133,7 @@ void RPCEnvironment::CheckForTimeoutFunctionCalls(uint32_t maxChecks)
 	for (auto &t : timeouts) {
 		t.ExecuteTimeout();
 	}
+	timeouts.clear();
 }
 
 void RPCEnvironment::RemoveRegisteredMessage(const std::string &name)
@@ -140,12 +146,19 @@ void RPCEnvironment::RemoveRegisteredMessage(const std::string &name)
 	registeredMessages.erase(it);
 }
 
-uint32_t RPCEnvironment::GetNewReturnIdCallback()
+uint32_t RPCEnvironment::GetNewReturnIdCallback(Peer *peer)
 {
 	uint32_t rcbId = 0;
-	do {
-		rcbId = ++returnCallCallbackIdGenerator;
-	} while (rcbId == 0 || returningCallbacks.count(rcbId) != 0);
+	for (;;) {
+		rcbId = ++(peer->returnIdGen);
+		if (rcbId != 0) {
+			auto &r = returningCallbacks[rcbId];
+			auto it = r.find(peer);
+			if (it == r.end()) {
+				break;
+			}
+		}
+	};
 	return rcbId;
 }
 } // namespace icon7

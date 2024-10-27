@@ -110,6 +110,7 @@ protected:
 
 	friend class Host;
 	friend class commands::internal::ExecuteDisconnect;
+	friend class RPCEnvironment;
 
 protected:
 	Peer(Host *host);
@@ -124,6 +125,7 @@ protected:
 	std::atomic<uint32_t> peerFlags;
 
 	alignas(64) void (*onDisconnect)(Peer *);
+	uint32_t returnIdGen = 0;
 
 	std::vector<SendFrameStruct> localQueue;
 
