@@ -45,23 +45,24 @@ bool Peer::_InternalSend(SendFrameStruct &f, bool hasMore)
 	if (socket == nullptr) {
 		return false;
 	}
-	
+
 	if (writeBuffer.size() == writeBuffer.capacity()) {
 		bool b = _InternalFlushBufferedSends(true);
 		if (b == false) {
 			return false;
 		}
 	}
-	
+
 	if (f.bytesSent < f.data.size()) {
 		uint32_t bytesToWrite = f.data.size() - f.bytesSent;
 		uint8_t *ptr = f.data.data() + f.bytesSent;
-		
-		if (writeBuffer.size() == writeBufferOffset && (
-					bytesToWrite > 500 || hasMore == false
-					)) {
+
+		if (writeBuffer.size() == writeBufferOffset &&
+			(bytesToWrite > 500 || hasMore == false)) {
 			if (f.bytesSent < f.data.size()) {
-				int b = us_socket_write(SSL, socket, (char *)(f.data.data() + f.bytesSent), f.data.size() - f.bytesSent, hasMore);
+				int b = us_socket_write(SSL, socket,
+										(char *)(f.data.data() + f.bytesSent),
+										f.data.size() - f.bytesSent, hasMore);
 				if (b < 0) {
 					LOG_ERROR("us_socket_write returned: %i", b);
 				} else if (b > 0) {
@@ -75,15 +76,18 @@ bool Peer::_InternalSend(SendFrameStruct &f, bool hasMore)
 				return false;
 			}
 			return true;
-		} else if (writeBuffer.size()+bytesToWrite <= writeBuffer.capacity()) {
+		} else if (writeBuffer.size() + bytesToWrite <=
+				   writeBuffer.capacity()) {
 			writeBuffer.append(ptr, bytesToWrite);
 			f.bytesSent += bytesToWrite;
-			if (hasMore == false || writeBuffer.size() == writeBuffer.capacity()) {
+			if (hasMore == false ||
+				writeBuffer.size() == writeBuffer.capacity()) {
 				return _InternalFlushBufferedSends(hasMore);
 			}
 			return true;
 		} else {
-			bytesToWrite = std::min<uint32_t>(bytesToWrite, writeBuffer.capacity()-writeBuffer.size());
+			bytesToWrite = std::min<uint32_t>(
+				bytesToWrite, writeBuffer.capacity() - writeBuffer.size());
 			writeBuffer.append(ptr, bytesToWrite);
 			f.bytesSent += bytesToWrite;
 			bool canWriteMore = _InternalFlushBufferedSends(true);
@@ -96,7 +100,7 @@ bool Peer::_InternalSend(SendFrameStruct &f, bool hasMore)
 	} else {
 		return true;
 	}
-	
+
 	return false;
 }
 

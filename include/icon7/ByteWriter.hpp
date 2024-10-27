@@ -32,7 +32,7 @@ public:
 	using Base = bitscpp::ByteWriter<ByteBuffer>;
 
 public:
-	~ByteWriter(){};
+	~ByteWriter() {};
 
 	ByteWriter(ByteBuffer &&buf) : _data(std::move(buf))
 	{
@@ -50,7 +50,7 @@ public:
 		: bitscpp::ByteWriter<ByteBuffer>(&_data), _data(std::move(o._data))
 	{
 	}
-	
+
 	inline ByteBuffer &Buffer() { return _data; }
 
 	ByteWriter(uint32_t initialCapacity) : _data(initialCapacity + 8)
@@ -63,7 +63,7 @@ public:
 		_data.storage->offset += 8;
 		Init(&_data);
 	}
-	
+
 	void Reinit(uint32_t capacity)
 	{
 		_data.Init(capacity);

@@ -52,7 +52,10 @@ void FrameDecoder::PushData(uint8_t *data, uint32_t _length,
 		}
 		if (buffer.size() < headerSize) {
 			if (length != 0) {
-				LOG_FATAL("This error should never happen, FrameDecoder algorithm broken: buffer.size(): %u/%u    headerSize:   %u    length: %u", frameSize, buffer.size(), headerSize, length);
+				LOG_FATAL("This error should never happen, FrameDecoder "
+						  "algorithm broken: buffer.size(): %u/%u    "
+						  "headerSize:   %u    length: %u",
+						  frameSize, buffer.size(), headerSize, length);
 			}
 			break;
 		}
@@ -61,7 +64,10 @@ void FrameDecoder::PushData(uint8_t *data, uint32_t _length,
 										 buffer.data(), headerSize);
 			buffer.reserve(frameSize);
 		} else if (frameSize == 0) {
-			LOG_FATAL("This error should never happen - FrameDecoder algorithm broken:   length: %u    buffer.size: %u     frameSize: %u     headerSize: %u", length, buffer.size(), frameSize, headerSize);
+			LOG_FATAL("This error should never happen - FrameDecoder algorithm "
+					  "broken:   length: %u    buffer.size: %u     frameSize: "
+					  "%u     headerSize: %u",
+					  length, buffer.size(), frameSize, headerSize);
 		}
 
 		if (buffer.size() < frameSize) {
@@ -70,13 +76,19 @@ void FrameDecoder::PushData(uint8_t *data, uint32_t _length,
 				bytes = length;
 			}
 			if (bytes < 0) {
-				LOG_FATAL("This error should never happen - FrameDecoder algorithm broken:   length: %u    buffer.size: %u     frameSize: %u     headerSize: %u ;    bytes < 0", length, buffer.size(), frameSize, headerSize, bytes);
+				LOG_FATAL("This error should never happen - FrameDecoder "
+						  "algorithm broken:   length: %u    buffer.size: %u   "
+						  "  frameSize: %u     headerSize: %u ;    bytes < 0",
+						  length, buffer.size(), frameSize, headerSize, bytes);
 			}
 			buffer.append(data, bytes);
 			length -= bytes;
 			data += bytes;
 		} else {
-			LOG_FATAL("This error should never happen - FrameDecoder algorithm broken:   length: %u    buffer.size: %u     frameSize: %u     headerSize: %u", length, buffer.size(), frameSize, headerSize);
+			LOG_FATAL("This error should never happen - FrameDecoder algorithm "
+					  "broken:   length: %u    buffer.size: %u     frameSize: "
+					  "%u     headerSize: %u",
+					  length, buffer.size(), frameSize, headerSize);
 		}
 
 		if (buffer.size() == frameSize) {
@@ -86,14 +98,19 @@ void FrameDecoder::PushData(uint8_t *data, uint32_t _length,
 			Restart();
 		} else if (buffer.size() > frameSize) {
 			LOG_FATAL("FrameDecoder::PushData push to frame more than frame "
-					  "size was: %i > %i, h:%i: 0x%2.2X", buffer.size(), frameSize, headerSize, (uint32_t)(uint8_t)buffer.data()[0]);
+					  "size was: %i > %i, h:%i: 0x%2.2X",
+					  buffer.size(), frameSize, headerSize,
+					  (uint32_t)(uint8_t)buffer.data()[0]);
 			throw;
 		} else {
 			break;
 		}
 	}
 	if (length < 0) {
-		LOG_FATAL("This error should never happen - FrameDecoder algorithm broken:   length: %u    buffer.size: %u     frameSize: %u     headerSize: %u", length, buffer.size(), frameSize, headerSize);
+		LOG_FATAL("This error should never happen - FrameDecoder algorithm "
+				  "broken:   length: %u    buffer.size: %u     frameSize: %u   "
+				  "  headerSize: %u",
+				  length, buffer.size(), frameSize, headerSize);
 	}
 }
 

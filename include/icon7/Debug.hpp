@@ -20,9 +20,9 @@
 #define ICON7_DEBUG_HPP
 
 #ifdef ICON7_LOG_USE_PRETTY_FUNCTION
-# define __FUNCTION_NAME__ __PRETTY_FUNCTION__
+#define __FUNCTION_NAME__ __PRETTY_FUNCTION__
 #else
-# define __FUNCTION_NAME__ __FUNCTION__
+#define __FUNCTION_NAME__ __FUNCTION__
 #endif
 
 #define DEBUG(...)                                                             \

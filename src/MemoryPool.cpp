@@ -18,34 +18,34 @@
 
 #if !defined(ICON7_USE_RPMALLOC) and !defined(ICON7_USE_THREAD_CACHED_POOL)
 // Current default configuration
-# define ICON7_USE_THREAD_CACHED_POOL 0
-#  define ICON7_USE_RPMALLOC 0
+#define ICON7_USE_THREAD_CACHED_POOL 0
+#define ICON7_USE_RPMALLOC 0
 #endif
 
 #if !defined(ICON7_USE_RPMALLOC) and !defined(ICON7_USE_THREAD_CACHED_POOL)
-# if !defined(ICON7_USE_RPMALLOC)
-#  define ICON7_USE_RPMALLOC 1
-# endif
+#if !defined(ICON7_USE_RPMALLOC)
+#define ICON7_USE_RPMALLOC 1
+#endif
 #elif !defined(ICON7_USE_THREAD_CACHED_POOL)
-# define ICON7_USE_THREAD_CACHED_POOL 1
+#define ICON7_USE_THREAD_CACHED_POOL 1
 #endif
 
 #if !defined(ICON7_USE_RPMALLOC) or !ICON7_USE_RPMALLOC
-# define ICON7_CUSTOM_ALLOCATOR
+#define ICON7_CUSTOM_ALLOCATOR
 #endif
 
 #if ICON7_USE_RPMALLOC
-# include "../rpmalloc/rpmalloc/rpmalloc.h"
+#include "../rpmalloc/rpmalloc/rpmalloc.h"
 #else
-# include <bit>
+#include <bit>
 
-# include "../concurrentqueue/concurrentqueue.h"
+#include "../concurrentqueue/concurrentqueue.h"
 
-# include "../include/icon7/ConcurrentQueueTraits.hpp"
+#include "../include/icon7/ConcurrentQueueTraits.hpp"
 #endif
 
 #if ICON7_MEMORY_COLLECT_STATS
-# include <atomic>
+#include <atomic>
 #endif
 
 #if ICON7_USE_MALLOC_TRIM
@@ -59,7 +59,7 @@
 namespace icon7
 {
 #if ICON7_USE_MALLOC_TRIM
-# define ICON7_MALLOC_TRIM() MallocTrim()
+#define ICON7_MALLOC_TRIM() MallocTrim()
 static void MallocTrim()
 {
 	static uint32_t i = 0;
@@ -68,7 +68,7 @@ static void MallocTrim()
 	}
 }
 #else
-# define ICON7_MALLOC_TRIM()
+#define ICON7_MALLOC_TRIM()
 #endif
 
 #if ICON7_MEMORY_COLLECT_STATS
@@ -82,10 +82,22 @@ alignas(64) std::atomic<uint64_t> allocatedMemory = 0;
 alignas(64) std::atomic<uint64_t> freedMemory = 0;
 void MemoryPool::PrintStats()
 {
-	printf("Objects  acquired: +%16lu -%16lu = %16lu\n", acquiredObjects.load(), releasedObjects.load(), acquiredObjects.load()-releasedObjects.load());
-	printf("Memory   acquired: +%16.2f -%16.2f = %16.2f MiB\n", acquiredMemory.load()/(1024.0*1024.0), releasedMemory.load()/(1024.0*1024.0), acquiredMemory.load()/(1024.0*1024.0)-releasedMemory.load()/(1024.0*1024.0));
-	printf("Objects allocated: +%16lu -%16lu = %16lu\n", allocatedObjects.load(), freedObjects.load(), allocatedObjects.load()-freedObjects.load());
-	printf("Memory  allocated: +%16.2f -%16.2f = %16.2f MiB\n", allocatedMemory.load()/(1024.0*1024.0), freedMemory.load()/(1024.0*1024.0), allocatedMemory.load()/(1024.0*1024.0)-freedMemory.load()/(1024.0*1024.0));
+	printf("Objects  acquired: +%16lu -%16lu = %16lu\n", acquiredObjects.load(),
+		   releasedObjects.load(),
+		   acquiredObjects.load() - releasedObjects.load());
+	printf("Memory   acquired: +%16.2f -%16.2f = %16.2f MiB\n",
+		   acquiredMemory.load() / (1024.0 * 1024.0),
+		   releasedMemory.load() / (1024.0 * 1024.0),
+		   acquiredMemory.load() / (1024.0 * 1024.0) -
+			   releasedMemory.load() / (1024.0 * 1024.0));
+	printf("Objects allocated: +%16lu -%16lu = %16lu\n",
+		   allocatedObjects.load(), freedObjects.load(),
+		   allocatedObjects.load() - freedObjects.load());
+	printf("Memory  allocated: +%16.2f -%16.2f = %16.2f MiB\n",
+		   allocatedMemory.load() / (1024.0 * 1024.0),
+		   freedMemory.load() / (1024.0 * 1024.0),
+		   allocatedMemory.load() / (1024.0 * 1024.0) -
+			   freedMemory.load() / (1024.0 * 1024.0));
 	fflush(stdout);
 }
 #else
@@ -102,14 +114,14 @@ const static uint32_t SMALLES_OBJECT_SIZE = 64;
 const static uint32_t BIGGEST_OBJECT_SIZE = SMALLES_OBJECT_SIZE
 											<< (NUMBER_OF_POOLS - 1);
 
-const static uint32_t objectSizes[NUMBER_OF_POOLS] = {
-	64,   128,  256,  512, 1024,  2048, 4096, 8192};
-# if ICON7_USE_THREAD_CACHED_POOL
-# else
-const static uint32_t MAX_OBJECTS_STORED_MEMORY = 16*1024*1024;
-# endif
+const static uint32_t objectSizes[NUMBER_OF_POOLS] = {64,	128,  256,	512,
+													  1024, 2048, 4096, 8192};
+#if ICON7_USE_THREAD_CACHED_POOL
+#else
+const static uint32_t MAX_OBJECTS_STORED_MEMORY = 16 * 1024 * 1024;
+#endif
 
-# if ICON7_USE_THREAD_CACHED_POOL
+#if ICON7_USE_THREAD_CACHED_POOL
 struct ListElement {
 	ListElement *next;
 	ListElement *n2;
@@ -122,8 +134,7 @@ using PoolsQueue =
 static PoolsQueue pools[NUMBER_OF_POOLS] = {
 	PoolsQueue(1024 * 16), PoolsQueue(1024 * 16), PoolsQueue(1024 * 16),
 	PoolsQueue(1024 * 16), PoolsQueue(1024 * 16), PoolsQueue(1024 * 16),
-	PoolsQueue(1024 * 16), PoolsQueue(1024 * 16)
-};
+	PoolsQueue(1024 * 16), PoolsQueue(1024 * 16)};
 
 struct PoolDestrctor {
 	~PoolDestrctor()
@@ -144,8 +155,8 @@ struct PoolDestrctor {
 	}
 } _staticPoolsDestruction;
 
-const static uint32_t objectCounts[NUMBER_OF_POOLS] = {
-	1024, 1024, 1024, 1024, 1024, 1024, 1024, 64};
+const static uint32_t objectCounts[NUMBER_OF_POOLS] = {1024, 1024, 1024, 1024,
+													   1024, 1024, 1024, 64};
 
 struct ObjectPoolTLS {
 	PoolsQueue *queue;
@@ -199,7 +210,7 @@ struct ObjectPoolTLS {
 			return;
 		} else {
 			second = first;
-			secondCount = firstCount;	
+			secondCount = firstCount;
 
 			first = (ListElement *)ptr;
 			firstCount = 1;
@@ -231,21 +242,16 @@ struct ObjectPoolTLS {
 struct PoolsTLS {
 	ObjectPoolTLS pools[NUMBER_OF_POOLS];
 
-	PoolsTLS() : pools(
-			ObjectPoolTLS(0),
-			ObjectPoolTLS(1),
-			ObjectPoolTLS(2),
-			ObjectPoolTLS(3),
-			ObjectPoolTLS(4),
-			ObjectPoolTLS(5),
-			ObjectPoolTLS(6),
-			ObjectPoolTLS(7)
-			)
-	{}
+	PoolsTLS()
+		: pools(ObjectPoolTLS(0), ObjectPoolTLS(1), ObjectPoolTLS(2),
+				ObjectPoolTLS(3), ObjectPoolTLS(4), ObjectPoolTLS(5),
+				ObjectPoolTLS(6), ObjectPoolTLS(7))
+	{
+	}
 };
 
 thread_local PoolsTLS objectPoolTLS;
-# else
+#else
 using SizedPool =
 	moodycamel::ConcurrentQueue<void *, ConcurrentQueueDefaultTraits>;
 
@@ -282,32 +288,27 @@ struct PoolDestrctor {
 		ICON7_MALLOC_TRIM();
 	}
 } _staticPoolsDestruction;
-# endif
+#endif
 #endif
 
 AllocatedObject<void> MemoryPool::Allocate(uint32_t bytes)
 {
 #if ICON7_USE_RPMALLOC
-# if ICON7_MEMORY_COLLECT_STATS
+#if ICON7_MEMORY_COLLECT_STATS
 	acquiredObjects++;
 	allocatedObjects++;
 	acquiredMemory += bytes;
 	allocatedMemory += bytes;
-# endif
+#endif
 	static int ____staticInitilizeRpmalloc = (rpmalloc_initialize(), 0);
 	class __RpMallocThreadLocalDestructor final
 	{
-		public:
-			__RpMallocThreadLocalDestructor()
-			{
-				rpmalloc_thread_initialize();
-			}
-			~__RpMallocThreadLocalDestructor()
-			{
-				rpmalloc_thread_finalize(1);
-			}
+	public:
+		__RpMallocThreadLocalDestructor() { rpmalloc_thread_initialize(); }
+		~__RpMallocThreadLocalDestructor() { rpmalloc_thread_finalize(1); }
 	};
-	thread_local __RpMallocThreadLocalDestructor ____staticThreadLocalDestructorRpmalloc;
+	thread_local __RpMallocThreadLocalDestructor
+		____staticThreadLocalDestructorRpmalloc;
 	if (bytes >= 256) {
 		return {rpaligned_alloc(64, bytes), bytes};
 	} else {
@@ -315,98 +316,99 @@ AllocatedObject<void> MemoryPool::Allocate(uint32_t bytes)
 	}
 #else
 	if (bytes > BIGGEST_OBJECT_SIZE) {
-# if ICON7_MEMORY_COLLECT_STATS
+#if ICON7_MEMORY_COLLECT_STATS
 		acquiredObjects++;
 		allocatedObjects++;
 		acquiredMemory += bytes;
 		allocatedMemory += bytes;
-# endif
+#endif
 		return {malloc(bytes), bytes};
 	}
-	
+
 	uint32_t poolId = GetPoolId(&bytes);
-	
+
 #if ICON7_MEMORY_COLLECT_STATS
 	acquiredObjects++;
 	acquiredMemory += bytes;
 #endif
-	
-# if ICON7_USE_THREAD_CACHED_POOL
-		PoolsTLS &tls = objectPoolTLS;
-		return {tls.pools[poolId].AcquireObject(), bytes};
-# else
-		void *ptr = nullptr;
-		if (sizedQueues[poolId].try_dequeue(ptr) == true) {
-			return {ptr, bytes};
-		}
+
+#if ICON7_USE_THREAD_CACHED_POOL
+	PoolsTLS &tls = objectPoolTLS;
+	return {tls.pools[poolId].AcquireObject(), bytes};
+#else
+	void *ptr = nullptr;
+	if (sizedQueues[poolId].try_dequeue(ptr) == true) {
+		return {ptr, bytes};
+	}
 #if ICON7_MEMORY_COLLECT_STATS
-		allocatedObjects++;
-		allocatedMemory += bytes;
+	allocatedObjects++;
+	allocatedMemory += bytes;
 #endif
-		return {malloc(bytes), bytes};
-# endif
+	return {malloc(bytes), bytes};
+#endif
 #endif
 }
 
 void MemoryPool::Release(void *ptr, uint32_t bytes)
 {
 #if ICON7_USE_RPMALLOC
-# if ICON7_MEMORY_COLLECT_STATS
+#if ICON7_MEMORY_COLLECT_STATS
 	releasedObjects++;
 	freedObjects++;
 	releasedMemory += bytes;
 	freedMemory += bytes;
-# endif
+#endif
 	rpfree(ptr);
 	return;
 #else
 	if (bytes > BIGGEST_OBJECT_SIZE) {
-# if ICON7_MEMORY_COLLECT_STATS
+#if ICON7_MEMORY_COLLECT_STATS
 		releasedObjects++;
 		freedObjects++;
 		releasedMemory += bytes;
 		freedMemory += bytes;
-# endif
+#endif
 		free(ptr);
 		ICON7_MALLOC_TRIM();
 		return;
 	}
 
 	uint32_t poolId = GetPoolId(&bytes);
-	
-# if ICON7_MEMORY_COLLECT_STATS
+
+#if ICON7_MEMORY_COLLECT_STATS
 	releasedObjects++;
 	releasedMemory += bytes;
-# endif
-	
-# if ICON7_USE_THREAD_CACHED_POOL
-		PoolsTLS &tls = objectPoolTLS;
-		tls.pools[poolId].ReleaseObject(ptr);
-# else
-		if (sizedQueues[poolId].size_approx() > (MAX_OBJECTS_STORED_MEMORY/objectSizes[poolId])) {
-#  if ICON7_MEMORY_COLLECT_STATS
-			freedObjects++;
-			freedMemory += bytes;
-#  endif
-			free(ptr);
-			ICON7_MALLOC_TRIM();
-			return;
-		} else if (sizedQueues[poolId].enqueue(ptr) == false) {
-#  if ICON7_MEMORY_COLLECT_STATS
-			freedObjects++;
-			freedMemory += bytes;
-#  endif
-			free(ptr);
-			ICON7_MALLOC_TRIM();
-			return;
-		}
+#endif
+
+#if ICON7_USE_THREAD_CACHED_POOL
+	PoolsTLS &tls = objectPoolTLS;
+	tls.pools[poolId].ReleaseObject(ptr);
+#else
+	if (sizedQueues[poolId].size_approx() >
+		(MAX_OBJECTS_STORED_MEMORY / objectSizes[poolId])) {
+#if ICON7_MEMORY_COLLECT_STATS
+		freedObjects++;
+		freedMemory += bytes;
+#endif
+		free(ptr);
+		ICON7_MALLOC_TRIM();
+		return;
+	} else if (sizedQueues[poolId].enqueue(ptr) == false) {
+#if ICON7_MEMORY_COLLECT_STATS
+		freedObjects++;
+		freedMemory += bytes;
+#endif
+		free(ptr);
+		ICON7_MALLOC_TRIM();
+		return;
+	}
 // 		if (sizedQueues[poolId].enqueue(ptr) == false) {
 // 			printf("f");
 // 			free(ptr);
 // 			ICON7_MALLOC_TRIM();
 // 			return;
 // 		}
-# endif
+#endif
 #endif
 }
 

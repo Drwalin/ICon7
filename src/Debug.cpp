@@ -29,28 +29,25 @@
 #include "../include/icon7/Debug.hpp"
 
 #ifdef __unix__
-# include <sys/syscall.h>
-# include <unistd.h>
-# ifdef SYS_gettid
-static uint64_t GenThreadId()
-{
-	return syscall(SYS_gettid);
-}
-#  define GEN_THREAD_ID() GenThreadId()
-# endif
+#include <sys/syscall.h>
+#include <unistd.h>
+#ifdef SYS_gettid
+static uint64_t GenThreadId() { return syscall(SYS_gettid); }
+#define GEN_THREAD_ID() GenThreadId()
+#endif
 #endif
 #if !defined(GEN_THREAD_ID)
-# include <atomic>
+#include <atomic>
 static uint64_t GenThreadId()
 {
 	static std::atomic<uint64_t> globID = 1;
 	return globID++;
 }
-# define GEN_THREAD_ID() GenThreadId()
+#define GEN_THREAD_ID() GenThreadId()
 #endif
 
 #ifndef ICON7_LOG_DATETIME_SUBSECONDS_DIGITS
-# define ICON7_LOG_DATETIME_SUBSECONDS_DIGITS 5
+#define ICON7_LOG_DATETIME_SUBSECONDS_DIGITS 5
 #endif
 
 namespace icon7
@@ -58,13 +55,13 @@ namespace icon7
 namespace log
 {
 #ifndef ICON7_LOG_IGNORE_COMMON_PATH
-# define ICON7_LOG_IGNORE_COMMON_PATH ""
+#define ICON7_LOG_IGNORE_COMMON_PATH ""
 #endif
 inline const static std::string IGNORE_COMMON_PATH =
 	ICON7_LOG_IGNORE_COMMON_PATH;
 
 #ifndef ICON7_LOG_DEFAULT_LOG_LEVEL
-# define ICON7_LOG_DEFAULT_LOG_LEVEL icon7::log::LL_IGNORE
+#define ICON7_LOG_DEFAULT_LOG_LEVEL icon7::log::LL_IGNORE
 #endif
 
 static LogLevel globalLogLevel = ICON7_LOG_DEFAULT_LOG_LEVEL;
@@ -175,7 +172,7 @@ std::string CorrectFilePath(std::string path)
 		it = it2;
 	}
 	if (it != 0) {
-		return path.substr(it+1);
+		return path.substr(it + 1);
 	}
 	return path;
 #else
@@ -286,7 +283,8 @@ void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
 
 	std::string timestamp;
 	if (printTime) {
-		timestamp = icon7::time::GetCurrentTimestampString(ICON7_LOG_DATETIME_SUBSECONDS_DIGITS);
+		timestamp = icon7::time::GetCurrentTimestampString(
+			ICON7_LOG_DATETIME_SUBSECONDS_DIGITS);
 	}
 
 	std::string funcName = GetPrettyFunctionName(function);
@@ -302,7 +300,8 @@ void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
 
 	if (printTime) {
 		offset = strlen(buf);
-		snprintf(buf + offset, BYTES - offset, "%s [%3lu] ", timestamp.c_str(), threadId);
+		snprintf(buf + offset, BYTES - offset, "%s [%3lu] ", timestamp.c_str(),
+				 threadId);
 	}
 
 	if (file != nullptr) {

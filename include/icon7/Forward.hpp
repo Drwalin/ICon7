@@ -24,7 +24,7 @@ namespace moodycamel
 template <typename T, typename Traits> class ConcurrentQueue;
 struct ConsumerToken;
 struct ProducerToken;
-}
+} // namespace moodycamel
 
 namespace bitscpp
 {

@@ -7,8 +7,7 @@
 #include <algorithm>
 #include <cmath>
 
-template<typename T>
-struct _DataStats {
+template <typename T> struct _DataStats {
 	T mean;
 	T stddev;
 	T p0;
@@ -26,8 +25,7 @@ struct _DataStats {
 };
 using DataStats = _DataStats<double>;
 
-template<typename T>
-_DataStats<T> CalcDataStats(T *ar, size_t count)
+template <typename T> _DataStats<T> CalcDataStats(T *ar, size_t count)
 {
 	_DataStats<T> stats;
 	memset(&stats, 0, sizeof(stats));
@@ -71,7 +69,7 @@ public:
 	inline ArgsParser(int argc, char **argv)
 	{
 		progName = argv[0];
-		for (int i=1; i<argc; ++i) {
+		for (int i = 1; i < argc; ++i) {
 			if (argv[i][0] == '-') {
 				std::string s = argv[i];
 				auto pos = s.find('=');
@@ -79,7 +77,7 @@ public:
 					args.emplace_back(s, "");
 				} else {
 					std::string key = s.substr(0, pos);
-					std::string value = s.substr(pos+1);
+					std::string value = s.substr(pos + 1);
 					args.emplace_back(key, value);
 				}
 			} else {
@@ -87,12 +85,12 @@ public:
 			}
 		}
 	}
-	
+
 	inline bool IsPresent(const std::vector<std::string> &params,
 						  bool *hasValue = nullptr) const
 	{
-		for (int i=0; i<args.size(); ++i) {
-			for (int j=0; j<params.size(); ++j) {
+		for (int i = 0; i < args.size(); ++i) {
+			for (int j = 0; j < params.size(); ++j) {
 				if (args[i].key == params[j]) {
 					if (hasValue) {
 						*hasValue = args[i].value != "";
@@ -106,20 +104,20 @@ public:
 		}
 		return false;
 	}
-	
+
 	inline bool HasValue(const std::vector<std::string> &params)
 	{
 		bool ret = false;
 		IsPresent(params, &ret);
 		return ret;
 	}
-	
+
 	inline std::string GetString(const std::vector<std::string> &params,
 								 std::string defaultValue,
 								 bool *exists = nullptr) const
 	{
-		for (int i=0; i<args.size(); ++i) {
-			for (int j=0; j<params.size(); ++j) {
+		for (int i = 0; i < args.size(); ++i) {
+			for (int j = 0; j < params.size(); ++j) {
 				if (args[i].key == params[j]) {
 					if (exists) {
 						*exists = true;
@@ -133,7 +131,7 @@ public:
 		}
 		return defaultValue;
 	}
-	
+
 	inline int64_t GetInt(const std::vector<std::string> &params) const
 	{
 		bool exists = false;
@@ -143,7 +141,7 @@ public:
 		}
 		return 0;
 	}
-	
+
 	inline int64_t GetInt(const std::vector<std::string> &params,
 						  int64_t defaultValue, int64_t min, int64_t max) const
 	{
@@ -157,7 +155,7 @@ public:
 		}
 		return defaultValue;
 	}
-	
+
 	inline bool GetFlag(const std::vector<std::string> &params) const
 	{
 		bool ret = false;
@@ -170,14 +168,12 @@ public:
 		}
 		return false;
 	}
-	
+
 public:
-	struct Entry
-	{
+	struct Entry {
 		std::string key, value;
 	};
 	std::string progName;
 	std::vector<Entry> args;
 	std::vector<std::string> floatingArgs;
 };
-

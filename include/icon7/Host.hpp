@@ -128,7 +128,7 @@ protected:
 protected:
 	std::vector<std::shared_ptr<Peer>> toRemoveFromQueue;
 	std::chrono::steady_clock::time_point timePointToExecuteLoop;
-	
+
 public:
 	decltype(std::chrono::microseconds()) minimumSingleLoopExecutionPeriod;
 };

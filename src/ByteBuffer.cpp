@@ -30,9 +30,9 @@ ByteBufferStorageHeader *ByteBufferStorageHeader::Allocate(uint32_t capacity)
 	uint32_t trueCapacity = std::bit_ceil(capacity + S);
 	if (trueCapacity < 64)
 		trueCapacity = 64;
-	
+
 	void *vptr = MemoryPool::Allocate(trueCapacity).object;
-	
+
 	ByteBufferStorageHeader *ptr = (ByteBufferStorageHeader *)vptr;
 	ptr->refCounter = 1;
 	ptr->size = 0;
@@ -60,7 +60,7 @@ ByteBufferStorageHeader::Reallocate(ByteBufferStorageHeader *ptr,
 	ret->size = ptr->size;
 	ret->refCounter = 1;
 	memcpy(ret->data(), ptr->data(), ptr->size);
-	
+
 	ptr->unref();
 	return ret;
 }
