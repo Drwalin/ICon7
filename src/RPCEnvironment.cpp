@@ -114,6 +114,10 @@ void RPCEnvironment::CheckForTimeoutFunctionCalls(uint32_t maxChecks)
 	auto it = returningCallbacks.find(lastCheckedId);
 	if (it == returningCallbacks.end())
 		it = returningCallbacks.begin();
+	else
+		++it;
+	if (it == returningCallbacks.end())
+		it = returningCallbacks.begin();
 	for (int i = 0; i < maxChecks && it != returningCallbacks.end(); ++i) {
 		lastCheckedId = it->first;
 		for (auto it2 = it->second.begin(); it2 != it->second.end(); ++i) {
