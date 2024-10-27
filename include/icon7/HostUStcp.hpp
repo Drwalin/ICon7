@@ -53,13 +53,15 @@ public:
 			  const char *passphrase = nullptr,
 			  const char *dh_params_file_name = nullptr,
 			  const char *ca_file_name = nullptr,
-			  const char *ssl_ciphers = nullptr);
+			  const char *ssl_ciphers = nullptr, int timerWakeupRepeatMs = 5);
 
 	virtual void SingleLoopIteration() override;
 
 	virtual void WakeUp() override;
 
 	virtual void StopListening() override;
+
+	void _LocalSetTimerRepeat(int timerWakeupRepeatMs);
 
 protected:
 	bool InitLoopAndContext(us_socket_context_options_t options);

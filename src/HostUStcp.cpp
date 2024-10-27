@@ -70,7 +70,7 @@ void Host::_InternalDestroy()
 bool Host::Init(bool useSSL, const char *key_file_name,
 				const char *cert_file_name, const char *passphrase,
 				const char *dh_params_file_name, const char *ca_file_name,
-				const char *ssl_ciphers)
+				const char *ssl_ciphers, int timerWakeupRepeatMs)
 {
 	SSL = useSSL;
 	us_socket_context_options_t options{key_file_name, cert_file_name,
@@ -81,8 +81,14 @@ bool Host::Init(bool useSSL, const char *key_file_name,
 	}
 	timerWakeup = us_create_timer(loop, true, sizeof(void *));
 	*(Host **)us_timer_ext(timerWakeup) = this;
-	us_timer_set(timerWakeup, _InternalOnTimerWakup, 1, 1);
+	_LocalSetTimerRepeat(timerWakeupRepeatMs);
 	return true;
+}
+
+void Host::_LocalSetTimerRepeat(int timerWakeupRepeatMs)
+{
+	us_timer_set(timerWakeup, _InternalOnTimerWakup, timerWakeupRepeatMs,
+				 timerWakeupRepeatMs);
 }
 
 void Host::_InternalOnTimerWakup(us_timer_t *timer)
@@ -288,16 +294,16 @@ us_socket_t *Host::_Internal_on_timeout(struct us_socket_t *socket)
 	if (peer) {
 		peer->_InternalOnTimeout();
 	}
-	
+
 	if (!us_socket_is_established(SSL, socket) || peer == nullptr) {
 		us_socket_shutdown(SSL, socket);
 		return us_socket_close(SSL, socket, 0, nullptr);
 	}
-	
+
 	if (us_socket_is_shut_down(SSL, socket)) {
 		return us_socket_close(SSL, socket, 0, nullptr);
 	}
-	
+
 	return socket;
 }
 
@@ -320,11 +326,11 @@ us_socket_t *Host::_Internal_on_connect_error(struct us_socket_t *socket,
 {
 	icon7::uS::tcp::Peer *peer =
 		*(icon7::uS::tcp::Peer **)us_socket_ext(SSL, socket);
-	
+
 	if (peer == nullptr) {
 		return socket;
 	}
-	
+
 	Host *host = (Host *)peer->host;
 
 	peer->_InternalClearInternalDataOnClose();
