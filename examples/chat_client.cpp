@@ -70,8 +70,21 @@ int main(int argc, char **argv)
 			auto end = str.find(' ', 5);
 			std::string recipient = str.substr(4, end - 4);
 			printf("Sending msg to `%s`\n", recipient.c_str());
-			rpc.Send(peer.get(), icon7::FLAG_RELIABLE, "Msg", recipient,
-					 str.substr(end + 1));
+
+			rpc.Call(peer.get(), icon7::FLAG_RELIABLE,
+					 icon7::OnReturnCallback::Make<bool>(
+						 [recipient](icon7::Peer *peer, icon7::Flags flags,
+									 bool result) -> void {
+							 if (result == false) {
+								 printf("No user named '%s' found in server\n",
+										recipient.c_str());
+							 }
+						 },
+						 [](icon7::Peer *peer) -> void {
+							 printf(" Sending private message timed out\n");
+						 },
+						 10000, peer.get()),
+					 "Msg", recipient, str.substr(end + 1));
 		} else {
 			rpc.Send(peer.get(), icon7::FLAG_RELIABLE, "Broadcast", str);
 		}

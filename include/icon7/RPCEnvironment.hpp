@@ -111,13 +111,15 @@ public:
 		SerializeSend(buffer, flags, name, args...);
 		peer->Send(buffer);
 	}
-	
-	static void InitializeSerializeSend(ByteWriter &writer, const std::string &name)
+
+	static void InitializeSerializeSend(ByteWriter &writer,
+										const std::string &name)
 	{
 		writer.op(name);
 	}
-	
-	static void FinalizeSerializeSend(ByteWriter &writer, Flags &flags) {
+
+	static void FinalizeSerializeSend(ByteWriter &writer, Flags &flags)
+	{
 		flags |= FLAGS_CALL_NO_FEEDBACK;
 		if (FramingProtocol::WriteHeaderIntoBuffer(writer._data, flags) ==
 			false) {
@@ -164,11 +166,11 @@ public:
 
 		virtual void Execute() override
 		{
-			const uint32_t rcbId = rpcEnv->GetNewReturnIdCallback();
+			const uint32_t rcbId = rpcEnv->GetNewReturnIdCallback(peer.get());
 			const uint32_t rcbId_v =
 				bitscpp::HostToNetworkUint<uint32_t>(rcbId);
 			memcpy(buffer.data(), &rcbId_v, sizeof(rcbId_v));
-			rpcEnv->returningCallbacks[rcbId] = std::move(callback);
+			rpcEnv->returningCallbacks[rcbId][peer.get()] = std::move(callback);
 			flags |= FLAGS_CALL;
 			if (FramingProtocol::WriteHeaderIntoBuffer(buffer, flags)) {
 				peer->SendLocalThread(std::move(buffer));
@@ -212,7 +214,7 @@ public:
 
 	void RemoveRegisteredMessage(const std::string &name);
 
-	uint32_t GetNewReturnIdCallback();
+	uint32_t GetNewReturnIdCallback(Peer *peer);
 
 	friend class Host;
 
@@ -220,8 +222,9 @@ protected:
 	std::unordered_map<std::string, MessageConverter *> registeredMessages;
 	Host *host = nullptr;
 
-	uint32_t returnCallCallbackIdGenerator = 0;
-	std::unordered_map<uint32_t, OnReturnCallback> returningCallbacks;
+	std::unordered_map<uint32_t,
+							std::unordered_map<Peer *, OnReturnCallback>>
+		returningCallbacks;
 	uint32_t lastCheckedId = 1;
 
 	std::vector<OnReturnCallback> timeouts;
