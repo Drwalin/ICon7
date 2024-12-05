@@ -6,12 +6,9 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-	set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
-else()
-endif()
+set(CMAKE_COLOR_DIAGNOSTICS ON)
 
+option(ENABLE_LTO "Enable LTO" OFF)
 option(ICON7_BUILD_EXAMPLES "Build icon7 examples" ON)
 option(ICON7_BUILD_TEST "Build icon7 tests" ON)
 option(ICON7_USE_RPMALLOC "Use rpmalloc. Otherwise use object pool" ON)
@@ -22,6 +19,10 @@ option(ICON7_LOG_USE_FILENAME_WITHOUT_PATH "Write file names without full path t
 option(ICON7_LOG_USE_PRETTY_FUNCTION "Use pretty function name for ICon7 log" ON)
 option(USOCKETS_USE_OPENSSL "Use OpenSSL instead of BoringSSL" ON)
 set(ICON7_LOG_DATETIME_SUBSECONDS_DIGITS 5 CACHE STRING "Number of sub-second digits in ICon7 log date-time")
+
+if(ENABLE_LTO)
+	set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
 
 add_subdirectory(bitscpp)
 

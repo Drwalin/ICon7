@@ -19,6 +19,8 @@
 #include <bit>
 
 #include "../include/icon7/MemoryPool.hpp"
+#include "../include/icon7/ByteReader.hpp"
+#include "../include/icon7/ByteWriter.hpp"
 
 #include "../include/icon7/ByteBuffer.hpp"
 
@@ -63,5 +65,34 @@ ByteBufferStorageHeader::Reallocate(ByteBufferStorageHeader *ptr,
 
 	ptr->unref();
 	return ret;
+}
+
+bitscpp::ByteReader<true> &ByteBuffer::__ByteStream_op(bitscpp::ByteReader<true> &s)
+{
+	int32_t size = 0;
+	s.op(size);
+	if (size <= 0) {
+		this->~ByteBuffer();
+	} else {
+		Init(size);
+		s.op((uint8_t *)data(), size);
+	}
+	return s;
+}
+
+bitscpp::ByteWriter<icon7::ByteBuffer> &
+ByteBuffer::__ByteStream_op(bitscpp::ByteWriter<icon7::ByteBuffer> &s)
+{
+	if (storage) {
+		const uint32_t size = this->size();
+		s.op(size);
+		if (size > 0) {
+			s.op((const uint8_t *)data(), size);
+		}
+	} else {
+		const uint32_t size = 0;
+		s.op(size);
+	}
+	return s;
 }
 } // namespace icon7

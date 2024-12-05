@@ -24,6 +24,12 @@
 
 #include <atomic>
 
+namespace bitscpp
+{
+template <bool V> class ByteReader;
+template <typename T> class ByteWriter;
+} // namespace bitscpp
+
 namespace icon7
 {
 struct ByteBufferStorageHeader {
@@ -169,6 +175,10 @@ public:
 			storage = ByteBufferStorageHeader::Reallocate(storage, newCapacity);
 		}
 	}
+
+	bitscpp::ByteReader<true> &__ByteStream_op(bitscpp::ByteReader<true> &s);
+	bitscpp::ByteWriter<icon7::ByteBuffer> &
+	__ByteStream_op(bitscpp::ByteWriter<icon7::ByteBuffer> &s);
 
 public:
 	ByteBufferStorageHeader *storage = nullptr;
