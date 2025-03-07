@@ -27,19 +27,6 @@
 
 namespace icon7
 {
-struct CoroutineSchedulable {
-	struct promise_type {
-		CoroutineSchedulable get_return_object() { return {}; }
-		std::suspend_never initial_suspend() { return {}; }
-		std::suspend_never final_suspend() noexcept { return {}; }
-		void return_void() {}
-		void unhandled_exception() {}
-
-		void *operator new(std::size_t bytes);
-		void operator delete(void *ptr, std::size_t bytes);
-	};
-};
-
 class CommandExecutionQueue
 {
 public:
