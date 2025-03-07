@@ -27,6 +27,7 @@
 #include "../include/icon7/ConcurrentQueueTraits.hpp"
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/CommandsBufferHandler.hpp"
+#include "../include/icon7/CoroutineHelper.hpp"
 
 #include "../include/icon7/Debug.hpp"
 #include "../include/icon7/CommandExecutionQueue.hpp"

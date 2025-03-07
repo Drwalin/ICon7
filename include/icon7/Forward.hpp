@@ -39,6 +39,7 @@ class ByteReader;
 struct ByteBufferStorageHeader;
 class ByteBuffer;
 class CommandExecutionQueue;
+struct CoroutineSchedulable;
 class Peer;
 class Host;
 class Command;
