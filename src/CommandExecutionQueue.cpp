@@ -33,6 +33,25 @@
 
 namespace icon7
 {
+void *CoroutineSchedulable::promise_type::operator new(std::size_t bytes)
+{
+	return MemoryPool::Allocate(bytes).object;
+}
+
+void CoroutineSchedulable::promise_type::operator delete(void *ptr,
+														 std::size_t bytes)
+{
+	MemoryPool::Release(ptr, bytes);
+}
+
+void CommandExecutionQueue::CoroutineAwaitable::await_suspend(
+	std::coroutine_handle<> h)
+{
+	queue->EnqueueCommand(CommandHandle<>::Create(h));
+	queue = nullptr;
+	objectHolder = nullptr;
+}
+
 CommandExecutionQueue::CommandExecutionQueue()
 {
 	asyncExecutionFlags = STOPPED;

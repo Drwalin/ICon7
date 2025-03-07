@@ -21,11 +21,25 @@
 
 #include <atomic>
 #include <memory>
+#include <coroutine>
 
 #include "Forward.hpp"
 
 namespace icon7
 {
+struct CoroutineSchedulable {
+	struct promise_type {
+		CoroutineSchedulable get_return_object() { return {}; }
+		std::suspend_never initial_suspend() { return {}; }
+		std::suspend_never final_suspend() noexcept { return {}; }
+		void return_void() {}
+		void unhandled_exception() {}
+
+		void *operator new(std::size_t bytes);
+		void operator delete(void *ptr, std::size_t bytes);
+	};
+};
+
 class CommandExecutionQueue
 {
 public:
@@ -52,6 +66,53 @@ public:
 	CommandsBufferHandler *GetThreadLocalBuffer();
 	std::unique_ptr<CommandsBufferHandler> CreateCommandBufferHandler();
 	void FlushThreadLocalCommandsBuffer();
+
+public:
+	struct CoroutineAwaitable {
+		inline CoroutineAwaitable(CommandExecutionQueue *queue,
+								  std::shared_ptr<void> &obj)
+			: queue(queue), objectHolder(obj)
+		{
+		}
+		inline CoroutineAwaitable(CommandExecutionQueue *queue,
+								  std::shared_ptr<void> &&obj)
+			: queue(queue), objectHolder(std::move(obj))
+		{
+		}
+		inline CoroutineAwaitable() : queue(nullptr), objectHolder(nullptr) {}
+		inline CoroutineAwaitable(CoroutineAwaitable &&o)
+			: queue(o.queue), objectHolder(std::move(o.objectHolder))
+		{
+			o.queue = nullptr;
+			o.objectHolder = nullptr;
+		}
+
+		inline CoroutineAwaitable &operator=(CoroutineAwaitable &&o)
+		{
+			this->queue = o.queue;
+			this->objectHolder = std::move(o.objectHolder);
+			o.queue = nullptr;
+			o.objectHolder = nullptr;
+			return *this;
+		}
+
+		inline bool await_ready() { return false; }
+		inline void await_resume() {}
+		void await_suspend(std::coroutine_handle<> h);
+
+		CommandExecutionQueue *queue = nullptr;
+		std::shared_ptr<void> objectHolder;
+		
+		inline bool IsValid() const { return queue; }
+	};
+	inline CoroutineAwaitable Schedule(std::shared_ptr<void> &&obj)
+	{
+		return CoroutineAwaitable(this, std::move(obj));
+	}
+	inline CoroutineAwaitable Schedule()
+	{
+		return CoroutineAwaitable(this, std::shared_ptr<void>(userSmartPtr));
+	}
 
 public:
 	void *userPtr = nullptr;
