@@ -48,63 +48,72 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader, Flags flags)
 {
 	switch (flags & 6) {
 	case FLAGS_CALL:
-	case FLAGS_CALL_NO_FEEDBACK: {
-		uint32_t returnId = 0;
-		if ((flags & 6) == FLAGS_CALL) {
-			reader.op(returnId);
-		}
-		std::string name;
-		reader.op(name);
-		auto it = registeredMessages.find(name);
-		if (registeredMessages.end() != it) {
-			auto mtd = it->second;
-			auto queue = mtd->ExecuteGetQueue(peer, reader, flags);
-			if (queue) {
-				auto com =
-					CommandHandle<commands::internal::ExecuteRPC>::Create(
-						std::move(reader));
-				com->peer = peer->shared_from_this();
-				com->flags = flags;
-				com->returnId = returnId;
-				com->messageConverter = mtd;
-				queue->EnqueueCommand(std::move(com));
-			} else {
-				mtd->Call(peer, reader, flags, returnId);
-			}
-		} else {
-			LOG_WARN("function not found: `%s`", name.c_str());
-		}
-	} break;
-	case FLAGS_CALL_RETURN_FEEDBACK: {
-		uint32_t id;
-		reader.op(id);
-		OnReturnCallback callback;
-		bool found = false;
-		{
-			auto it = returningCallbacks.find(id);
-			if (it != returningCallbacks.end()) {
-				auto it2 = it->second.find(peer);
-				if (it2 != it->second.end()) {
-					callback = std::move(it2->second);
-					it->second.erase(it2);
-					found = true;
-				}
-				if (it->second.empty()) {
-					returningCallbacks.erase(it);
-				}
-			}
-		}
-		if (found) {
-			callback.Execute(peer, flags, reader);
-		} else {
-			LOG_WARN(
-				"Remote function call returned value but OnReturnedCallback "
-				"already expired. returnId = %u",
-				id);
-		}
-	} break;
+	case FLAGS_CALL_NO_FEEDBACK:
+		OnReceiveCall(peer, reader, flags);
+		break;
+	case FLAGS_CALL_RETURN_FEEDBACK:
+		OnReceiveReturn(peer, reader, flags);
+		break;
 	default:
 		LOG_WARN("Received packet with UNUSED RPC type bits set.");
+	}
+}
+
+void RPCEnvironment::OnReceiveCall(Peer *peer, ByteReader &reader, Flags flags)
+{
+	uint32_t returnId = 0;
+	if ((flags & 6) == FLAGS_CALL) {
+		reader.op(returnId);
+	}
+	std::string name;
+	reader.op(name);
+	auto it = registeredMessages.find(name);
+	if (registeredMessages.end() != it) {
+		auto mtd = it->second;
+		auto queue = mtd->ExecuteGetQueue(peer, reader, flags);
+		if (queue) {
+			auto com = CommandHandle<commands::internal::ExecuteRPC>::Create(
+				std::move(reader));
+			com->peer = peer->shared_from_this();
+			com->flags = flags;
+			com->returnId = returnId;
+			com->messageConverter = mtd;
+			queue->EnqueueCommand(std::move(com));
+		} else {
+			mtd->Call(peer, reader, flags, returnId);
+		}
+	} else {
+		LOG_WARN("function not found: `%s`", name.c_str());
+	}
+}
+
+void RPCEnvironment::OnReceiveReturn(Peer *peer, ByteReader &reader,
+									 Flags flags)
+{
+	uint32_t id;
+	reader.op(id);
+	OnReturnCallback callback;
+	bool found = false;
+	{
+		auto it = returningCallbacks.find(id);
+		if (it != returningCallbacks.end()) {
+			auto it2 = it->second.find(peer);
+			if (it2 != it->second.end()) {
+				callback = std::move(it2->second);
+				it->second.erase(it2);
+				found = true;
+			}
+			if (it->second.empty()) {
+				returningCallbacks.erase(it);
+			}
+		}
+	}
+	if (found) {
+		callback.Execute(peer, flags, reader);
+	} else {
+		LOG_WARN("Remote function call returned value but OnReturnedCallback "
+				 "already expired. returnId = %u",
+				 id);
 	}
 }
 
