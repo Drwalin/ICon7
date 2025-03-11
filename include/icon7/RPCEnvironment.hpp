@@ -51,6 +51,8 @@ public:
 	 * offset
 	 */
 	void OnReceive(Peer *peer, ByteReader &reader, Flags flags);
+	void OnReceiveCall(Peer *peer, ByteReader &reader, Flags flags);
+	void OnReceiveReturn(Peer *peer, ByteReader &reader, Flags flags);
 
 	template <typename Fun>
 	MessageConverter *
