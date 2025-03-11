@@ -131,9 +131,10 @@ public:
 	OnReturnCallback() {}
 	OnReturnCallback(OnReturnCallback &&o)
 		: callback(std::move(o.callback)), executionQueue(o.executionQueue),
-		  timeoutTimePoint(o.timeoutTimePoint)
+		  timeoutTimePoint(o.timeoutTimePoint), pointerHolder(o.pointerHolder)
 	{
 		o.executionQueue = nullptr;
+		o.pointerHolder = nullptr;
 	}
 
 	OnReturnCallback(OnReturnCallback &) = delete;
@@ -145,6 +146,8 @@ public:
 		executionQueue = o.executionQueue;
 		timeoutTimePoint = o.timeoutTimePoint;
 		o.executionQueue = nullptr;
+		pointerHolder = o.pointerHolder;
+		o.pointerHolder = nullptr;
 		return *this;
 	}
 
@@ -161,7 +164,8 @@ public:
 	template <typename Tret, typename Tfunc, typename Ttimeout>
 	static OnReturnCallback
 	Make(Tfunc &&onReturned, Ttimeout &&onTimeout, uint32_t timeoutMilliseconds,
-		 Peer *peer, CommandExecutionQueue *executionQueue = nullptr)
+		 Peer *peer, CommandExecutionQueue *executionQueue = nullptr,
+		 std::shared_ptr<void> pointerHolder = nullptr)
 	{
 		OnReturnCallback ret;
 		auto cb =
@@ -173,13 +177,15 @@ public:
 		ret.executionQueue = executionQueue;
 		ret.timeoutTimePoint = std::chrono::steady_clock::now() +
 							   (std::chrono::milliseconds(timeoutMilliseconds));
+		ret.pointerHolder = pointerHolder;
 		return ret;
 	}
 
 	template <typename Tfunc, typename Ttimeout>
 	static OnReturnCallback
 	Make(Tfunc &&onReturned, Ttimeout &&onTimeout, uint32_t timeoutMilliseconds,
-		 Peer *peer, CommandExecutionQueue *executionQueue = nullptr)
+		 Peer *peer, CommandExecutionQueue *executionQueue = nullptr,
+		 std::shared_ptr<void> pointerHolder = nullptr)
 	{
 		OnReturnCallback ret;
 		auto cb =
@@ -191,6 +197,7 @@ public:
 		ret.executionQueue = executionQueue;
 		ret.timeoutTimePoint = std::chrono::steady_clock::now() +
 							   (std::chrono::milliseconds(timeoutMilliseconds));
+		ret.pointerHolder = pointerHolder;
 		return ret;
 	}
 
@@ -198,6 +205,7 @@ public:
 	CommandHandle<ExecuteReturnCallbackBase> callback;
 	CommandExecutionQueue *executionQueue;
 	std::chrono::time_point<std::chrono::steady_clock> timeoutTimePoint;
+	std::shared_ptr<void> pointerHolder;
 };
 } // namespace icon7
 
