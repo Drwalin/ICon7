@@ -2,9 +2,9 @@
 # ICon7
 
 Provides async interface for Remote Procedure Call (RPC), agnostic towards
-networking library. The
-library itself does not provide encryption or reliability mechanisms but require
-the underlying library to provide those themselfs if needed.
+networking library. The library itself does not provide encryption or
+reliability mechanisms but require the underlying library to provide those
+themselfs if needed.
 
 ## Remote method invocation
 
@@ -16,11 +16,12 @@ reimplemented as wrapper around RPC.
 Unreliable messages are not implemented yet!
 
 Unreliable message size is limited to MTU, which usually is around 1500 bytes,
-but for safety reasons it shouldn't be more than around 768 or 1024 bytes.
+but for compatibility reasons it shouldn't be more than around 768 or 1024
+bytes.
 
-Reliable messages (with headers) should be smaller than 64 KiB, but
-size is limited by 2^28 (256 MiB). Size of messages may be limited by underlying
-networking library more.
+Reliable messages (with headers) should be smaller than 64 KiB, but size is
+limited by 2^28 (256 MiB). Underlying networking library may be more restrictive
+towards message size.
 
 ## Vulnerabilities
 
@@ -29,7 +30,7 @@ The same as underlying networking library.
 ## Requirements
 
 - cmake
-- OpenSSL
+- OpenSSL (optional, can use BoringSSL included as submodule)
 - C++ 17 compliant compiler
 
 ## How to compile
@@ -56,9 +57,9 @@ library to be received as continous data in case of stream protocols.
 For sake of simplicity call, return calls, messages, control messages (if
 implemented in future) will be named as messages.
 
-Each message have header that describes it's size and some aditional information.
-Within one packet (definition depends on underlying library) can be as many
-message as can fit inside.
+Each message have header that describes it's size and some aditional
+information.  Within one packet (definition depends on underlying library) can
+be as many message as can fit inside.
 
 In case of streaming protocols, such as TCP, messages are distinguished by their
 headers.
@@ -100,12 +101,10 @@ zzzz...zz - size of body of message, stored in little endian. Effectively to
     whole header and then bit shift it by 4, then add 1 to result:
 ``` C
     uint8_t header[4] = ...;
-    uint8_t sizeOfSize = header[0] & 0b11;
-    uint32_t bodySize = 0;
-    if (sizeOfSize == 0b11) {
-        uint32_t tmp = get_little_endian_uint32(header);
-        bodySize = (tmp>>4) + 1;
-    } else if ...
+    uint8_t bytesOfSize = header[0] & 0b11;
+    uint32_t tmp = get_little_endian_uint64(header) >> 4;
+    constexpr uint32_t size_masks[4] = {0xF, 0xFFF, 0xFFFFF, 0xFFFFFFF};
+    uint32_t bodySize = (tmp & size_masks[bytesOfSize-1]) + 1;
 ```
 
 ### Controll packet structure
