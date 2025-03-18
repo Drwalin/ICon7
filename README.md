@@ -87,14 +87,13 @@ xx - (2 least significant bits of first byte) - determine size of header:
 ```
 
 yy - determines type of RPC message:
-- 00 - function/procedure call without feedback
-- 01 - function/procedure call where callee awaits returned value
-           (or signal of execution finished in case of `void` return type)
-- 10 - return feedback (from callee to caller)
-- 11 - Controll sequence. See Controll packet structure.
-    Then first body byte values between 0x00-0x7F are
-           reserved for future use; it's values between 0x80-0xFF are to be used
-           by underlying networking library.
+```
+    - 00 - function/procedure call without feedback
+    - 01 - function/procedure call where callee awaits returned value (or signal
+            of execution finished in case of void return type)
+    - 10 - return feedback (from callee to caller)
+    - 11 - Controll sequence. See Controll packet structure.
+```
 
 zzzz...zz - size of body of message, stored in little endian. Effectively to
     extract size of message body one needs to get little endian integer from
@@ -108,6 +107,10 @@ zzzz...zz - size of body of message, stored in little endian. Effectively to
 ```
 
 ### Controll packet structure
+
+Then first body byte values between 0x00-0x7F are reserved for future use; it's
+values between 0x80-0xFF are to be used by underlying networking library.
+
 ```
          Header           1 byte
   ___________________   ___________
@@ -118,8 +121,10 @@ zzzz...zz - size of body of message, stored in little endian. Effectively to
 ```
 
 Vector call byte values:
-- 0x00-0x7F - reserved for future use in protocol
-- 0x80-0xFF - reserved for use for underlying backend implementation
+```
+    - 0x00-0x7F - reserved for future use in protocol
+    - 0x80-0xFF - reserved for use for underlying backend implementation
+```
 
 ### structure of message body
 
