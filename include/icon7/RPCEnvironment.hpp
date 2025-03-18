@@ -111,7 +111,7 @@ public:
 	{
 		ByteBuffer buffer(100);
 		SerializeSend(buffer, flags, name, args...);
-		peer->Send(buffer);
+		peer->Send(std::move(buffer));
 	}
 
 	static void InitializeSerializeSend(ByteWriter &writer,

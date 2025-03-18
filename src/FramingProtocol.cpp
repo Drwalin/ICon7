@@ -35,8 +35,6 @@ uint32_t FramingProtocol::GetHeaderSize(uint32_t dataSize)
 		return 3;
 	} else if (dataSize <= 1 << 28) {
 		return 4;
-	} else {
-		return 0;
 	}
 	return 0;
 }
