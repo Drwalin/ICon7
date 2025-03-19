@@ -9,6 +9,7 @@
 #include <icon7/Flags.hpp>
 #include <icon7/PeerUStcp.hpp>
 #include <icon7/HostUStcp.hpp>
+#include "../include/icon7/LoopUS.hpp"
 
 std::unordered_map<std::string, icon7::Peer *> peers;
 icon7::RPCEnvironment rpc;
@@ -75,9 +76,11 @@ int main(int argc, char **argv)
 							}
 						});
 
-	icon7::uS::tcp::Host *_host = new icon7::uS::tcp::Host();
-	_host->Init();
-	icon7::Host *host = _host;
+	std::shared_ptr<icon7::uS::Loop> loop = std::make_shared<icon7::uS::Loop>();
+	loop->Init(1);
+	std::shared_ptr<icon7::uS::tcp::Host> _host = loop->CreateHost(false);
+
+	icon7::Host *host = _host.get();
 	host->SetOnDisconnect([](icon7::Peer *peer) {
 		if (peer->userPointer != nullptr) {
 			std::string *oldName = (std::string *)(peer->userPointer);
@@ -87,7 +90,7 @@ int main(int argc, char **argv)
 		}
 	});
 	host->SetRpcEnvironment(&rpc);
-	host->RunAsync();
+	loop->RunAsync();
 
 	auto Listen = [host, port](std::string addr) -> bool {
 		auto listeningFuture = host->ListenOnPort(addr, port, icon7::IPv4);
@@ -111,13 +114,12 @@ int main(int argc, char **argv)
 		std::string str;
 		std::cin >> str;
 		if (str == "quit") {
-			host->QueueStopRunning();
-			host->WaitStopRunning();
 			break;
 		}
 	}
 
-	delete host;
+	loop->Destroy();
+	loop = nullptr;
 
 	icon7::Deinitialize();
 	return 0;

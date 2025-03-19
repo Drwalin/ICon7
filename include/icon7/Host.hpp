@@ -1,6 +1,6 @@
 /*
  *  This file is part of ICon7.
- *  Copyright (C) 2023-2024 Marek Zalewski aka Drwalin
+ *  Copyright (C) 2023-2025 Marek Zalewski aka Drwalin
  *
  *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
 #ifndef ICON7_HOST_HPP
 #define ICON7_HOST_HPP
 
-#include <chrono>
 #include <string>
 #include <unordered_set>
 #include <functional>
@@ -34,8 +33,9 @@ namespace icon7
 {
 class Peer;
 class RPCEnvironment;
+class Loop;
 
-class Host
+class Host : public std::enable_shared_from_this<Host>
 {
 public:
 	virtual ~Host();
@@ -69,13 +69,7 @@ public:
 
 	virtual void StopListening() = 0;
 
-	void RunAsync();
-	void WaitStopRunning();
-	void QueueStopRunning();
-	bool IsRunningAsync();
-	bool IsQueuedStopAsync();
-
-	CommandExecutionQueue *GetCommandExecutionQueue() { return &commandQueue; }
+	CommandExecutionQueue *GetCommandExecutionQueue() { return commandQueue; }
 	void EnqueueCommand(CommandHandle<Command> &&command);
 
 	void InsertPeerToFlush(Peer *peer);
@@ -83,15 +77,14 @@ public:
 	RPCEnvironment *GetRpcEnvironment();
 	void SetRpcEnvironment(RPCEnvironment *env);
 
-	virtual void WakeUp();
+	Loop *GetLoop();
 
 public: // thread unsafe, safe only in hosts loop thread
 	void ForEachPeer(void(func)(icon7::Peer *));
 	void ForEachPeer(std::function<void(icon7::Peer *)> func);
 	void DisconnectAll();
 
-	virtual void SingleLoopIteration() = 0;
-	virtual void _InternalSingleLoopIteration(bool forceExecution);
+	virtual void _InternalSingleLoopIteration();
 
 	void _InternalInsertPeerToFlush(Peer *peer);
 	virtual void
@@ -103,10 +96,13 @@ public: // thread unsafe, safe only in hosts loop thread
 	_InternalConnect_Finish(commands::internal::ExecuteConnect &connectCommand);
 	virtual void _Internal_on_open_Finish(std::shared_ptr<Peer> peer);
 	void _Internal_on_close_Finish(std::shared_ptr<Peer> peer);
+	
+	virtual void _InternalStopListening() = 0;
 
 public:
 	uint64_t userData;
 	void *userPointer;
+	std::shared_ptr<void> userSmartPtr;
 
 protected:
 	Host();
@@ -121,16 +117,12 @@ protected:
 
 	std::unordered_set<std::shared_ptr<Peer>> peers;
 
-	CommandExecutionQueue commandQueue;
-	std::atomic<uint32_t> asyncRunnerFlags;
-	std::thread asyncRunner;
+	CommandExecutionQueue *commandQueue;
+
+	std::shared_ptr<Loop> loop;
 
 protected:
 	std::vector<std::shared_ptr<Peer>> toRemoveFromQueue;
-	std::chrono::steady_clock::time_point timePointToExecuteLoop;
-
-public:
-	decltype(std::chrono::microseconds()) minimumSingleLoopExecutionPeriod;
 };
 
 void Initialize();

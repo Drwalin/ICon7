@@ -10,6 +10,7 @@
 #include <icon7/Flags.hpp>
 #include <icon7/PeerUStcp.hpp>
 #include <icon7/HostUStcp.hpp>
+#include "../include/icon7/LoopUS.hpp"
 
 int Sum(int a, int b)
 {
@@ -35,10 +36,12 @@ int main()
 	rpc2.RegisterMessage("sum", Sum);
 	rpc2.RegisterMessage("mul", Mul);
 
-	icon7::uS::tcp::Host *hosta = new icon7::uS::tcp::Host();
+	std::shared_ptr<icon7::uS::Loop> loopa =
+		std::make_shared<icon7::uS::Loop>();
+	loopa->Init(1);
+	std::shared_ptr<icon7::uS::tcp::Host> hosta = loopa->CreateHost(false);
 	hosta->SetRpcEnvironment(&rpc);
-	hosta->Init();
-	hosta->RunAsync();
+	loopa->RunAsync();
 
 	{
 		auto f = hosta->ListenOnPort("127.0.0.1", port, icon7::IPv4);
@@ -51,10 +54,12 @@ int main()
 		}
 	}
 
-	icon7::uS::tcp::Host *hostb = new icon7::uS::tcp::Host();
+	std::shared_ptr<icon7::uS::Loop> loopb =
+		std::make_shared<icon7::uS::Loop>();
+	loopb->Init(1);
+	std::shared_ptr<icon7::uS::tcp::Host> hostb = loopb->CreateHost(false);
 	hostb->SetRpcEnvironment(&rpc2);
-	hostb->Init();
-	hostb->RunAsync();
+	loopb->RunAsync();
 
 	{
 		class CommandDisconnectOnConnect final
@@ -97,11 +102,11 @@ int main()
 
 	std::this_thread::sleep_for(std::chrono::milliseconds(300));
 
-	hosta->_InternalDestroy();
-	hostb->_InternalDestroy();
+	hosta = nullptr;
+	hostb = nullptr;
+	loopa->Destroy();
+	loopb->Destroy();
 
-	delete hosta;
-	delete hostb;
 	t.join();
 
 	icon7::Deinitialize();

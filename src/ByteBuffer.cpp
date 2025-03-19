@@ -67,7 +67,8 @@ ByteBufferStorageHeader::Reallocate(ByteBufferStorageHeader *ptr,
 	return ret;
 }
 
-bitscpp::ByteReader<true> &ByteBuffer::__ByteStream_op(bitscpp::ByteReader<true> &s)
+bitscpp::ByteReader<true> &
+ByteBuffer::__ByteStream_op(bitscpp::ByteReader<true> &s)
 {
 	int32_t size = 0;
 	s.op(size);

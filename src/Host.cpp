@@ -1,6 +1,6 @@
 /*
  *  This file is part of ICon7.
- *  Copyright (C) 2023-2024 Marek Zalewski aka Drwalin
+ *  Copyright (C) 2023-2025 Marek Zalewski aka Drwalin
  *
  *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,13 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <chrono>
-#include <thread>
-
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/Peer.hpp"
 #include "../include/icon7/RPCEnvironment.hpp"
 #include "../include/icon7/Debug.hpp"
+#include "../include/icon7/Loop.hpp"
 
 #include "../include/icon7/Host.hpp"
 
@@ -34,46 +32,20 @@ Host::Host()
 	userPointer = nullptr;
 	onConnect = nullptr;
 	onDisconnect = nullptr;
-	asyncRunnerFlags = 0;
 	rpcEnvironment = nullptr;
-	timePointToExecuteLoop = std::chrono::steady_clock::now();
-	minimumSingleLoopExecutionPeriod = std::chrono::microseconds(700);
 }
 
 Host::~Host()
 {
-	WaitStopRunning();
-	asyncRunner.join();
 	if (rpcEnvironment) {
 		rpcEnvironment->host = this;
 	}
 }
 
-void Host::WaitStopRunning()
-{
-	QueueStopRunning();
-	while (IsRunningAsync()) {
-		QueueStopRunning();
-		WakeUp();
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
-	}
-}
-
 void Host::_InternalDestroy()
 {
-	StopListening();
-	DisconnectAllAsync();
-	QueueStopRunning();
-
-	do {
-		WakeUp();
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
-	} while (IsRunningAsync());
-
-	commandQueue.Execute(128);
-	while (commandQueue.HasAny()) {
-		commandQueue.Execute(128);
-	}
+	_InternalStopListening();
+	DisconnectAll();
 }
 
 void Host::DisconnectAllAsync()
@@ -230,48 +202,11 @@ void Host::Connect(std::string address, uint16_t port,
 
 void Host::EnqueueCommand(CommandHandle<Command> &&command)
 {
-	commandQueue.EnqueueCommand(std::move(command));
-	WakeUp();
+	loop->EnqueueCommand(std::move(command));
 }
 
-enum RunnerFlags : uint32_t { RUNNING = 1, QUEUE_STOP = 2 };
-
-void Host::RunAsync()
+void Host::_InternalSingleLoopIteration()
 {
-	asyncRunnerFlags = 0;
-	asyncRunner = std::thread(
-		[](Host *host) {
-			host->asyncRunnerFlags |= RUNNING;
-			while (host->IsQueuedStopAsync() == false) {
-				host->SingleLoopIteration();
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			}
-			host->asyncRunnerFlags &= ~RUNNING;
-		},
-		this);
-}
-
-void Host::QueueStopRunning()
-{
-	asyncRunnerFlags |= QUEUE_STOP;
-	if (IsRunningAsync()) {
-		WakeUp();
-	}
-}
-
-bool Host::IsQueuedStopAsync() { return asyncRunnerFlags & QUEUE_STOP; }
-
-bool Host::IsRunningAsync() { return asyncRunnerFlags & RUNNING; }
-
-void Host::_InternalSingleLoopIteration(bool forceExecution)
-{
-	if (forceExecution == false &&
-		timePointToExecuteLoop > std::chrono::steady_clock::now()) {
-		return;
-	}
-	timePointToExecuteLoop =
-		std::chrono::steady_clock::now() + minimumSingleLoopExecutionPeriod;
-	commandQueue.Execute(128 * 1024);
 	for (auto &p : peers) {
 		if (p->_InternalHasBufferedSends() || p->_InternalHasQueuedSends()) {
 			p->_InternalOnWritable();
@@ -321,9 +256,6 @@ void Host::ForEachPeer(std::function<void(icon7::Peer *)> func)
 	}
 }
 
-void Host::WakeUp() {}
-
 void Initialize() {}
 void Deinitialize() {}
-
 } // namespace icon7
