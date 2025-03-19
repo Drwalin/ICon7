@@ -40,8 +40,9 @@ struct ByteBufferStorageHeader;
 class ByteBuffer;
 class CommandExecutionQueue;
 struct CoroutineSchedulable;
-class Peer;
+class Loop;
 class Host;
+class Peer;
 class Command;
 template <typename T> class CommandHandle;
 class CommandsBufferHandler;
@@ -75,10 +76,11 @@ namespace icon7
 {
 namespace uS
 {
+class Loop;
 namespace tcp
 {
-class Peer;
 class Host;
+class Peer;
 } // namespace tcp
 } // namespace uS
 } // namespace icon7
