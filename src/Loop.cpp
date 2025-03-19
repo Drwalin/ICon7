@@ -81,6 +81,17 @@ void Loop::EnqueueCommand(CommandHandle<Command> &&command)
 	WakeUp();
 }
 
+CommandExecutionQueue::CoroutineAwaitable
+Loop::Schedule(std::shared_ptr<void> &&obj)
+{
+	return commandQueue.Schedule(std::move(obj));
+}
+
+CommandExecutionQueue::CoroutineAwaitable Loop::Schedule()
+{
+	return commandQueue.Schedule();
+}
+
 void Loop::RunAsync()
 {
 	asyncRunnerFlags = 0;
@@ -113,7 +124,7 @@ bool Loop::IsRunningAsync() { return asyncRunnerFlags & RUNNING; }
 
 void Loop::_InternalSingleLoopIteration()
 {
-	commandQueue.Execute(128 * 1024);
+	commandQueue.Execute(1024);
 	for (auto &h : hosts) {
 		h->_InternalSingleLoopIteration();
 	}

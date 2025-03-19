@@ -160,20 +160,28 @@ void CommandExecutionQueue::ExecuteLoop(uint32_t sleepMicrosecondsOnNoActions,
 
 uint32_t CommandExecutionQueue::Execute(uint32_t maxToDequeue)
 {
+	constexpr uint32_t elems = 128;
 	uint32_t total = 0;
 	alignas(alignof(CommandHandle<Command>))
-		uint8_t commandsStore[128 * sizeof(CommandHandle<Command>)];
-	memset(commandsStore, 0, 128 * sizeof(CommandHandle<Command>));
+		uint8_t commandsStore[elems * sizeof(CommandHandle<Command>)];
+	memset(commandsStore, 0, elems * sizeof(CommandHandle<Command>));
 	CommandHandle<Command> *commands = (CommandHandle<Command> *)commandsStore;
-	while (maxToDequeue && HasAny()) {
-		uint32_t toDequeue = std::min<uint32_t>(maxToDequeue, 128);
+	
+	while (maxToDequeue) {
+		uint32_t toDequeue = std::min<uint32_t>(maxToDequeue, elems);
 		uint32_t dequeued = TryDequeueBulk(commands, toDequeue);
-		maxToDequeue -= dequeued;
+		
 		total += dequeued;
 		for (int i = 0; i < dequeued; ++i) {
 			commands[i].Execute();
 			commands[i].~CommandHandle();
 			commands[i]._com = nullptr;
+		}
+		
+		if (dequeued != toDequeue) {
+			break;
+		} else {
+			maxToDequeue -= dequeued;
 		}
 	}
 	return total;
