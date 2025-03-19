@@ -220,7 +220,7 @@ int main(int argc, char **argv)
 
 			uint32_t sendFrameSize = 0;
 			const auto _S = std::chrono::steady_clock::now();
-			double sumTim = 0;
+			std::atomic<double> sumTim = 0;
 			{
 				auto commandsBuffer =
 					hostb->GetCommandExecutionQueue()->GetThreadLocalBuffer();

@@ -29,6 +29,7 @@ template <typename T> struct AllocatedObject {
 	T *object;
 	uint32_t capacity;
 };
+
 class MemoryPool
 {
 public:
@@ -56,14 +57,6 @@ public:
 	}
 
 	static void PrintStats();
-
-#if ICON7_USE_RPMALLOC
-#else
-private:
-	static uint32_t RoundSize(uint32_t bytes);
-	static uint32_t GetBits(uint32_t bytes);
-	static uint32_t GetPoolId(uint32_t *bytes);
-#endif
 };
 } // namespace icon7
 

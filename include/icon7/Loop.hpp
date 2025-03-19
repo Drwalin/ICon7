@@ -55,6 +55,8 @@ public: // multithreaded safe functions
 
 	CommandExecutionQueue *GetCommandExecutionQueue() { return &commandQueue; }
 	void EnqueueCommand(CommandHandle<Command> &&command);
+	CommandExecutionQueue::CoroutineAwaitable Schedule(std::shared_ptr<void> &&obj);
+	CommandExecutionQueue::CoroutineAwaitable Schedule();
 
 	virtual void WakeUp() = 0;
 

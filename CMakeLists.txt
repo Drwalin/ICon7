@@ -13,12 +13,17 @@ option(ICON7_BUILD_EXAMPLES "Build icon7 examples" ON)
 option(ICON7_BUILD_TEST "Build icon7 tests" ON)
 option(ICON7_USE_RPMALLOC "Use rpmalloc. Otherwise use object pool" ON)
 option(ICON7_MEMORY_COLLECT_STATS "Enable memory statistics collection" OFF)
-option(ICON7_USE_MALLOC_TRIM "Enable malloc trimming with each call to free()" OFF)
 option(ICON7_LOG_LEVEL_SINGLE_CHARACTER "Write single character for ICon7 log level" ON)
 option(ICON7_LOG_USE_FILENAME_WITHOUT_PATH "Write file names without full path to ICon7 log" ON)
 option(ICON7_LOG_USE_PRETTY_FUNCTION "Use pretty function name for ICon7 log" ON)
+option(ICON7_CLANG_FUZZTEST "Compile fuzztesting and use clang" OFF)
 option(USOCKETS_USE_OPENSSL "Use OpenSSL instead of BoringSSL" ON)
 set(ICON7_LOG_DATETIME_SUBSECONDS_DIGITS 5 CACHE STRING "Number of sub-second digits in ICon7 log date-time")
+
+if(ICON7_CLANG_FUZZTEST)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address,fuzzer -O1 -g -fprofile-instr-generate -fcoverage-mapping")
+	set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address,fuzzer -O1 -g -fprofile-instr-generate -fcoverage-mapping")
+endif()
 
 if(ENABLE_LTO)
 	set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
@@ -77,7 +82,7 @@ add_library(icon7 STATIC
 )
 target_link_libraries(icon7 uSockets)
 
-if (ICON7_USE_RPMALLOC)
+if(ICON7_USE_RPMALLOC)
 	target_link_libraries(icon7 rpmalloc)
 	add_library(rpmalloc STATIC
 		rpmalloc/rpmalloc/rpmalloc.c
@@ -90,12 +95,14 @@ else()
 	target_compile_definitions(icon7 PUBLIC ICON7_USE_THREAD_CACHED_POOL=0)
 endif()
 
-if (NOT DEFINED ICON7_IGNORE_COMMON_LOG_PATH)
+if(NOT DEFINED ICON7_IGNORE_COMMON_LOG_PATH)
 target_compile_definitions(icon7 PUBLIC ICON7_LOG_IGNORE_COMMON_PATH="${PROJECT_SOURCE_DIR}")
 endif()
 if(NOT DEFINED ICON7_LOG_DEFAULT_LOG_LEVEL)
 	if(CMAKE_BUILD_TYPE STREQUAL "Release")
 		target_compile_definitions(icon7 PUBLIC ICON7_LOG_DEFAULT_LOG_LEVEL=INFO)
+	elseif(ICON7_CLANG_FUZZTEST)
+		target_compile_definitions(icon7 PUBLIC ICON7_LOG_DEFAULT_LOG_LEVEL=LL_ERROR)
 	else()
 		target_compile_definitions(icon7 PUBLIC ICON7_LOG_DEFAULT_LOG_LEVEL=LL_IGNORE)
 	endif()
@@ -105,10 +112,6 @@ endif()
 
 if(ICON7_MEMORY_COLLECT_STATS)
 	target_compile_definitions(icon7 PUBLIC ICON7_MEMORY_COLLECT_STATS=1)
-endif()
-
-if(ICON7_USE_MALLOC_TRIM)
-	target_compile_definitions(icon7 PUBLIC ICON7_USE_MALLOC_TRIM=1)
 endif()
 
 if(ICON7_LOG_LEVEL_SINGLE_CHARACTER)
@@ -136,4 +139,28 @@ endif()
 
 if(ICON7_BUILD_EXAMPLES)
 	add_subdirectory(examples)
+endif()
+
+if(ICON7_CLANG_FUZZTEST)
+	add_executable(fuzz_test
+		tests/fuzz_test
+	)
+	target_compile_options(fuzz_test
+		PRIVATE -fsanitize=address,fuzzer
+	)
+	target_link_libraries(fuzz_test
+		PRIVATE -fsanitize=address,fuzzer
+		icon7
+	)
+	
+	add_executable(fuzz_test2
+		tests/fuzz_test2
+	)
+	target_compile_options(fuzz_test2
+		PRIVATE -fsanitize=address,fuzzer
+	)
+	target_link_libraries(fuzz_test2
+		PRIVATE -fsanitize=address,fuzzer
+		icon7
+	)
 endif()
