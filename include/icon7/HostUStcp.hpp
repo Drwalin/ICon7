@@ -1,6 +1,6 @@
 /*
  *  This file is part of ICon7.
- *  Copyright (C) 2023-2024 Marek Zalewski aka Drwalin
+ *  Copyright (C) 2023-2025 Marek Zalewski aka Drwalin
  *
  *  ICon7 is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -29,6 +29,8 @@ namespace icon7
 {
 namespace uS
 {
+class Loop;
+
 namespace tcp
 {
 class Peer;
@@ -48,33 +50,22 @@ public:
 
 	virtual void _InternalDestroy() override;
 
-	bool Init(bool useSSL = false, const char *key_file_name = nullptr,
+	bool Init(std::shared_ptr<uS::Loop> loop, bool useSSL,
+			  const char *key_file_name = nullptr,
 			  const char *cert_file_name = nullptr,
 			  const char *passphrase = nullptr,
 			  const char *dh_params_file_name = nullptr,
 			  const char *ca_file_name = nullptr,
-			  const char *ssl_ciphers = nullptr, int timerWakeupRepeatMs = 5);
-
-	virtual void SingleLoopIteration() override;
-
-	virtual void WakeUp() override;
+			  const char *ssl_ciphers = nullptr);
 
 	virtual void StopListening() override;
 
-	void _LocalSetTimerRepeat(int timerWakeupRepeatMs);
-
 protected:
-	bool InitLoopAndContext(us_socket_context_options_t options);
-
 	virtual void _InternalConnect(
 		commands::internal::ExecuteConnect &connectCommand) override;
 	virtual void _InternalListen(
 		const std::string &address, IPProto ipProto, uint16_t port,
 		CommandHandle<commands::ExecuteBooleanOnHost> &com) override;
-
-	static void _Internal_wakeup_cb(struct us_loop_t *loop);
-	static void _Internal_pre_cb(struct us_loop_t *loop);
-	static void _Internal_post_cb(struct us_loop_t *loop);
 
 	template <bool SSL>
 	static us_socket_t *_Internal_on_open(struct us_socket_t *socket,
@@ -101,23 +92,23 @@ protected:
 	template <bool _SSL> void SetUSocketContextCallbacks();
 
 	virtual std::shared_ptr<icon7::uS::tcp::Peer> MakePeer(us_socket_t *socket);
+	
+	virtual void _InternalStopListening() override;
 
-	friend class Peer;
+	friend class uS::tcp::Peer;
 
-	static void _InternalOnTimerWakup(us_timer_t *timer);
-
-	static Host *HostFromUsLoop(us_loop_t *loop);
-	static Host **HostStoreFromUsLoop(us_loop_t *loop);
+protected:
+	template <bool SSL>
+	static Host *HostFromUsSocketContext(us_socket_context_t *context);
 
 protected:
 	int SSL;
 
-	struct us_loop_t *loop;
+	struct us_loop_t *uSloop;
+	std::shared_ptr<uS::Loop> loop;
 
 	us_socket_context_t *socketContext;
 	std::unordered_set<us_listen_socket_t *> listenSockets;
-
-	us_timer_t *timerWakeup;
 };
 } // namespace tcp
 } // namespace uS

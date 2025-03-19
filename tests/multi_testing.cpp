@@ -3,14 +3,15 @@
 #include <chrono>
 #include <thread>
 
-#include "icon7/Command.hpp"
-#include <icon7/Debug.hpp>
-#include <icon7/Peer.hpp>
-#include <icon7/Flags.hpp>
-#include <icon7/RPCEnvironment.hpp>
-#include <icon7/Flags.hpp>
-#include <icon7/PeerUStcp.hpp>
-#include <icon7/HostUStcp.hpp>
+#include "../include/icon7/Command.hpp"
+#include "../include/icon7/Debug.hpp"
+#include "../include/icon7/Peer.hpp"
+#include "../include/icon7/Flags.hpp"
+#include "../include/icon7/RPCEnvironment.hpp"
+#include "../include/icon7/Flags.hpp"
+#include "../include/icon7/PeerUStcp.hpp"
+#include "../include/icon7/HostUStcp.hpp"
+#include "../include/icon7/LoopUS.hpp"
 
 #include "utility.hpp"
 
@@ -90,35 +91,38 @@ int main(int argc, char **argv)
 		icon7::RPCEnvironment rpc;
 		rpc.RegisterMessage("sum", Sum);
 		rpc.RegisterMessage("mul", Mul);
-		icon7::uS::tcp::Host *hosta = new icon7::uS::tcp::Host();
+		std::shared_ptr<icon7::uS::Loop> loopa =
+			std::make_shared<icon7::uS::Loop>();
+		loopa->Init(1);
+		std::shared_ptr<icon7::uS::tcp::Host> hosta =
+			loopa->CreateHost(useSSL, "../cert/user.key", "../cert/user.crt",
+							  "", nullptr, "../cert/rootca.crt",
+							  "ECDHE-ECDSA-AES256-GCM-SHA384:"
+							  "ECDHE-ECDSA-AES128-GCM-SHA256:"
+							  "ECDHE-ECDSA-CHACHA20-POLY1305:"
+							  "DHE-RSA-AES256-GCM-SHA384:");
 		hosta->SetRpcEnvironment(&rpc);
-		hosta->Init();
-		hosta->Init(useSSL, "../cert/user.key", "../cert/user.crt", "", nullptr,
-					"../cert/rootca.crt",
-					"ECDHE-ECDSA-AES256-GCM-SHA384:"
-					"ECDHE-ECDSA-AES128-GCM-SHA256:"
-					"ECDHE-ECDSA-CHACHA20-POLY1305:"
-					"DHE-RSA-AES256-GCM-SHA384:",
-					1);
-		hosta->RunAsync();
+		loopa->RunAsync();
 		auto listenFuture = hosta->ListenOnPort("127.0.0.1", port, icon7::IPv4);
 
 		icon7::RPCEnvironment rpc2;
 		rpc2.RegisterMessage("sum", Sum);
 		rpc2.RegisterMessage("mul", Mul);
-		icon7::uS::tcp::Host *hostb = new icon7::uS::tcp::Host();
+		std::shared_ptr<icon7::uS::Loop> loopb =
+			std::make_shared<icon7::uS::Loop>();
+		loopb->Init(1);
+		std::shared_ptr<icon7::uS::tcp::Host> hostb = loopb->CreateHost(
+			useSSL, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
 		hostb->SetRpcEnvironment(&rpc2);
-		hostb->Init(useSSL, nullptr, nullptr, nullptr, nullptr, nullptr,
-					nullptr, 1);
-		hostb->RunAsync();
+		loopb->RunAsync();
 
 		listenFuture.wait_for(std::chrono::milliseconds(150));
 		if (listenFuture.get() == false) {
 			LOG_FATAL("Cannot listen on port: %i", (int)port);
-			hosta->_InternalDestroy();
-			hostb->_InternalDestroy();
-			delete hosta;
-			delete hostb;
+			loopa->Destroy();
+			loopb->Destroy();
+			loopa = nullptr;
+			loopb = nullptr;
 			--i;
 			continue;
 		}
@@ -365,8 +369,8 @@ int main(int argc, char **argv)
 			totalToReturnCount += toReturnCount;
 		}
 
-		hosta->_InternalDestroy();
-		hostb->_InternalDestroy();
+		loopa->Destroy();
+		loopb->Destroy();
 
 		if (totalSent != totalReceived || totalReturned != totalToReturnCount ||
 			notPassedTests) {
@@ -382,8 +386,8 @@ int main(int argc, char **argv)
 					 totalToReturnCount);
 		}
 
-		delete hosta;
-		delete hostb;
+		loopa = nullptr;
+		loopb = nullptr;
 	}
 
 	icon7::Deinitialize();

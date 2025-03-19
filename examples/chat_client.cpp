@@ -10,6 +10,7 @@
 #include <icon7/Flags.hpp>
 #include <icon7/PeerUStcp.hpp>
 #include <icon7/HostUStcp.hpp>
+#include "../include/icon7/LoopUS.hpp"
 
 std::unordered_map<std::string, icon7::Peer *> peers;
 icon7::RPCEnvironment rpc;
@@ -42,11 +43,13 @@ int main(int argc, char **argv)
 			   message.c_str());
 	});
 
-	icon7::uS::tcp::Host *_host = new icon7::uS::tcp::Host();
-	_host->Init();
-	icon7::Host *host = _host;
+	std::shared_ptr<icon7::uS::Loop> loop = std::make_shared<icon7::uS::Loop>();
+	loop->Init(1);
+	std::shared_ptr<icon7::uS::tcp::Host> _host = loop->CreateHost(false);
+
+	icon7::Host *host = _host.get();
 	host->SetRpcEnvironment(&rpc);
-	host->RunAsync();
+	loop->RunAsync();
 
 	std::shared_ptr<icon7::Peer> peer =
 		host->ConnectPromise(argv[1], port).get();
@@ -60,8 +63,8 @@ int main(int argc, char **argv)
 		if (str.substr(0, 4) == "quit" && str.size() <= 6) {
 			peer->Disconnect();
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));
-			host->QueueStopRunning();
-			host->WaitStopRunning();
+			loop->QueueStopRunning();
+			loop->WaitStopRunning();
 			break;
 		} else if (str.substr(0, 5) == "nick ") {
 			rpc.Send(peer.get(), icon7::FLAG_RELIABLE, "SetNickname",
@@ -90,7 +93,8 @@ int main(int argc, char **argv)
 		}
 	}
 
-	delete host;
+	loop->Destroy();
+	loop = nullptr;
 
 	icon7::Deinitialize();
 	return 0;
