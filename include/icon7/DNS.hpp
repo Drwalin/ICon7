@@ -25,6 +25,7 @@
 
 #include "Flags.hpp"
 
+// NOLINTBEGIN
 namespace icon7
 {
 class AddressInfo
@@ -55,5 +56,6 @@ class DomainNameSystemResolution
 public:
 };
 } // namespace icon7
+// NOLINTEND
 
 #endif

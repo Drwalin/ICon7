@@ -86,29 +86,40 @@ void Loop::_InternalOnTimerWakup(us_timer_t *timer)
 
 void Loop::SingleLoopIteration()
 {
-	us_loop_run(loop);
+	if (noWaitLoop) {
+		us_loop_run_once(loop);
+	} else {
+		us_loop_run(loop);
+	}
 	_InternalSingleLoopIteration();
 }
 
 void Loop::_Internal_wakeup_cb(struct us_loop_t *loop)
 {
-	Loop *host = LoopFromUsLoop(loop);
-	host->_InternalSingleLoopIteration();
+	Loop *_loop = LoopFromUsLoop(loop);
+	_loop->_InternalSingleLoopIteration();
 }
 
 void Loop::_Internal_pre_cb(struct us_loop_t *loop)
 {
-	Loop *host = LoopFromUsLoop(loop);
-	host->_InternalSingleLoopIteration();
+	Loop *_loop = LoopFromUsLoop(loop);
+	_loop->_InternalSingleLoopIteration();
 }
 
 void Loop::_Internal_post_cb(struct us_loop_t *loop)
 {
-	Loop *host = LoopFromUsLoop(loop);
-	host->_InternalSingleLoopIteration();
+	Loop *_loop = LoopFromUsLoop(loop);
+	if (!_loop->noWaitLoop) {
+		_loop->_InternalSingleLoopIteration();
+	}
 }
 
 void Loop::WakeUp() { us_wakeup_loop(loop); }
+
+void Loop::_LocalSetNoWaitLoop(bool value)
+{
+	noWaitLoop = value;
+}
 
 Loop *Loop::LoopFromUsLoop(us_loop_t *loop)
 {

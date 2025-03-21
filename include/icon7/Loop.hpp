@@ -53,9 +53,12 @@ public: // multithreaded safe functions
 	bool IsRunningAsync();
 	bool IsQueuedStopAsync();
 
+	void SetSleepBetweenUnlockedIterations(int32_t microseconds);
+
 	CommandExecutionQueue *GetCommandExecutionQueue() { return &commandQueue; }
 	void EnqueueCommand(CommandHandle<Command> &&command);
-	CommandExecutionQueue::CoroutineAwaitable Schedule(std::shared_ptr<void> &&obj);
+	CommandExecutionQueue::CoroutineAwaitable
+	Schedule(std::shared_ptr<void> &&obj);
 	CommandExecutionQueue::CoroutineAwaitable Schedule();
 
 	virtual void WakeUp() = 0;
@@ -79,6 +82,8 @@ protected:
 	CommandExecutionQueue commandQueue;
 	std::atomic<uint32_t> asyncRunnerFlags;
 	std::thread asyncRunner;
+
+	int32_t microsecondsOfSleepBetweenIterations = 1000;
 };
 } // namespace icon7
 

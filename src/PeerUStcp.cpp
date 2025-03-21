@@ -38,7 +38,12 @@ Peer::Peer(uS::tcp::Host *host, us_socket_t *socket) : icon7::Peer(host)
 	SSL = host->SSL;
 }
 
-Peer::~Peer() { socket = nullptr; }
+Peer::~Peer() {
+	if (socket != nullptr) {
+		socket = nullptr;
+		LOG_FATAL("on ~Peer(): socket != nullptr");
+	}
+}
 
 bool Peer::_InternalSend(SendFrameStruct &f, bool hasMore)
 {

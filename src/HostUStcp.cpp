@@ -302,10 +302,7 @@ void Host::StopListening()
 		virtual ~CommandStopListening() {}
 		virtual void Execute() override
 		{
-			for (us_listen_socket_t *s : ((tcp::Host *)host)->listenSockets) {
-				us_listen_socket_close(((tcp::Host *)host)->SSL, s);
-			}
-			((tcp::Host *)host)->listenSockets.clear();
+			host->_InternalStopListening();
 		}
 	};
 	auto com = CommandHandle<CommandStopListening>::Create();
