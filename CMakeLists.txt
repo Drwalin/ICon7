@@ -84,6 +84,10 @@ add_library(icon7 STATIC
 )
 target_link_libraries(icon7 uSockets)
 
+if(ASAN)
+	add_definitions(-fsanitize=address)
+endif()
+
 if(ICON7_USE_RPMALLOC)
 	target_link_libraries(icon7 rpmalloc)
 	add_library(rpmalloc STATIC
@@ -137,6 +141,7 @@ if(ICON7_BUILD_TEST)
 		tests/multi_testing
 	)
 	target_link_libraries(multi_test icon7)
+	target_compile_definitions(multi_test PUBLIC ICON7_LOG_DEFAULT_LOG_LEVEL=LL_IGNORE)
 endif()
 
 if(ICON7_BUILD_EXAMPLES)

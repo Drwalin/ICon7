@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <cstdio>
+#include "../include/icon7/Debug.hpp"
 
 #if !defined(ICON7_USE_RPMALLOC)
 #define ICON7_USE_RPMALLOC 0
@@ -35,35 +35,31 @@ namespace icon7
 void MemoryPool::PrintStats()
 {
 #if ICON7_USE_RPMALLOC
-	printf("Nope");
+	LOG_WARN("Printing memory stats not implemented.");
 #else
-	printf("Memory stats not collected\n");
-	fflush(stdout);
+	LOG_WARN("Printing memory stats not implemented.");
 #endif
 }
 
-#if ICON7_USE_RPMALLOC
-static int ____staticInitilizeRpmalloc = (rpmalloc_initialize(), 0);
-class __RpMallocThreadLocalDestructor final
+AllocatedObject<void> MemoryPool::Allocate(uint64_t bytes)
 {
-public:
-	__RpMallocThreadLocalDestructor() { rpmalloc_thread_initialize(); }
-	~__RpMallocThreadLocalDestructor() { rpmalloc_thread_finalize(1); }
-};
-thread_local __RpMallocThreadLocalDestructor
+#if ICON7_USE_RPMALLOC
+	static int ____staticInitilizeRpmalloc = (rpmalloc_initialize(), 0);
+	class __RpMallocThreadLocalDestructor final
+	{
+	public:
+		__RpMallocThreadLocalDestructor() { rpmalloc_thread_initialize(); }
+		~__RpMallocThreadLocalDestructor() { rpmalloc_thread_finalize(1); }
+	};
+	thread_local __RpMallocThreadLocalDestructor
 	____staticThreadLocalDestructorRpmalloc;
-#endif
-
-AllocatedObject<void> MemoryPool::Allocate(uint32_t bytes)
-{
-#if ICON7_USE_RPMALLOC
 	return {rpmalloc(bytes), bytes};
 #else
 	return {malloc(bytes), bytes};
 #endif
 }
 
-void MemoryPool::Release(void *ptr, uint32_t bytes)
+void MemoryPool::Release(void *ptr, uint64_t bytes)
 {
 #if ICON7_USE_RPMALLOC
 	rpfree(ptr);

@@ -20,6 +20,7 @@
 #define ICON7_MEMORY_POOL_HPP
 
 #include <cstdint>
+#include <cstdio>
 
 #include <utility>
 
@@ -27,7 +28,7 @@ namespace icon7
 {
 template <typename T> struct AllocatedObject {
 	T *object;
-	uint32_t capacity;
+	size_t capacity;
 };
 
 class MemoryPool
@@ -37,8 +38,8 @@ public:
 	~MemoryPool() {};
 
 	__attribute__((noinline)) static AllocatedObject<void>
-	Allocate(uint32_t bytes);
-	__attribute__((noinline)) static void Release(void *ptr, uint32_t bytes);
+	Allocate(size_t bytes);
+	__attribute__((noinline)) static void Release(void *ptr, size_t bytes);
 
 	template <typename T, typename... Args>
 	static T *AllocateTyped(Args &&...args)
@@ -50,7 +51,7 @@ public:
 		return ret.object;
 	}
 
-	template <typename T> static void ReleaseTyped(T *ptr, uint32_t bytes)
+	template <typename T> static void ReleaseTyped(T *ptr, size_t bytes)
 	{
 		ptr->~T();
 		Release(ptr, bytes);
