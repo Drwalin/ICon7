@@ -46,6 +46,10 @@ static uint64_t GenThreadId()
 #define GEN_THREAD_ID() GenThreadId()
 #endif
 
+#ifndef ICON7_LOG_USE_PRETTY_FUNCTION
+#define ICON7_LOG_USE_PRETTY_FUNCTION 1
+#endif
+
 #ifndef ICON7_LOG_DATETIME_SUBSECONDS_DIGITS
 #define ICON7_LOG_DATETIME_SUBSECONDS_DIGITS 5
 #endif
@@ -321,6 +325,8 @@ void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
 	std::lock_guard lock(mutex);
 	fwrite(buf, 1, offset, stdout);
 	fflush(stdout);
+	
+	va_end(va);
 }
 
 void HexDump(void *buf, int bytes)

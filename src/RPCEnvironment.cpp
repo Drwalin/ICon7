@@ -90,7 +90,7 @@ void RPCEnvironment::OnReceiveCall(Peer *peer, ByteReader &reader, Flags flags)
 void RPCEnvironment::OnReceiveReturn(Peer *peer, ByteReader &reader,
 									 Flags flags)
 {
-	uint32_t id;
+	uint32_t id=0;
 	reader.op(id);
 	OnReturnCallback callback;
 	bool found = false;

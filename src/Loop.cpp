@@ -42,7 +42,7 @@ void Loop::WaitStopRunning()
 	while (IsRunningAsync()) {
 		QueueStopRunning();
 		WakeUp();
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		std::this_thread::sleep_for(std::chrono::microseconds(100));
 	}
 	// 	asyncRunner.join();
 }
@@ -57,9 +57,13 @@ void Loop::Destroy()
 		Loop *loop;
 		virtual void Execute() override
 		{
+			loop->commandQueue.Execute(128);
+			while (loop->commandQueue.HasAny()) {
+				loop->commandQueue.Execute(128);
+			}
 			while (loop->hosts.empty() == false) {
-				auto h = loop->hosts.begin();
-				(*h)->_InternalDestroy();
+				std::shared_ptr<icon7::Host> h = *loop->hosts.begin();
+				h->_InternalDestroy();
 			}
 		}
 	};
@@ -105,7 +109,10 @@ void Loop::_InternalSyncLoop()
 	asyncRunnerFlags |= RUNNING;
 	while (IsQueuedStopAsync() == false) {
 		SingleLoopIteration();
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		if (microsecondsOfSleepBetweenIterations > 0) {
+			std::this_thread::sleep_for(std::chrono::microseconds(
+				microsecondsOfSleepBetweenIterations));
+		}
 	}
 	asyncRunnerFlags &= ~RUNNING;
 }
@@ -130,5 +137,8 @@ void Loop::_InternalSingleLoopIteration()
 	}
 }
 
-void Loop::WakeUp() {}
+void Loop::SetSleepBetweenUnlockedIterations(int32_t microseconds)
+{
+	microsecondsOfSleepBetweenIterations = microseconds;
+}
 } // namespace icon7

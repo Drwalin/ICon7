@@ -65,6 +65,7 @@ public:
 		const char *ca_file_name = nullptr, const char *ssl_ciphers = nullptr);
 
 	void _LocalSetTimerRepeat(int timerWakeupRepeatMs);
+	void _LocalSetNoWaitLoop(bool value);
 
 protected:
 	static void _Internal_wakeup_cb(struct us_loop_t *loop);
@@ -86,6 +87,7 @@ protected:
 		hostsBySocketContext;
 
 	us_timer_t *timerWakeup;
+	bool noWaitLoop = false;
 };
 } // namespace uS
 } // namespace icon7

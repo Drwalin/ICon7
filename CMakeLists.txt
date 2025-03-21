@@ -21,17 +21,17 @@ option(USOCKETS_USE_OPENSSL "Use OpenSSL instead of BoringSSL" ON)
 set(ICON7_LOG_DATETIME_SUBSECONDS_DIGITS 5 CACHE STRING "Number of sub-second digits in ICon7 log date-time")
 
 if(ICON7_CLANG_FUZZTEST)
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address,fuzzer -O1 -g -fprofile-instr-generate -fcoverage-mapping")
-	set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address,fuzzer -O1 -g -fprofile-instr-generate -fcoverage-mapping")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O1 -g -fprofile-instr-generate -fcoverage-mapping")
+	set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -O1 -g -fprofile-instr-generate -fcoverage-mapping")
 endif()
 
 if(ENABLE_LTO)
 	set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
-add_subdirectory(bitscpp)
+add_definitions(-DCMAKE_EXPORT_COMPILE_COMMANDS=ON)
 
-add_subdirectory(libuv)
+add_subdirectory(bitscpp)
 
 include_directories(include/)
 include_directories(uSockets/src/)
@@ -56,11 +56,13 @@ add_library(uSockets STATIC
 	${usockets_files}
 	${usockets_files_eventing}
 )
-target_link_libraries(uSockets pthread ${ZLIB_LIBRARIES} uv_a m)
+target_link_libraries(uSockets pthread ${ZLIB_LIBRARIES} m)
 
 if(UNIX)
 else()
-	target_link_libraries(uSockets ws2_32)
+	add_subdirectory(libuv)
+	target_link_libraries(uSockets uv_a ws2_32)
+	# target_compile_definitions(uSockets PRIVATE LIBUS_USE_LIBUV)
 endif()
 
 if(USOCKETS_USE_OPENSSL)

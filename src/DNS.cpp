@@ -18,7 +18,6 @@
 
 #include <cstring>
 #include <cstdio>
-#include <cstdlib>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -28,8 +27,6 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #endif
-
-#include "../uSockets/src/internal/networking/bsd.h"
 
 #include "../include/icon7/DNS.hpp"
 
@@ -85,6 +82,12 @@ bool AddressInfo::Populate(const std::string address, const uint16_t port,
 				this->proto = proto;
 			}
 		}
+	} else {
+		return false;
+	}
+	
+	if (addr == nullptr) {
+		return false;
 	}
 
 	if (proto == IPv4) {
