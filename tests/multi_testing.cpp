@@ -15,6 +15,16 @@
 
 #include "utility.hpp"
 
+#undef LOG_DEBUG
+#undef LOG_INFO
+#undef LOG_TRACE
+#undef LOG_WARN
+
+#define LOG_DEBUG(...) LOG_ERROR(__VA_ARGS__)
+#define LOG_INFO(...) LOG_ERROR(__VA_ARGS__)
+#define LOG_TRACE(...) LOG_ERROR(__VA_ARGS__)
+#define LOG_WARN(...) LOG_ERROR(__VA_ARGS__)
+
 std::atomic<int64_t> sent = 0, received = 0, returned = 0;
 
 int Sum(int a, int b, std::string str)
