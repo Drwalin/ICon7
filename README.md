@@ -6,6 +6,8 @@ networking library. The library itself does not provide encryption or
 reliability mechanisms but require the underlying library to provide those
 themselfs if needed.
 
+This project is distributed under MIT License. Please see LICENSE file.
+
 ## Remote method invocation
 
 Remote method invocation is not implemented any more. It can be simply
