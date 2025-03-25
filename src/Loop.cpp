@@ -44,10 +44,6 @@ void Loop::Destroy()
 		Loop *loop;
 		virtual void Execute() override
 		{
-			loop->commandQueue.Execute(128);
-			while (loop->commandQueue.HasAny()) {
-				loop->commandQueue.Execute(128);
-			}
 			while (loop->hosts.empty() == false) {
 				std::shared_ptr<icon7::Host> h = *loop->hosts.begin();
 				h->_InternalDestroy();
