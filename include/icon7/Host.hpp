@@ -1,5 +1,5 @@
 // Copyright (C) 2023-2025 Marek Zalewski aka Drwalin
-// 
+//
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
@@ -83,7 +83,7 @@ public: // thread unsafe, safe only in hosts loop thread
 	_InternalConnect_Finish(commands::internal::ExecuteConnect &connectCommand);
 	virtual void _Internal_on_open_Finish(std::shared_ptr<Peer> peer);
 	void _Internal_on_close_Finish(std::shared_ptr<Peer> peer);
-	
+
 	virtual void _InternalStopListening() = 0;
 
 public:

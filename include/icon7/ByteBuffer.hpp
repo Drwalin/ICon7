@@ -1,5 +1,5 @@
 // Copyright (C) 2023-2025 Marek Zalewski aka Drwalin
-// 
+//
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
@@ -145,9 +145,9 @@ public:
 		storage->size += bytes;
 	}
 
-	inline uint8_t *data() { return storage->data(); } // NOLINT
+	inline uint8_t *data() { return storage->data(); }			   // NOLINT
 	inline uint8_t *const data() const { return storage->data(); } // NOLINT
-	inline size_t size() const { return storage->size; } // NOLINT
+	inline size_t size() const { return storage->size; }		   // NOLINT
 	inline void resize(size_t newSize)
 	{
 		if (capacity() < newSize) {
