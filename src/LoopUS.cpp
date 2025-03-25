@@ -20,9 +20,10 @@ void Loop::Destroy()
 {
 	icon7::Loop::Destroy();
 
+	us_loop_run_once(loop);
 	do {
-		us_loop_run_once(loop);
 		commandQueue.Execute(128);
+		us_loop_run_once(loop);
 	} while (commandQueue.HasAny());
 
 	us_timer_close(timerWakeup);

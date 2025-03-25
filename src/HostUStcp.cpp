@@ -1,5 +1,5 @@
 // Copyright (C) 2023-2025 Marek Zalewski aka Drwalin
-// 
+//
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
@@ -27,7 +27,7 @@ Host::~Host() {}
 void Host::_InternalDestroy()
 {
 	icon7::Host::_InternalDestroy();
-	
+
 	us_socket_context_close(SSL, socketContext);
 	loop->hostsBySocketContext.erase(socketContext);
 	us_socket_context_free(SSL, socketContext);
@@ -287,10 +287,7 @@ void Host::StopListening()
 	public:
 		CommandStopListening() {}
 		virtual ~CommandStopListening() {}
-		virtual void Execute() override
-		{
-			host->_InternalStopListening();
-		}
+		virtual void Execute() override { host->_InternalStopListening(); }
 	};
 	auto com = CommandHandle<CommandStopListening>::Create();
 	com->host = this;

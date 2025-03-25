@@ -1,5 +1,5 @@
 // Copyright (C) 2023-2025 Marek Zalewski aka Drwalin
-// 
+//
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
@@ -25,7 +25,8 @@ Peer::Peer(uS::tcp::Host *host, us_socket_t *socket) : icon7::Peer(host)
 	SSL = host->SSL;
 }
 
-Peer::~Peer() {
+Peer::~Peer()
+{
 	if (socket != nullptr) {
 		socket = nullptr;
 		LOG_FATAL("on ~Peer(): socket != nullptr");

@@ -1,5 +1,5 @@
 // Copyright (C) 2023-2024 Marek Zalewski aka Drwalin
-// 
+//
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
@@ -72,7 +72,7 @@ bool AddressInfo::Populate(const std::string address, const uint16_t port,
 	} else {
 		return false;
 	}
-	
+
 	if (addr == nullptr) {
 		return false;
 	}

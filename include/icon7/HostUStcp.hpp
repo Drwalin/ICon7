@@ -1,5 +1,5 @@
 // Copyright (C) 2023-2025 Marek Zalewski aka Drwalin
-// 
+//
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
@@ -79,7 +79,7 @@ protected:
 	template <bool _SSL> void SetUSocketContextCallbacks();
 
 	virtual std::shared_ptr<icon7::uS::tcp::Peer> MakePeer(us_socket_t *socket);
-	
+
 	virtual void _InternalStopListening() override;
 
 	friend class uS::tcp::Peer;

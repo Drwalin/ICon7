@@ -1,5 +1,5 @@
 // Copyright (C) 2023-2025 Marek Zalewski aka Drwalin
-// 
+//
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
@@ -153,18 +153,18 @@ uint32_t CommandExecutionQueue::Execute(uint32_t maxToDequeue)
 		uint8_t commandsStore[elems * sizeof(CommandHandle<Command>)];
 	memset(commandsStore, 0, elems * sizeof(CommandHandle<Command>));
 	CommandHandle<Command> *commands = (CommandHandle<Command> *)commandsStore;
-	
+
 	while (maxToDequeue) {
 		uint32_t toDequeue = std::min<uint32_t>(maxToDequeue, elems);
 		uint32_t dequeued = TryDequeueBulk(commands, toDequeue);
-		
+
 		total += dequeued;
 		for (int i = 0; i < dequeued; ++i) {
 			commands[i].Execute();
 			commands[i].~CommandHandle();
 			commands[i]._com = nullptr;
 		}
-		
+
 		if (dequeued != toDequeue) {
 			break;
 		} else {

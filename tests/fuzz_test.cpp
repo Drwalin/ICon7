@@ -112,7 +112,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 		for (auto &v : arrayOfLatency) {
 			v = 0.0;
 		}
-		
+
 		std::vector<concurrent::future<std::shared_ptr<icon7::Peer>>> peers;
 		for (int i = 0; i < connectionsCount; ++i) {
 			peers.push_back(hostb->ConnectPromise("127.0.0.1", port));
