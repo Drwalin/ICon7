@@ -21,6 +21,8 @@ void Loop::Destroy()
 	icon7::Loop::Destroy();
 
 	us_loop_run_once(loop);
+	commandQueue.Execute(128);
+	us_loop_run_once(loop);
 	do {
 		commandQueue.Execute(128);
 		us_loop_run_once(loop);

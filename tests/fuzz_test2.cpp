@@ -94,7 +94,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 
 	std::shared_ptr<icon7::uS::Loop> loop = std::make_shared<icon7::uS::Loop>();
 	loop->Init(1);
-	loop->SetSleepBetweenUnlockedIterations(10);
+	loop->SetSleepBetweenUnlockedIterations(0);
 	loop->_LocalSetNoWaitLoop(true);
 
 	Test(loop.get(), data, size);
