@@ -1,5 +1,5 @@
 // Copyright (C) 2025 Marek Zalewski aka Drwalin
-// 
+//
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
@@ -19,6 +19,11 @@ Loop::~Loop() {}
 void Loop::Destroy()
 {
 	icon7::Loop::Destroy();
+
+	do {
+		us_loop_run_once(loop);
+		commandQueue.Execute(128);
+	} while (commandQueue.HasAny());
 
 	us_timer_close(timerWakeup);
 	timerWakeup = nullptr;
@@ -103,10 +108,7 @@ void Loop::_Internal_post_cb(struct us_loop_t *loop)
 
 void Loop::WakeUp() { us_wakeup_loop(loop); }
 
-void Loop::_LocalSetNoWaitLoop(bool value)
-{
-	noWaitLoop = value;
-}
+void Loop::_LocalSetNoWaitLoop(bool value) { noWaitLoop = value; }
 
 Loop *Loop::LoopFromUsLoop(us_loop_t *loop)
 {
