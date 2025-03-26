@@ -157,7 +157,7 @@ public:
 		{
 			const uint32_t rcbId = rpcEnv->GetNewReturnIdCallback(peer.get());
 			const uint32_t rcbId_v =
-				bitscpp::HostToNetworkUint<uint32_t>(rcbId);
+				bitscpp::HostToNetworkUint(rcbId);
 			memcpy(buffer.data(), &rcbId_v, sizeof(rcbId_v));
 			rpcEnv->returningCallbacks[rcbId][peer.get()] = std::move(callback);
 			flags |= FLAGS_CALL;
