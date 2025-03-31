@@ -309,10 +309,8 @@ void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
 	snprintf(buf + offset, BYTES - offset, "\n");
 	offset = strlen(buf);
 
-	std::lock_guard lock(mutex);
-	fwrite(buf, 1, offset, stdout);
-	fflush(stdout);
-
+	WriteSync(buf, offset);
+	
 	va_end(va);
 }
 
@@ -335,6 +333,22 @@ void HexDump(void *buf, int bytes)
 		}
 		printf("\n");
 	}
+	fflush(stdout);
+}
+
+void PrintLineSync(const char *fmt, ...)
+{
+	va_list va;
+	va_start(va, fmt);
+	vfprintf(stdout, fmt, va);
+	fwrite("\n", 1, 1, stdout);
+	va_end(va);
+}
+
+void WriteSync(const char *buf, int bytes)
+{
+	std::lock_guard lock(mutex);
+	fwrite(buf, 1, bytes, stdout);
 	fflush(stdout);
 }
 } // namespace log

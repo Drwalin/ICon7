@@ -125,6 +125,9 @@ void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
 		 int line, const char *function, const char *fmt, ...);
 
 void HexDump(void *buf, int bytes);
+
+void PrintLineSync(const char *fmt, ...);
+void WriteSync(const char *buf, int bytes);
 } // namespace log
 } // namespace icon7
 
