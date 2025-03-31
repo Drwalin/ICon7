@@ -341,7 +341,11 @@ void PrintLineSync(const char *fmt, ...)
 	va_list va;
 	va_start(va, fmt);
 	vfprintf(stdout, fmt, va);
-	fwrite("\n", 1, 1, stdout);
+	{
+		std::lock_guard lock(mutex);
+		fwrite("\n", 1, 1, stdout);
+		fflush(stdout);
+	}
 	va_end(va);
 }
 
