@@ -141,8 +141,8 @@ us_socket_t *Host::_Internal_on_open(struct us_socket_t *socket, int isClient,
 {
 	us_socket_context_t *context = us_socket_context(SSL, socket);
 	Host *host = HostFromUsSocketContext<SSL>(context);
-	
-	host->stats.connectionsLocalTotal+=1;
+
+	host->stats.connectionsLocalTotal += 1;
 
 	std::shared_ptr<icon7::Peer> peer;
 
@@ -150,11 +150,11 @@ us_socket_t *Host::_Internal_on_open(struct us_socket_t *socket, int isClient,
 		peer = host->MakePeer(socket);
 		(*(icon7::Peer **)us_socket_ext(SSL, socket)) = peer.get();
 		peer->isClient = false;
-		host->loop->stats.connectionsLocalTotal+=1;
+		host->loop->stats.connectionsLocalTotal += 1;
 	} else {
 		peer =
 			(*(icon7::Peer **)us_socket_ext(SSL, socket))->shared_from_this();
-		host->loop->stats.connectionsRemoteTotal+=1;
+		host->loop->stats.connectionsRemoteTotal += 1;
 	}
 
 	peer->isClient = isClient;
@@ -169,10 +169,10 @@ us_socket_t *Host::_Internal_on_close(struct us_socket_t *socket, int code,
 									  void *reason)
 {
 	Host *host = HostFromUsSocketContext<SSL>(us_socket_context(SSL, socket));
-	host->stats.disconnectedTotal+=1;
-	host->loop->stats.disconnectedTotal+=1;
-	host->stats.disconnectedLocal+=1;
-	host->loop->stats.disconnectedLocal+=1;
+	host->stats.disconnectedTotal += 1;
+	host->loop->stats.disconnectedTotal += 1;
+	host->stats.disconnectedLocal += 1;
+	host->loop->stats.disconnectedLocal += 1;
 
 	// closed locally
 	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
@@ -209,14 +209,14 @@ us_socket_t *Host::_Internal_on_writable(struct us_socket_t *socket)
 	if (peer == nullptr) {
 		Host *host =
 			HostFromUsSocketContext<SSL>(us_socket_context(SSL, socket));
-		host->stats.onWriteable+=1;
-		host->loop->stats.onWriteable+=1;
+		host->stats.onWriteable += 1;
+		host->loop->stats.onWriteable += 1;
 		return socket;
 	}
 
-	peer->stats.onWriteable+=1;
-	peer->host->stats.onWriteable+=1;
-	peer->host->loop->stats.onWriteable+=1;
+	peer->stats.onWriteable += 1;
+	peer->host->stats.onWriteable += 1;
+	peer->host->loop->stats.onWriteable += 1;
 
 	peer->_InternalOnWritable();
 	return socket;
@@ -226,8 +226,8 @@ template <bool SSL>
 us_socket_t *Host::_Internal_on_timeout(struct us_socket_t *socket)
 {
 	Host *host = HostFromUsSocketContext<SSL>(us_socket_context(SSL, socket));
-	host->stats.timeouts+=1;
-	host->loop->stats.timeouts+=1;
+	host->stats.timeouts += 1;
+	host->loop->stats.timeouts += 1;
 
 	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
 
@@ -251,8 +251,8 @@ template <bool SSL>
 us_socket_t *Host::_Internal_on_long_timeout(struct us_socket_t *socket)
 {
 	Host *host = HostFromUsSocketContext<SSL>(us_socket_context(SSL, socket));
-	host->stats.longTimeouts+=1;
-	host->loop->stats.longTimeouts+=1;
+	host->stats.longTimeouts += 1;
+	host->loop->stats.longTimeouts += 1;
 
 	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
 
@@ -269,8 +269,8 @@ us_socket_t *Host::_Internal_on_connect_error(struct us_socket_t *socket,
 											  int code)
 {
 	Host *host = HostFromUsSocketContext<SSL>(us_socket_context(SSL, socket));
-	host->stats.connectionsFailed+=1;
-	host->loop->stats.connectionsFailed+=1;
+	host->stats.connectionsFailed += 1;
+	host->loop->stats.connectionsFailed += 1;
 
 	icon7::uS::tcp::Peer *peer =
 		*(icon7::uS::tcp::Peer **)us_socket_ext(SSL, socket);
@@ -289,10 +289,10 @@ template <bool SSL>
 us_socket_t *Host::_Internal_on_end(struct us_socket_t *socket)
 {
 	Host *host = HostFromUsSocketContext<SSL>(us_socket_context(SSL, socket));
-	host->stats.disconnectedTotal+=1;
-	host->loop->stats.disconnectedTotal+=1;
-	host->stats.disconnectedRemote+=1;
-	host->loop->stats.disconnectedRemote+=1;
+	host->stats.disconnectedTotal += 1;
+	host->loop->stats.disconnectedTotal += 1;
+	host->stats.disconnectedRemote += 1;
+	host->loop->stats.disconnectedRemote += 1;
 
 	// closed by the other side
 	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);

@@ -68,9 +68,9 @@ struct MemoryStats {
 #else
 	alignas(64) std::atomic<int64_t> deallocations = 0;
 #endif
-	
+
 	volatile uint64_t startTimestamp;
-	
+
 	MemoryStats();
 
 	inline const static size_t MAX_BYTES_FOR_SMALL_ALLOCATIONS = 256;

@@ -44,7 +44,7 @@ public:
 		ptr->~T();
 		Release(ptr, bytes);
 	}
-	
+
 	static MemoryStats stats;
 };
 } // namespace icon7

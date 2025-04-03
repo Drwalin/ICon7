@@ -9,8 +9,5 @@
 
 namespace icon7
 {
-PeerStats::PeerStats()
-{
-	startTimestamp = icon7::time::GetTimestamp();
-}
-}
+PeerStats::PeerStats() { startTimestamp = icon7::time::GetTimestamp(); }
+} // namespace icon7
