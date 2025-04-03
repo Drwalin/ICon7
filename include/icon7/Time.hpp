@@ -14,7 +14,10 @@ namespace icon7
 {
 namespace time
 {
+uint64_t GetTemporaryTimestamp();
+uint64_t TemporaryTimestampToTimestamp(uint64_t tmpTimestamp);
 uint64_t GetTimestamp();
+uint64_t DeltaNsBetweenTimestamps(uint64_t begin, uint64_t end);
 std::string TimestampToString(uint64_t timestamp, int subsecondsDigits);
 std::string GetCurrentTimestampString(int subsecondsDigits);
 uint64_t StringToTimestamp(std::string str);

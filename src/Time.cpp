@@ -19,10 +19,12 @@ struct DayTimeBegin {
 	{
 		date = std::chrono::utc_clock::now();
 		time = std::chrono::steady_clock::now();
+		timeSinceEpoch = time.time_since_epoch().count();
 		nanosecondsSinceEpoch =
 			std::chrono::duration_cast<std::chrono::nanoseconds, int64_t>(
 				date.time_since_epoch())
-				.count();
+				.count() -
+			timeSinceEpoch;
 
 		time_t secs;
 		secs = std::time(nullptr);
@@ -38,6 +40,7 @@ struct DayTimeBegin {
 	}
 	std::chrono::utc_clock::time_point date;
 	std::chrono::steady_clock::time_point time;
+	uint64_t timeSinceEpoch;
 	uint64_t nanosecondsSinceEpoch;
 	int64_t hoursOffset;
 	int64_t hoursOffsetNanoseconds;
@@ -47,14 +50,22 @@ static const DayTimeBegin glob;
 
 uint64_t GetTimestamp()
 {
-	auto now = std::chrono::steady_clock::now();
+	return TemporaryTimestampToTimestamp(GetTemporaryTimestamp());
+}
 
-	auto diff = now - glob.time;
-	int64_t ns =
-		std::chrono::duration_cast<std::chrono::nanoseconds, int64_t>(diff)
-			.count();
+uint64_t GetTemporaryTimestamp()
+{
+	return std::chrono::steady_clock::now().time_since_epoch().count();
+}
 
-	return glob.nanosecondsSinceEpoch + (uint64_t)ns;
+uint64_t TemporaryTimestampToTimestamp(uint64_t tmpTimestamp)
+{
+	return glob.nanosecondsSinceEpoch + tmpTimestamp;
+}
+
+uint64_t DeltaNsBetweenTimestamps(uint64_t begin, uint64_t end)
+{
+	return end - begin;
 }
 
 int IsLeapYear(int year)
