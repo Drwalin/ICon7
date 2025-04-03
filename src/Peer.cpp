@@ -7,6 +7,7 @@
 
 #include "../include/icon7/ConcurrentQueueTraits.hpp"
 #include "../include/icon7/Host.hpp"
+#include "../include/icon7/Loop.hpp"
 #include "../include/icon7/RPCEnvironment.hpp"
 #include "../include/icon7/SendFrameStruct.hpp"
 #include "../include/icon7/Command.hpp"
@@ -66,6 +67,9 @@ Peer::~Peer()
 void Peer::Send(ByteBuffer &frame)
 {
 	if (IsDisconnecting()) {
+		stats.errorsCount+=1;
+		host->stats.errorsCount+=1;
+		host->loop->stats.errorsCount+=1;
 		LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
 		// TODO: inform about dropping packets
 		return;
@@ -79,6 +83,9 @@ void Peer::Send(ByteBuffer &frame)
 void Peer::SendLocalThread(ByteBuffer &frame)
 {
 	if (IsDisconnecting()) {
+		stats.errorsCount+=1;
+		host->stats.errorsCount+=1;
+		host->loop->stats.errorsCount+=1;
 		LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
 		// TODO: inform about dropping packets
 		return;
@@ -91,6 +98,9 @@ void Peer::SendLocalThread(ByteBuffer &frame)
 void Peer::Send(ByteBuffer &&frame)
 {
 	if (IsDisconnecting()) {
+		stats.errorsCount+=1;
+		host->stats.errorsCount+=1;
+		host->loop->stats.errorsCount+=1;
 		LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
 		// TODO: inform about dropping packets
 		return;
@@ -104,6 +114,9 @@ void Peer::Send(ByteBuffer &&frame)
 void Peer::SendLocalThread(ByteBuffer &&frame)
 {
 	if (IsDisconnecting()) {
+		stats.errorsCount+=1;
+		host->stats.errorsCount+=1;
+		host->loop->stats.errorsCount+=1;
 		LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
 		// TODO: inform about dropping packets
 		return;
@@ -123,6 +136,14 @@ void Peer::Disconnect()
 
 void Peer::_InternalOnData(uint8_t *data, uint32_t length)
 {
+	stats.bytesReceived += length;
+	host->stats.bytesReceived += length;
+	host->loop->stats.bytesReceived += length;
+
+	stats.packetsReceived+=1;
+	host->stats.packetsReceived+=1;
+	host->loop->stats.packetsReceived+=1;
+
 	frameDecoder.PushData(data, length, _Internal_static_OnPacket, this);
 }
 
@@ -134,7 +155,14 @@ void Peer::_Internal_static_OnPacket(ByteBuffer &buffer, uint32_t headerSize,
 
 void Peer::_InternalOnPacket(ByteBuffer &buffer, uint32_t headerSize)
 {
+	stats.framesReceived+=1;
+	host->stats.framesReceived+=1;
+	host->loop->stats.framesReceived+=1;
+
 	if (buffer.size() == headerSize) {
+		stats.errorsCount+=1;
+		host->stats.errorsCount+=1;
+		host->loop->stats.errorsCount+=1;
 		LOG_ERROR("Protocol doesn't allow for 0 sized packets.");
 		return;
 	}
@@ -155,6 +183,9 @@ void Peer::_InternalOnPacketWithControllSequence(ByteBuffer &buffer,
 	if (vectorCall <= 0x7F) {
 		// TODO: decode here future controll sequences
 		uint32_t vectorCall = buffer.data()[headerSize];
+		stats.errorsCount+=1;
+		host->stats.errorsCount+=1;
+		host->loop->stats.errorsCount+=1;
 		LOG_WARN("Received packet with undefined controll sequence: 0x%X",
 				 vectorCall);
 	} else {
@@ -166,6 +197,9 @@ void Peer::_InternalOnPacketWithControllSequenceBackend(ByteBuffer &buffer,
 														uint32_t headerSize)
 {
 	uint32_t vectorCall = buffer.data()[headerSize];
+	stats.errorsCount+=1;
+	host->stats.errorsCount+=1;
+	host->loop->stats.errorsCount+=1;
 	LOG_WARN("Unhandled packet with controll sequence by backend. Vector call "
 			 "value: 0x%X",
 			 vectorCall);
@@ -246,6 +280,11 @@ bool Peer::_InternalFlushQueuedSends()
 		}
 	}
 	sendingQueueSize -= sentFrames;
+
+	stats.framesSent += sentFrames;
+	host->stats.framesSent += sentFrames;
+	host->loop->stats.framesSent += sentFrames;
+
 	return ret;
 }
 

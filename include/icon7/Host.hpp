@@ -12,6 +12,7 @@
 
 #include "../../concurrent/future.hpp"
 
+#include "Stats.hpp"
 #include "Flags.hpp"
 #include "CommandExecutionQueue.hpp"
 #include "Forward.hpp"
@@ -106,10 +107,14 @@ protected:
 
 	CommandExecutionQueue *commandQueue;
 
+public:
 	std::shared_ptr<Loop> loop;
 
 protected:
 	std::vector<std::shared_ptr<Peer>> toRemoveFromQueue;
+
+public:
+	HostStats stats;
 };
 
 void Initialize();

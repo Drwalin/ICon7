@@ -75,12 +75,14 @@ void Loop::_LocalSetTimerRepeat(int timerWakeupRepeatMs)
 
 void Loop::_InternalOnTimerWakup(us_timer_t *timer)
 {
-	Loop *host = *(Loop **)us_timer_ext(timer);
-	host->_InternalSingleLoopIteration();
+	Loop *loop = *(Loop **)us_timer_ext(timer);
+	loop->stats.loopTimerWakeups += 1;
+	loop->_InternalSingleLoopIteration();
 }
 
 void Loop::SingleLoopIteration()
 {
+	icon7::Loop::SingleLoopIteration();
 	if (noWaitLoop) {
 		us_loop_run_once(loop);
 	} else {
@@ -92,6 +94,7 @@ void Loop::SingleLoopIteration()
 void Loop::_Internal_wakeup_cb(struct us_loop_t *loop)
 {
 	Loop *_loop = LoopFromUsLoop(loop);
+	_loop->stats.loopWakeups+=1;
 	_loop->_InternalSingleLoopIteration();
 }
 

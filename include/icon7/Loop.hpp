@@ -10,6 +10,7 @@
 #include <thread>
 #include <unordered_set>
 
+#include "Stats.hpp"
 #include "CommandExecutionQueue.hpp"
 #include "Forward.hpp"
 
@@ -51,7 +52,7 @@ public: // multithreaded safe functions
 	virtual void WakeUp() = 0;
 
 public: // thread unsafe, safe only in hosts loop thread
-	virtual void SingleLoopIteration() = 0;
+	virtual void SingleLoopIteration();
 	virtual void _InternalSingleLoopIteration();
 	void _InternalSyncLoop();
 
@@ -71,6 +72,9 @@ protected:
 	std::thread asyncRunner;
 
 	int32_t microsecondsOfSleepBetweenIterations = 1000;
+
+public:
+	LoopStats stats;
 };
 } // namespace icon7
 
