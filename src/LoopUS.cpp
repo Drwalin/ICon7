@@ -94,7 +94,7 @@ void Loop::SingleLoopIteration()
 void Loop::_Internal_wakeup_cb(struct us_loop_t *loop)
 {
 	Loop *_loop = LoopFromUsLoop(loop);
-	_loop->stats.loopWakeups+=1;
+	_loop->stats.loopWakeups += 1;
 	_loop->_InternalSingleLoopIteration();
 }
 

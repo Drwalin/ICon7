@@ -126,7 +126,6 @@ protected:
 	moodycamel::ConsumerToken *consumerToken;
 
 public:
-
 	icon7::PeerStats stats;
 };
 } // namespace icon7

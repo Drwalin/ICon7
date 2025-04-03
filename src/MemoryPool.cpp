@@ -16,13 +16,10 @@
 
 namespace icon7
 {
-MemoryStats::MemoryStats()
-{
-	startTimestamp = time::GetTimestamp();
-}
+MemoryStats::MemoryStats() { startTimestamp = time::GetTimestamp(); }
 
 MemoryStats MemoryPool::stats = {};
-	
+
 AllocatedObject<void> MemoryPool::Allocate(size_t bytes)
 {
 #if ICON7_USE_RPMALLOC
@@ -35,7 +32,7 @@ AllocatedObject<void> MemoryPool::Allocate(size_t bytes)
 	};
 	thread_local __RpMallocThreadLocalDestructor
 		____staticThreadLocalDestructorRpmalloc;
-	
+
 	void *ptr = rpmalloc(bytes);
 	size_t _bytes = rpmalloc_usable_size(ptr);
 	if (_bytes < bytes) {
@@ -45,7 +42,7 @@ AllocatedObject<void> MemoryPool::Allocate(size_t bytes)
 	} else {
 		bytes = _bytes;
 	}
-	
+
 	stats.allocatedBytes += bytes;
 	if (bytes <= MemoryStats::MAX_BYTES_FOR_SMALL_ALLOCATIONS) {
 		stats.smallAllocations += 1;
@@ -54,7 +51,7 @@ AllocatedObject<void> MemoryPool::Allocate(size_t bytes)
 	} else {
 		stats.largeAllocations += 1;
 	}
-	
+
 	return {ptr, _bytes};
 #else
 	stats.allocatedBytes += bytes;
@@ -65,7 +62,7 @@ AllocatedObject<void> MemoryPool::Allocate(size_t bytes)
 	} else {
 		stats.largeAllocations += 1;
 	}
-	
+
 	return {malloc(bytes), bytes};
 #endif
 }
@@ -74,7 +71,7 @@ void MemoryPool::Release(void *ptr, size_t bytes)
 {
 #if ICON7_USE_RPMALLOC
 	bytes = rpmalloc_usable_size(ptr);
-	
+
 	stats.allocatedBytes += bytes;
 	if (bytes <= MemoryStats::MAX_BYTES_FOR_SMALL_ALLOCATIONS) {
 		stats.smallDeallocations += 1;
@@ -83,7 +80,7 @@ void MemoryPool::Release(void *ptr, size_t bytes)
 	} else {
 		stats.largeDeallocations += 1;
 	}
-	
+
 	rpfree(ptr);
 	return;
 #else

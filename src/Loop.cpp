@@ -90,10 +90,7 @@ void Loop::RunAsync()
 	asyncRunner.detach();
 }
 
-void Loop::SingleLoopIteration()
-{
-	stats.loopBigIterations+=1;
-}
+void Loop::SingleLoopIteration() { stats.loopBigIterations += 1; }
 
 void Loop::_InternalSyncLoop()
 {
@@ -122,7 +119,7 @@ bool Loop::IsRunningAsync() { return asyncRunnerFlags & RUNNING; }
 
 void Loop::_InternalSingleLoopIteration()
 {
-	stats.loopSmallIterations+=1;
+	stats.loopSmallIterations += 1;
 	commandQueue.Execute(1024);
 	for (auto &h : hosts) {
 		h->_InternalSingleLoopIteration();
