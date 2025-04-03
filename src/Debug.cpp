@@ -310,7 +310,7 @@ void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
 	offset = strlen(buf);
 
 	WriteSync(buf, offset);
-	
+
 	va_end(va);
 }
 
@@ -340,9 +340,9 @@ void PrintLineSync(const char *fmt, ...)
 {
 	va_list va;
 	va_start(va, fmt);
-	vfprintf(stdout, fmt, va);
 	{
 		std::lock_guard lock(mutex);
+		vfprintf(stdout, fmt, va);
 		fwrite("\n", 1, 1, stdout);
 		fflush(stdout);
 	}
