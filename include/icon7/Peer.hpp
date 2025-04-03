@@ -10,6 +10,7 @@
 #include <memory>
 #include <vector>
 
+#include "Stats.hpp"
 #include "FrameDecoder.hpp"
 #include "Forward.hpp"
 
@@ -123,6 +124,10 @@ protected:
 	moodycamel::ConcurrentQueue<ByteBufferStorageHeader *,
 								ConcurrentQueueDefaultTraits> *queue;
 	moodycamel::ConsumerToken *consumerToken;
+
+public:
+
+	icon7::PeerStats stats;
 };
 } // namespace icon7
 

@@ -5,6 +5,7 @@
 
 #include <algorithm>
 
+#include "../include/icon7/LoopUS.hpp"
 #include "../include/icon7/HostUStcp.hpp"
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/Debug.hpp"
@@ -30,6 +31,9 @@ Peer::~Peer()
 	if (socket != nullptr) {
 		socket = nullptr;
 		LOG_FATAL("on ~Peer(): socket != nullptr");
+		stats.errorsCount+=1;
+		host->stats.errorsCount+=1;
+		host->loop->stats.errorsCount+=1;
 	}
 }
 
@@ -58,6 +62,9 @@ bool Peer::_InternalSend(SendFrameStruct &f, bool hasMore)
 										f.data.size() - f.bytesSent, hasMore);
 				if (b < 0) {
 					LOG_ERROR("us_socket_write returned: %i", b);
+					stats.errorsCount+=1;
+					host->stats.errorsCount+=1;
+					host->loop->stats.errorsCount+=1;
 				} else if (b > 0) {
 					f.bytesSent += b;
 				} else {
@@ -129,7 +136,19 @@ bool Peer::_InternalFlushBufferedSends(bool hasMore)
 		if (b < 0) {
 			// TODO: check, maybe some ot this means cork?
 			LOG_ERROR("us_socket_write returned: %i", b);
+			stats.errorsCount+=1;
+			host->stats.errorsCount+=1;
+			host->loop->stats.errorsCount+=1;
 		} else if (b > 0) {
+
+			stats.bytesSent += b;
+			host->stats.bytesSent += b;
+			host->loop->stats.bytesSent += b;
+
+			stats.packetsSent+=1;
+			host->stats.packetsSent+=1;
+			host->loop->stats.packetsSent+=1;
+
 			writeBufferOffset += b;
 			if (writeBuffer.size() == writeBufferOffset) {
 				writeBuffer.clear();

@@ -10,6 +10,8 @@
 
 #include <utility>
 
+#include "Stats.hpp"
+
 namespace icon7
 {
 template <typename T> struct AllocatedObject {
@@ -42,8 +44,8 @@ public:
 		ptr->~T();
 		Release(ptr, bytes);
 	}
-
-	static void PrintStats();
+	
+	static MemoryStats stats;
 };
 } // namespace icon7
 

@@ -3,13 +3,10 @@
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
-#include "../include/icon7/Debug.hpp"
-
-#if !defined(ICON7_USE_RPMALLOC)
-#define ICON7_USE_RPMALLOC 0
-#endif
+#include "../include/icon7/Time.hpp"
 
 #if ICON7_USE_RPMALLOC
+#include "../include/icon7/Debug.hpp"
 #include "../rpmalloc/rpmalloc/rpmalloc.h"
 #else
 #include <cstdlib>
@@ -19,15 +16,13 @@
 
 namespace icon7
 {
-void MemoryPool::PrintStats()
+MemoryStats::MemoryStats()
 {
-#if ICON7_USE_RPMALLOC
-	LOG_WARN("Printing memory stats not implemented.");
-#else
-	LOG_WARN("Printing memory stats not implemented.");
-#endif
+	startTimestamp = time::GetTimestamp();
 }
 
+MemoryStats MemoryPool::stats = {};
+	
 AllocatedObject<void> MemoryPool::Allocate(size_t bytes)
 {
 #if ICON7_USE_RPMALLOC
@@ -40,8 +35,37 @@ AllocatedObject<void> MemoryPool::Allocate(size_t bytes)
 	};
 	thread_local __RpMallocThreadLocalDestructor
 		____staticThreadLocalDestructorRpmalloc;
-	return {rpmalloc(bytes), bytes};
+	
+	void *ptr = rpmalloc(bytes);
+	size_t _bytes = rpmalloc_usable_size(ptr);
+	if (_bytes < bytes) {
+		rpfree(ptr);
+		LOG_FATAL("Allocated memory is smaller than requested");
+		return {nullptr, 0};
+	} else {
+		bytes = _bytes;
+	}
+	
+	stats.allocatedBytes += bytes;
+	if (bytes <= MemoryStats::MAX_BYTES_FOR_SMALL_ALLOCATIONS) {
+		stats.smallAllocations += 1;
+	} else if (bytes <= MemoryStats::MAX_BYTES_FOR_MEDIUM_ALLOCATIONS) {
+		stats.mediumAllocations += 1;
+	} else {
+		stats.largeAllocations += 1;
+	}
+	
+	return {ptr, _bytes};
 #else
+	stats.allocatedBytes += bytes;
+	if (bytes <= MemoryStats::MAX_BYTES_FOR_SMALL_ALLOCATIONS) {
+		stats.smallAllocations += 1;
+	} else if (bytes <= MemoryStats::MAX_BYTES_FOR_MEDIUM_ALLOCATIONS) {
+		stats.mediumAllocations += 1;
+	} else {
+		stats.largeAllocations += 1;
+	}
+	
 	return {malloc(bytes), bytes};
 #endif
 }
@@ -49,9 +73,21 @@ AllocatedObject<void> MemoryPool::Allocate(size_t bytes)
 void MemoryPool::Release(void *ptr, size_t bytes)
 {
 #if ICON7_USE_RPMALLOC
+	bytes = rpmalloc_usable_size(ptr);
+	
+	stats.allocatedBytes += bytes;
+	if (bytes <= MemoryStats::MAX_BYTES_FOR_SMALL_ALLOCATIONS) {
+		stats.smallDeallocations += 1;
+	} else if (bytes <= MemoryStats::MAX_BYTES_FOR_MEDIUM_ALLOCATIONS) {
+		stats.mediumDeallocations += 1;
+	} else {
+		stats.largeDeallocations += 1;
+	}
+	
 	rpfree(ptr);
 	return;
 #else
+	stats.deallocations -= 1;
 	free(ptr);
 #endif
 }

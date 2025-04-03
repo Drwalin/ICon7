@@ -311,7 +311,6 @@ int main(int argc, char **argv)
 					 sumTim * 1000.0 / ((double)returned.load()));
 
 			if (printMoreStats) {
-				icon7::MemoryPool::PrintStats();
 				DataStats stats =
 					CalcDataStats(arrayOfLatency.data(), returned.load());
 				{
@@ -360,7 +359,6 @@ int main(int argc, char **argv)
 						 "returned/called = %li/%li",
 						 received.load(), sent.load(), returned.load(),
 						 toReturnCount);
-				icon7::MemoryPool::PrintStats();
 			}
 
 			for (auto &p : validPeers) {
