@@ -63,9 +63,29 @@ uint64_t TemporaryTimestampToTimestamp(uint64_t tmpTimestamp)
 	return glob.nanosecondsSinceEpoch + tmpTimestamp;
 }
 
-uint64_t DeltaNsBetweenTimestamps(uint64_t begin, uint64_t end)
+int64_t DeltaNsBetweenTimestamps(uint64_t begin, uint64_t end)
 {
 	return end - begin;
+}
+
+double DeltaSecBetweenTimestamps(uint64_t begin, uint64_t end)
+{
+	return NanosecondsToSeconds(DeltaNsBetweenTimestamps(begin, end));
+}
+
+double DeltaMSecBetweenTimestamps(uint64_t begin, uint64_t end)
+{
+	return DeltaNsBetweenTimestamps(begin, end) / (1000.0 * 1000.0);
+}
+
+double DeltaUSecBetweenTimestamps(uint64_t begin, uint64_t end)
+{
+	return DeltaNsBetweenTimestamps(begin, end) / 1000.0;
+}
+
+double NanosecondsToSeconds(int64_t ns)
+{
+	return ns / (1000.0 * 1000.0 * 1000.0);
 }
 
 int IsLeapYear(int year)
