@@ -1,8 +1,6 @@
 #include <cstdio>
 
-#include <chrono>
-#include <thread>
-
+#include "../include/icon7/Time.hpp"
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/Debug.hpp"
 #include "../include/icon7/Peer.hpp"
@@ -99,7 +97,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 		hostb->SetRpcEnvironment(&rpc2);
 		loopb->RunAsync();
 
-		listenFuture.wait_for(std::chrono::milliseconds(150));
+		listenFuture.wait_for_milliseconds(150);
 		if (listenFuture.get() == false) {
 			loopa->Destroy();
 			loopb->Destroy();
@@ -145,7 +143,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 					if (j == 999) {
 						LOG_WARN("Failed to etablish connection");
 					}
-					std::this_thread::sleep_for(std::chrono::milliseconds(1));
+					icon7::time::SleepMSec(1);
 				} else {
 					break;
 				}
@@ -178,18 +176,17 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 
 			for (int k = 0; k < totalSends; ++k) {
 				if (k > 0) {
-					std::this_thread::sleep_for(std::chrono::microseconds(
-						delayBetweeEachTotalSendMilliseconds * 500ll));
+					icon7::time::SleepMSec(1);
 				}
 				for (auto p : validPeers) {
 					auto peer = p.get();
-					auto curTim = std::chrono::steady_clock::now();
+					auto curTim = icon7::time::GetTemporaryTimestamp();
 					auto onReturned = [curTim, &sumTim, &arrayOfLatency](
 										  icon7::Peer *peer, icon7::Flags flags,
 										  uint32_t result) -> void {
-						auto n = std::chrono::steady_clock::now();
+						auto n = icon7::time::GetTemporaryTimestamp();
 						auto dt =
-							std::chrono::duration<double>(n - curTim).count();
+							icon7::time::DeltaSecBetweenTimestamps(curTim, n);
 						sumTim += dt;
 						uint32_t i = returned++;
 						arrayOfLatency[i] = dt;
@@ -205,8 +202,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 					sent++;
 				}
 				commandsBuffer->FlushBuffer();
-				std::this_thread::sleep_for(std::chrono::microseconds(
-					delayBetweeEachTotalSendMilliseconds * 500ll));
+				icon7::time::SleepUSec(delayBetweeEachTotalSendMilliseconds *
+									   500ll);
 
 				for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
 					if (l % serializeSendsModulo < serializeSendsFract) {
@@ -232,15 +229,15 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 		}
 
 		uint32_t oldReceived = received.load(), oldReturned = returned.load();
-		auto startWaitTimepoint = std::chrono::steady_clock::now();
+		auto startWaitTimepoint = icon7::time::GetTemporaryTimestamp();
 		for (int64_t i = 0; i < maxWaitAfterPayloadDone * 100; ++i) {
 			if (received >= sent && returned >= toReturnCount) {
 				break;
 			}
 			if (oldReceived != received.load() ||
 				oldReturned != returned.load()) {
-				const auto now = std::chrono::steady_clock::now();
-				if ((now - startWaitTimepoint) > std::chrono::seconds(10)) {
+				const auto now = icon7::time::GetTemporaryTimestamp();
+				if ((now - startWaitTimepoint) > 10l*1000ll*1000ll*1000ll) {
 					notPassedTests++;
 					break;
 				}
@@ -248,7 +245,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 				oldReceived = received.load();
 				oldReturned = returned.load();
 			}
-			std::this_thread::sleep_for(std::chrono::microseconds(10));
+			icon7::time::SleepUSec(10);
 		}
 
 		for (auto &p : validPeers) {

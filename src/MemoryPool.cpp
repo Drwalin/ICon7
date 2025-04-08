@@ -43,7 +43,18 @@ AllocatedObject<void> MemoryPool::Allocate(size_t bytes)
 		bytes = _bytes;
 	}
 
-	stats.allocatedBytes += bytes;
+	int64_t max = (stats.allocatedBytes += bytes) - stats.deallocatedBytes;
+	{
+		int64_t v = stats.maxInUseAtOnce;
+		while (max > v) {
+			if (stats.maxInUseAtOnce.compare_exchange_weak(
+					v, max, std::memory_order_release,
+					std::memory_order_relaxed)) {
+				break;
+			}
+		}
+	}
+
 	if (bytes <= MemoryStats::MAX_BYTES_FOR_SMALL_ALLOCATIONS) {
 		stats.smallAllocations += 1;
 	} else if (bytes <= MemoryStats::MAX_BYTES_FOR_MEDIUM_ALLOCATIONS) {
@@ -72,7 +83,7 @@ void MemoryPool::Release(void *ptr, size_t bytes)
 #if ICON7_USE_RPMALLOC
 	bytes = rpmalloc_usable_size(ptr);
 
-	stats.allocatedBytes += bytes;
+	stats.deallocatedBytes += bytes;
 	if (bytes <= MemoryStats::MAX_BYTES_FOR_SMALL_ALLOCATIONS) {
 		stats.smallDeallocations += 1;
 	} else if (bytes <= MemoryStats::MAX_BYTES_FOR_MEDIUM_ALLOCATIONS) {

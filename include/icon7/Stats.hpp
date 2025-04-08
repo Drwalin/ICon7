@@ -61,6 +61,7 @@ struct MemoryStats {
 	alignas(64) std::atomic<int64_t> largeAllocations = 0;
 	alignas(64) std::atomic<int64_t> allocatedBytes = 0;
 #if ICON7_USE_RPMALLOC
+	alignas(64) std::atomic<int64_t> maxInUseAtOnce = 0;
 	alignas(64) std::atomic<int64_t> smallDeallocations = 0;
 	alignas(64) std::atomic<int64_t> mediumDeallocations = 0;
 	alignas(64) std::atomic<int64_t> largeDeallocations = 0;

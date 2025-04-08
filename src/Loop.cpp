@@ -3,12 +3,12 @@
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
-#include <chrono>
 #include <thread>
 
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/RPCEnvironment.hpp"
 #include "../include/icon7/Host.hpp"
+#include "../include/icon7/Time.hpp"
 
 #include "../include/icon7/Loop.hpp"
 
@@ -29,7 +29,8 @@ void Loop::WaitStopRunning()
 	while (IsRunningAsync()) {
 		QueueStopRunning();
 		WakeUp();
-		std::this_thread::sleep_for(std::chrono::microseconds(100));
+
+		time::SleepUSec(100);
 	}
 }
 
@@ -98,8 +99,7 @@ void Loop::_InternalSyncLoop()
 	while (IsQueuedStopAsync() == false) {
 		SingleLoopIteration();
 		if (microsecondsOfSleepBetweenIterations > 0) {
-			std::this_thread::sleep_for(std::chrono::microseconds(
-				microsecondsOfSleepBetweenIterations));
+			time::SleepUSec(microsecondsOfSleepBetweenIterations);
 		}
 	}
 	asyncRunnerFlags &= ~RUNNING;

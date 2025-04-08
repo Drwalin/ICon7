@@ -14,21 +14,27 @@ namespace icon7
 {
 namespace time
 {
-uint64_t GetTemporaryTimestamp();
-uint64_t TemporaryTimestampToTimestamp(uint64_t tmpTimestamp);
-uint64_t GetTimestamp();
-int64_t DeltaNsBetweenTimestamps(uint64_t begin, uint64_t end);
-double DeltaSecBetweenTimestamps(uint64_t begin, uint64_t end);
-double DeltaMSecBetweenTimestamps(uint64_t begin, uint64_t end);
-double DeltaUSecBetweenTimestamps(uint64_t begin, uint64_t end);
-double NanosecondsToSeconds(int64_t ns);
-std::string TimestampToString(uint64_t timestamp, int subsecondsDigits);
-std::string GetCurrentTimestampString(int subsecondsDigits);
-uint64_t StringToTimestamp(std::string str);
-void YMDFromTimestamp(uint64_t timestamp, int &day, int &month, int &year);
-uint64_t TimestampFromYMD(int day, int month, int year);
-} // namespace time
+int64_t GetTemporaryTimestamp();
+int64_t TemporaryTimestampToTimestamp(int64_t tmpTimestamp);
+int64_t GetTimestamp();
 
+int64_t DeltaNsBetweenTimestamps(int64_t begin, int64_t end);
+double DeltaSecBetweenTimestamps(int64_t begin, int64_t end);
+double DeltaMSecBetweenTimestamps(int64_t begin, int64_t end);
+double DeltaUSecBetweenTimestamps(int64_t begin, int64_t end);
+double NanosecondsToSeconds(int64_t ns);
+
+std::string TimestampToString(int64_t timestamp, int subsecondsDigits);
+std::string GetCurrentTimestampString(int subsecondsDigits);
+int64_t StringToTimestamp(std::string str);
+void YMDFromTimestamp(int64_t timestamp, int &day, int &month, int &year);
+int64_t TimestampFromYMD(int day, int month, int year);
+
+void SleepNSec(int64_t nanoseconds);
+void SleepUSec(int64_t microseconds);
+void SleepMSec(int64_t milliseconds);
+void SleepSec(double seconds);
+} // namespace time
 } // namespace icon7
 
 #endif

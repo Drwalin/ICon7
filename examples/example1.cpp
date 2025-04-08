@@ -1,9 +1,9 @@
 #include "icon7/Command.hpp"
 #include <cstdio>
 
-#include <chrono>
 #include <thread>
 
+#include <icon7/Time.hpp>
 #include <icon7/Peer.hpp>
 #include <icon7/Flags.hpp>
 #include <icon7/RPCEnvironment.hpp>
@@ -45,7 +45,7 @@ int main()
 
 	{
 		auto f = hosta->ListenOnPort("127.0.0.1", port, icon7::IPv4);
-		f.wait_for(std::chrono::milliseconds(150));
+		f.wait_for_milliseconds(150);
 		if (f.finished()) {
 			printf("Listening\n");
 		} else {
@@ -83,7 +83,7 @@ int main()
 
 			rpc->Send(peer, icon7::FLAG_RELIABLE, "sum", 3, 23);
 
-			std::this_thread::sleep_for(std::chrono::milliseconds(5));
+			icon7::time::SleepMSec(5);
 
 			rpc->Call(peer, icon7::FLAG_RELIABLE,
 					  icon7::OnReturnCallback::Make<uint32_t>(
@@ -100,7 +100,7 @@ int main()
 		},
 		&rpc2, hostb, port);
 
-	std::this_thread::sleep_for(std::chrono::milliseconds(300));
+	icon7::time::SleepMSec(300);
 
 	hosta = nullptr;
 	hostb = nullptr;

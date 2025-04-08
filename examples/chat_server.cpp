@@ -1,5 +1,4 @@
 #include <cstdio>
-#include <chrono>
 
 #include <iostream>
 
@@ -94,7 +93,7 @@ int main(int argc, char **argv)
 
 	auto Listen = [host, port](std::string addr) -> bool {
 		auto listeningFuture = host->ListenOnPort(addr, port, icon7::IPv4);
-		listeningFuture.wait_for(std::chrono::seconds(2));
+		listeningFuture.wait_for_seconds(2);
 		if (listeningFuture.get()) {
 			printf("Listening on: %s [%i]\n", addr.c_str(), port);
 			return true;

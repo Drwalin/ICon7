@@ -6,8 +6,7 @@
 #ifndef ICON7_COMMANDS_BUFFER_HANDLER_HPP
 #define ICON7_COMMANDS_BUFFER_HANDLER_HPP
 
-#include <chrono>
-
+#include "Time.hpp"
 #include "Debug.hpp"
 #include "CommandsBuffer.hpp"
 
@@ -30,12 +29,11 @@ public:
 			currentCommandsBuffer.CanAllocate(sizeof(T), alignof(T)) == false) {
 			AllocateBuffer();
 		}
-		if (forceEnqueueTimepoint < std::chrono::steady_clock::now()) {
+		if (forceEnqueueTimepoint < time::GetTemporaryTimestamp()) {
 			AllocateBuffer();
 		}
 		if (currentCommandsBuffer.countCommands == 0) {
-			forceEnqueueTimepoint = std::chrono::steady_clock::now() +
-									std::chrono::microseconds(200000);
+			forceEnqueueTimepoint = time::GetTemporaryTimestamp() + 200000000;
 		}
 		if (currentCommandsBuffer.EnqueueCommand<T>(std::move(args)...) ==
 			false) {
@@ -55,7 +53,7 @@ public:
 	inline const static uint32_t bufferSize = 1024 * 16;
 	CommandExecutionQueue *queue;
 	CommandsBuffer currentCommandsBuffer;
-	std::chrono::steady_clock::time_point forceEnqueueTimepoint;
+	int64_t forceEnqueueTimepoint;
 };
 } // namespace icon7
 

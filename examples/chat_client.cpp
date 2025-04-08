@@ -1,9 +1,8 @@
 #include <cstdio>
 
 #include <iostream>
-#include <chrono>
-#include <thread>
 
+#include <icon7/Time.hpp>
 #include <icon7/Peer.hpp>
 #include <icon7/Flags.hpp>
 #include <icon7/RPCEnvironment.hpp>
@@ -62,7 +61,7 @@ int main(int argc, char **argv)
 		std::getline(std::cin, str);
 		if (str.substr(0, 4) == "quit" && str.size() <= 6) {
 			peer->Disconnect();
-			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+			icon7::time::SleepMSec(50);
 			loop->QueueStopRunning();
 			loop->WaitStopRunning();
 			break;
