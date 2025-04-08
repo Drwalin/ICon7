@@ -1,7 +1,10 @@
 #include <cstdio>
 
-#include <chrono>
 #include <thread>
+
+#ifndef ICON7_USE_RPMALLOC
+#define ICON7_USE_RPMALLOC 1
+#endif
 
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/Debug.hpp"
@@ -12,6 +15,16 @@
 #include "../include/icon7/PeerUStcp.hpp"
 #include "../include/icon7/HostUStcp.hpp"
 #include "../include/icon7/LoopUS.hpp"
+
+#if defined(__unix__) && ICON7_USE_RPMALLOC
+#include <sstream>
+
+#include "../include/icon7/Time.hpp"
+#include "../include/icon7/MemoryPool.hpp"
+
+#include <sys/syscall.h>
+#include <unistd.h>
+#endif
 
 #include "utility.hpp"
 
@@ -39,11 +52,216 @@ int Mul(int a, int b, std::string str)
 	return a * b + strlen(str.c_str());
 }
 
+#if defined(__unix__) && ICON7_USE_RPMALLOC
+std::string ReadFile(std::string fileName)
+{
+	std::string ret;
+	FILE *f = fopen(fileName.c_str(), "r");
+	if (f) {
+		int64_t offset = 0;
+		while (true) {
+			ret.resize(offset + 1024 * 64);
+			int64_t size = fread(ret.data() + offset, 1, ret.size(), f);
+			if (size > 0) {
+				size += offset;
+				offset = size;
+				ret[size] = 0;
+				ret.resize(size);
+			} else {
+				ret.resize(offset);
+				break;
+			}
+		}
+		fclose(f);
+	}
+	return ret;
+}
+
+std::stringstream ReadProcFile(int64_t pid, std::string metric)
+{
+	std::string data = ReadFile("/proc/" + std::to_string(pid) + "/" + metric);
+	return std::stringstream(data);
+}
+
+struct ProcPidStatm {
+	int64_t VmSize;
+	int64_t VmRSS;
+	int64_t shared;
+	int64_t text;
+	int64_t data;
+};
+
+ProcPidStatm proc_pid_statm(int64_t pid)
+{
+	ProcPidStatm ret;
+	std::stringstream ss = ReadProcFile(pid, "statm");
+	int64_t v;
+	ss >> ret.VmSize >> ret.VmRSS >> ret.shared >> ret.text >> v >> ret.data >>
+		v;
+	return ret;
+}
+
+struct ProcPidStat {
+	int64_t pid;
+	std::string comm;
+	char state;
+	int64_t ppid;
+	int64_t pgrp;
+	int64_t session;
+	int64_t tty_nr;
+	int64_t tpgid;
+	uint64_t flags;
+	uint64_t minflt;
+	uint64_t cminflt;
+	uint64_t majflt;
+	uint64_t cmajflt;
+	uint64_t utim;
+	uint64_t stime;
+	int64_t cutim;
+	int64_t cstime;
+	int64_t priority;
+	int64_t nice;
+	int64_t num_threads;
+	int64_t itrealvalue;
+	uint64_t starttime;
+	union {
+		uint64_t vsize;
+		uint64_t VmSize;
+	};
+	union {
+		int64_t rss;
+		int64_t VmRSS;
+	};
+	uint64_t rsslim;
+	uint64_t startcode;
+	uint64_t endcode;
+	uint64_t startstack;
+	uint64_t kstkesp;
+	uint64_t kstkeip;
+	uint64_t signal;
+	uint64_t blocked;
+	uint64_t sigignore;
+	uint64_t sigcatch;
+	uint64_t wchan;
+	uint64_t nswap;
+	uint64_t cnswap;
+	int64_t exit_signal;
+	int64_t processor;
+	uint64_t rt_priority;
+	uint64_t policy;
+	uint64_t delayacct_blkio_ticks;
+	uint64_t guest_time;
+	int64_t cguest_time;
+	uint64_t start_data;
+	uint64_t end_data;
+	uint64_t start_brk;
+	uint64_t arg_start;
+	uint64_t arg_end;
+	uint64_t env_start;
+	uint64_t env_end;
+	int64_t exit_code;
+};
+
+ProcPidStat proc_pid_stat(int64_t pid)
+{
+	std::string s;
+	ProcPidStat ret;
+	std::stringstream ss = ReadProcFile(pid, "stat");
+	ss >> ret.pid;
+
+	std::getline(ss, ret.comm, '(');
+	std::getline(ss, ret.comm, ')');
+
+	printf("comm = `%s`\n", ret.comm.c_str());
+
+	ss >> ret.state >> ret.ppid >> ret.pgrp >> ret.session >> ret.tty_nr >>
+		ret.tpgid >> ret.flags >> ret.minflt >> ret.cminflt >> ret.majflt >>
+		ret.cmajflt >> ret.utim >> ret.stime >> ret.cutim >> ret.cstime >>
+		ret.priority >> ret.nice >> ret.num_threads >> ret.itrealvalue >>
+		ret.starttime >> ret.vsize >> ret.rss >> ret.rsslim >> ret.startcode >>
+		ret.endcode >> ret.startstack >> ret.kstkesp >> ret.kstkeip >>
+		ret.signal >> ret.blocked >> ret.sigignore >> ret.sigcatch >>
+		ret.wchan >> ret.nswap >> ret.cnswap >> ret.exit_signal >>
+		ret.processor >> ret.rt_priority >> ret.policy >>
+		ret.delayacct_blkio_ticks >> ret.guest_time >> ret.cguest_time >>
+		ret.start_data >> ret.end_data >> ret.start_brk >> ret.arg_start >>
+		ret.arg_end >> ret.env_start >> ret.env_end >> ret.exit_code;
+
+	return ret;
+}
+#endif
+
+void AsyncThreadMemoryAmountMetrics(std::string fileName)
+{
+#if defined(__unix__) && ICON7_USE_RPMALLOC
+	std::thread([=]() {
+		FILE *file = fopen(fileName.c_str(), "w");
+		fprintf(file, "# time[s] - "
+					  "totalAllocation - "
+					  "totalAllocated[MiB] - "
+					  "inUsePeak[MiB] - "
+					  "currentlyInUse[MiB] - "
+					  "VmPeak[MiB] - "
+					  "VmSize[MiB] - "
+					  "VmHWM[MiB] - "
+					  "VmRSS[MiB]"
+					  "\n");
+		fflush(file);
+		int64_t VmPeak = 0, VmHWM = 0;
+		const int64_t start = icon7::time::GetTemporaryTimestamp();
+		const int64_t period = 250ll * 1000ll * 1000ll;
+		const int64_t procId = syscall(SYS_gettid);
+		const int64_t pageSize = getpagesize();
+		while (true) {
+			const int64_t now = icon7::time::GetTemporaryTimestamp();
+			double deltaSeconds =
+				icon7::time::DeltaSecBetweenTimestamps(start, now);
+
+			const int64_t allocations =
+				icon7::MemoryPool::stats.smallAllocations +
+				icon7::MemoryPool::stats.mediumAllocations +
+				icon7::MemoryPool::stats.largeAllocations;
+			const int64_t totalAllocated =
+				icon7::MemoryPool::stats.allocatedBytes;
+			const int64_t currentlyInUse =
+				(totalAllocated - icon7::MemoryPool::stats.deallocatedBytes);
+			const int64_t inUsePeak = icon7::MemoryPool::stats.maxInUseAtOnce;
+
+			ProcPidStatm statm = proc_pid_statm(procId);
+			const int64_t VmSize = statm.VmSize;
+			const int64_t VmRSS = statm.VmRSS;
+			VmPeak = std::max(VmPeak, statm.VmSize);
+			VmHWM = std::max(VmHWM, statm.VmRSS);
+
+			fprintf(file, "%.4f %ld %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n",
+					deltaSeconds, allocations,
+					totalAllocated / (1024.0 * 1024.0),
+					inUsePeak / (1024.0 * 1024.0),
+					currentlyInUse / (1024.0 * 1024.0),
+					VmPeak * pageSize / (1024.0 * 1024.0),
+					VmSize * pageSize / (1024.0 * 1024.0),
+					VmHWM * pageSize / (1024.0 * 1024.0),
+					VmRSS * pageSize / (1024.0 * 1024.0));
+			fflush(file);
+
+			if (deltaSeconds < 10) {
+				icon7::time::SleepMSec(deltaSeconds + 1);
+			} else {
+				icon7::time::SleepNSec(period);
+			}
+		}
+		fclose(file);
+	}).detach();
+#endif
+}
+
 int main(int argc, char **argv)
 {
 	const ArgsParser args(argc, argv);
 
 	icon7::Initialize();
+
+	AsyncThreadMemoryAmountMetrics("memoryStats.mem");
 
 	int notPassedTests = 0;
 	const int testsCount = args.GetInt({"-tests", "-t"}, 1, 1, 1000000000);
@@ -59,7 +277,7 @@ int main(int argc, char **argv)
 	int delayBetweeEachTotalSendMilliseconds =
 		args.GetInt({"-delay", "-d"}, 0, 0, 10000);
 	const int64_t maxWaitAfterPayloadDone =
-		args.GetInt({"-max-wait-after-payload"}, 3 * 60 * 1000, 0,
+		args.GetInt({"-max-wait-after-payload"}, 1 * 60 * 1000, 0,
 					1000ll * 3600ll * 24ll * 365ll);
 	const int useSSL = args.GetFlag({"-ssl"});
 
@@ -126,7 +344,7 @@ int main(int argc, char **argv)
 		hostb->SetRpcEnvironment(&rpc2);
 		loopb->RunAsync();
 
-		listenFuture.wait_for(std::chrono::milliseconds(150));
+		listenFuture.wait_for_milliseconds(150);
 		if (listenFuture.get() == false) {
 			LOG_FATAL("Cannot listen on port: %i", (int)port);
 			loopa->Destroy();
@@ -153,8 +371,8 @@ int main(int argc, char **argv)
 		hostb->EnqueueCommand(
 			icon7::CommandHandle<CommandPrintThreadId>::Create("Sender"));
 
-		const auto beginingBeforeConnectingInIteration =
-			std::chrono::steady_clock::now();
+		const int64_t beginingBeforeConnectingInIteration =
+			icon7::time::GetTemporaryTimestamp();
 
 		for (int pq = 0; pq < testsPerHostsPairCount; ++pq) {
 			sent = received = returned = 0;
@@ -198,8 +416,7 @@ int main(int argc, char **argv)
 						if (j == 999) {
 							LOG_WARN("Failed to etablish connection");
 						}
-						std::this_thread::sleep_for(
-							std::chrono::milliseconds(1));
+						icon7::time::SleepMSec(1);
 					} else {
 						break;
 					}
@@ -229,7 +446,7 @@ int main(int argc, char **argv)
 			toReturnCount = validPeers.size() * totalSends;
 
 			uint32_t sendFrameSize = 0;
-			const auto _S = std::chrono::steady_clock::now();
+			const auto _S = icon7::time::GetTemporaryTimestamp();
 			std::atomic<double> sumTim = 0;
 			{
 				auto commandsBuffer =
@@ -237,19 +454,19 @@ int main(int argc, char **argv)
 
 				for (int k = 0; k < totalSends; ++k) {
 					if (k > 0) {
-						std::this_thread::sleep_for(std::chrono::microseconds(
-							delayBetweeEachTotalSendMilliseconds * 500ll));
+						icon7::time::SleepUSec(
+							delayBetweeEachTotalSendMilliseconds * 500ll);
 					}
 					for (auto p : validPeers) {
 						auto peer = p.get();
-						auto curTim = std::chrono::steady_clock::now();
+						auto curTim = icon7::time::GetTemporaryTimestamp();
 						auto onReturned = [curTim, &sumTim, &arrayOfLatency](
 											  icon7::Peer *peer,
 											  icon7::Flags flags,
 											  uint32_t result) -> void {
-							auto n = std::chrono::steady_clock::now();
-							auto dt = std::chrono::duration<double>(n - curTim)
-										  .count();
+							auto n = icon7::time::GetTemporaryTimestamp();
+							auto dt = icon7::time::DeltaSecBetweenTimestamps(
+								curTim, n);
 							sumTim += dt;
 							uint32_t i = returned++;
 							arrayOfLatency[i] = dt;
@@ -265,8 +482,8 @@ int main(int argc, char **argv)
 						sent++;
 					}
 					commandsBuffer->FlushBuffer();
-					std::this_thread::sleep_for(std::chrono::microseconds(
-						delayBetweeEachTotalSendMilliseconds * 500ll));
+					icon7::time::SleepUSec(
+						delayBetweeEachTotalSendMilliseconds * 500ll);
 
 					for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
 						if (l % serializeSendsModulo < serializeSendsFract) {
@@ -293,16 +510,15 @@ int main(int argc, char **argv)
 				}
 			}
 
-			auto _E = std::chrono::steady_clock::now();
-			double _sec = std::chrono::duration<double>(_E - _S).count();
+			const int64_t _E = icon7::time::GetTemporaryTimestamp();
+			double _sec = icon7::time::DeltaSecBetweenTimestamps(_S, _E);
 			double kops = (received.load() + returned.load()) / _sec / 1000.0;
 			double mibps = kops * sendFrameSize * 1000.0 / 1024.0 / 1024.0;
 			LOG_INFO("Instantenous throughput: %f Kops (%f MiBps)", kops,
 					 mibps);
 
-			_sec = std::chrono::duration<double>(
-					   _E - beginingBeforeConnectingInIteration)
-					   .count();
+			_sec = icon7::time::DeltaSecBetweenTimestamps(
+				beginingBeforeConnectingInIteration, _E);
 			kops = (totalReceived + totalReturned + received.load() +
 					returned.load()) /
 				   _sec / 1000.0;
@@ -335,23 +551,25 @@ int main(int argc, char **argv)
 
 			uint32_t oldReceived = received.load(),
 					 oldReturned = returned.load();
-			auto startWaitTimepoint = std::chrono::steady_clock::now();
-			for (int64_t i = 0; i < maxWaitAfterPayloadDone * 100; ++i) {
+			auto startWaitTimepoint = icon7::time::GetTemporaryTimestamp();
+			for (int64_t i = 0; i < maxWaitAfterPayloadDone; ++i) {
 				if (received >= sent && returned >= toReturnCount) {
 					break;
 				}
 				if (oldReceived != received.load() ||
 					oldReturned != returned.load()) {
-					const auto now = std::chrono::steady_clock::now();
-					if ((now - startWaitTimepoint) > std::chrono::seconds(10)) {
+					oldReceived = received.load();
+					oldReturned = returned.load();
+					startWaitTimepoint = icon7::time::GetTemporaryTimestamp();
+				} else {
+					const auto now = icon7::time::GetTemporaryTimestamp();
+					if (icon7::time::DeltaSecBetweenTimestamps(
+							startWaitTimepoint, now) > 5.0) {
 						notPassedTests++;
 						break;
 					}
-					startWaitTimepoint = now;
-					oldReceived = received.load();
-					oldReturned = returned.load();
 				}
-				std::this_thread::sleep_for(std::chrono::microseconds(10));
+				icon7::time::SleepUSec(950);
 			}
 
 			if (printMoreStats) {

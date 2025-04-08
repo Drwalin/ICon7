@@ -3,7 +3,6 @@
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
-#include <chrono>
 #include <memory>
 #include <thread>
 #include <utility>
@@ -11,6 +10,7 @@
 
 #include "../concurrentqueue/concurrentqueue.h"
 
+#include "../include/icon7/Time.hpp"
 #include "../include/icon7/ConcurrentQueueTraits.hpp"
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/CommandsBufferHandler.hpp"
@@ -105,7 +105,7 @@ void CommandExecutionQueue::WaitStopAsyncExecution()
 {
 	QueueStopAsyncExecution();
 	while (IsRunningAsync()) {
-		std::this_thread::sleep_for(std::chrono::microseconds(10));
+		time::SleepUSec(10);
 	}
 }
 
@@ -137,7 +137,7 @@ void CommandExecutionQueue::ExecuteLoop(uint32_t sleepMicrosecondsOnNoActions,
 				sleepTime = 1;
 			if (sleepTime > maxSleepDuration)
 				sleepTime = maxSleepDuration;
-			std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
+			time::SleepUSec(sleepTime);
 		} else {
 			accumulativeNopCounter = 0;
 		}

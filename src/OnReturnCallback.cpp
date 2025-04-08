@@ -9,8 +9,7 @@
 
 namespace icon7
 {
-bool OnReturnCallback::IsExpired(
-	std::chrono::time_point<std::chrono::steady_clock> t) const
+bool OnReturnCallback::IsExpired(int64_t t) const
 {
 	return t > timeoutTimePoint;
 }

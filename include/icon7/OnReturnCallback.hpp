@@ -6,6 +6,7 @@
 #ifndef ICON7_ON_RETURN_CALLBACK_HPP
 #define ICON7_ON_RETURN_CALLBACK_HPP
 
+#include "Time.hpp"
 #include "Command.hpp"
 #include "Host.hpp"
 #include "Peer.hpp"
@@ -141,8 +142,7 @@ public:
 	OnReturnCallback &operator=(OnReturnCallback &) = delete;
 	OnReturnCallback &operator=(const OnReturnCallback &) = delete;
 
-	bool IsExpired(std::chrono::time_point<std::chrono::steady_clock> t =
-					   std::chrono::steady_clock::now()) const;
+	bool IsExpired(int64_t t = time::GetTemporaryTimestamp()) const;
 	void Execute(Peer *peer, Flags flags, ByteReader &reader);
 	void ExecuteTimeout();
 
@@ -162,8 +162,8 @@ public:
 		cb->onTimeout = std::move(onTimeout);
 		ret.callback = std::move(cb);
 		ret.executionQueue = executionQueue;
-		ret.timeoutTimePoint = std::chrono::steady_clock::now() +
-							   (std::chrono::milliseconds(timeoutMilliseconds));
+		ret.timeoutTimePoint =
+			time::GetTemporaryTimestamp() + timeoutMilliseconds * 1000000ll;
 		ret.pointerHolder = pointerHolder;
 		return ret;
 	}
@@ -182,8 +182,8 @@ public:
 		cb->onTimeout = std::move(onTimeout);
 		ret.callback = std::move(cb);
 		ret.executionQueue = executionQueue;
-		ret.timeoutTimePoint = std::chrono::steady_clock::now() +
-							   (std::chrono::milliseconds(timeoutMilliseconds));
+		ret.timeoutTimePoint =
+			time::GetTemporaryTimestamp() + timeoutMilliseconds * 1000000ll;
 		ret.pointerHolder = pointerHolder;
 		return ret;
 	}
@@ -191,7 +191,7 @@ public:
 public:
 	CommandHandle<ExecuteReturnCallbackBase> callback;
 	CommandExecutionQueue *executionQueue;
-	std::chrono::time_point<std::chrono::steady_clock> timeoutTimePoint;
+	int64_t timeoutTimePoint;
 	std::shared_ptr<void> pointerHolder;
 };
 } // namespace icon7

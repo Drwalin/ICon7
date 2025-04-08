@@ -4,9 +4,13 @@
 // You should have received a copy of the MIT License along with this program.
 
 #include <cstring>
+
+#ifdef tm_gmtoff
 #include <ctime>
+#endif
 
 #include <chrono>
+#include <thread>
 
 #include "../include/icon7/Time.hpp"
 
@@ -26,11 +30,10 @@ struct DayTimeBegin {
 				.count() -
 			timeSinceEpoch;
 
+#ifdef tm_gmtoff
 		time_t secs;
 		secs = std::time(nullptr);
 		struct tm local = *localtime(&secs);
-
-#ifdef tm_gmtoff
 		hoursOffset = -local.tm_gmtoff / 3600;
 #else
 		hoursOffset = 0;
@@ -40,45 +43,45 @@ struct DayTimeBegin {
 	}
 	std::chrono::utc_clock::time_point date;
 	std::chrono::steady_clock::time_point time;
-	uint64_t timeSinceEpoch;
-	uint64_t nanosecondsSinceEpoch;
+	int64_t timeSinceEpoch;
+	int64_t nanosecondsSinceEpoch;
 	int64_t hoursOffset;
 	int64_t hoursOffsetNanoseconds;
 };
 
 static const DayTimeBegin glob;
 
-uint64_t GetTimestamp()
+int64_t GetTimestamp()
 {
 	return TemporaryTimestampToTimestamp(GetTemporaryTimestamp());
 }
 
-uint64_t GetTemporaryTimestamp()
+int64_t GetTemporaryTimestamp()
 {
 	return std::chrono::steady_clock::now().time_since_epoch().count();
 }
 
-uint64_t TemporaryTimestampToTimestamp(uint64_t tmpTimestamp)
+int64_t TemporaryTimestampToTimestamp(int64_t tmpTimestamp)
 {
 	return glob.nanosecondsSinceEpoch + tmpTimestamp;
 }
 
-int64_t DeltaNsBetweenTimestamps(uint64_t begin, uint64_t end)
+int64_t DeltaNsBetweenTimestamps(int64_t begin, int64_t end)
 {
 	return end - begin;
 }
 
-double DeltaSecBetweenTimestamps(uint64_t begin, uint64_t end)
+double DeltaSecBetweenTimestamps(int64_t begin, int64_t end)
 {
 	return NanosecondsToSeconds(DeltaNsBetweenTimestamps(begin, end));
 }
 
-double DeltaMSecBetweenTimestamps(uint64_t begin, uint64_t end)
+double DeltaMSecBetweenTimestamps(int64_t begin, int64_t end)
 {
 	return DeltaNsBetweenTimestamps(begin, end) / (1000.0 * 1000.0);
 }
 
-double DeltaUSecBetweenTimestamps(uint64_t begin, uint64_t end)
+double DeltaUSecBetweenTimestamps(int64_t begin, int64_t end)
 {
 	return DeltaNsBetweenTimestamps(begin, end) / 1000.0;
 }
@@ -104,7 +107,7 @@ struct YMD {
 	int day;
 };
 
-void YMDFromTimestamp(uint64_t timestamp, int &day, int &month, int &year)
+void YMDFromTimestamp(int64_t timestamp, int &day, int &month, int &year)
 {
 	int days = timestamp / (24ll * 3600ll * 1000ll * 1000ll * 1000ll);
 
@@ -139,14 +142,14 @@ void YMDFromTimestamp(uint64_t timestamp, int &day, int &month, int &year)
 	day = days + 1;
 }
 
-YMD YMDFromTimestamp(uint64_t timestamp)
+YMD YMDFromTimestamp(int64_t timestamp)
 {
 	YMD ymd;
 	YMDFromTimestamp(timestamp, ymd.day, ymd.month, ymd.year);
 	return ymd;
 }
 
-uint64_t TimestampFromYMD(int day, int month, int year)
+int64_t TimestampFromYMD(int day, int month, int year)
 {
 	int64_t days = 0;
 	int leapYears = LeapYearsBefore(year - 1) - LeapYearsBefore(1970);
@@ -164,12 +167,12 @@ uint64_t TimestampFromYMD(int day, int month, int year)
 
 	return days * 24ll * 3600ll * 1000ll * 1000ll * 1000ll;
 }
-uint64_t TimestampFromYMD(YMD ymd)
+int64_t TimestampFromYMD(YMD ymd)
 {
 	return TimestampFromYMD(ymd.day, ymd.month, ymd.year);
 }
 
-std::string TimestampToString(uint64_t timestamp, int subsecondDigits)
+std::string TimestampToString(int64_t timestamp, int subsecondDigits)
 {
 	timestamp -= glob.hoursOffsetNanoseconds;
 
@@ -179,7 +182,7 @@ std::string TimestampToString(uint64_t timestamp, int subsecondDigits)
 	const std::chrono::nanoseconds subseconds = nanoseconds - seconds;
 
 	char subsecondsStr[32];
-	const uint64_t ns = subseconds.count();
+	const int64_t ns = subseconds.count();
 
 	if (subsecondDigits > 9) {
 		subsecondDigits = 9;
@@ -218,7 +221,7 @@ std::string GetCurrentTimestampString(int subsecondDigits)
 	return TimestampToString(GetTimestamp(), subsecondDigits);
 }
 
-uint64_t StringToTimestamp(std::string str)
+int64_t StringToTimestamp(std::string str)
 {
 	int years = 0, months = 0, days = 0, hours = 0, minutes = 0, seconds = 0;
 	sscanf(str.c_str(), "%d-%d-%d+%d:%d:%d", &years, &months, &days, &hours,
@@ -249,8 +252,25 @@ uint64_t StringToTimestamp(std::string str)
 			.count();
 
 	tpSeconds += utcOffset * 3600ll;
-	uint64_t ns = ((uint64_t)tpSeconds) * 1000000000llu + subseconds;
+	int64_t ns = ((int64_t)tpSeconds) * 1000000000ll + subseconds;
 	return ns;
 }
+
+void SleepNSec(int64_t nanoseconds)
+{
+	std::this_thread::sleep_for(std::chrono::nanoseconds(nanoseconds));
+}
+
+void SleepUSec(int64_t microseconds)
+{
+	std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
+}
+
+void SleepMSec(int64_t milliseconds)
+{
+	std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
+}
+
+void SleepSec(double seconds) { SleepMSec(seconds * 1000.0); }
 } // namespace time
 } // namespace icon7

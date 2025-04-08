@@ -3,8 +3,6 @@
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
-#include <chrono>
-
 #include "../include/icon7/ByteReader.hpp"
 #include "../include/icon7/FramingProtocol.hpp"
 
@@ -106,7 +104,7 @@ void RPCEnvironment::OnReceiveReturn(Peer *peer, ByteReader &reader,
 
 void RPCEnvironment::CheckForTimeoutFunctionCalls(uint32_t maxChecks)
 {
-	auto now = std::chrono::steady_clock::now();
+	auto now = time::GetTemporaryTimestamp();
 	auto it = returningCallbacks.find(lastCheckedId);
 	if (it == returningCallbacks.end())
 		it = returningCallbacks.begin();
