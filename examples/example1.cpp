@@ -12,15 +12,19 @@
 #include <icon7/HostUStcp.hpp>
 #include "../include/icon7/LoopUS.hpp"
 
+std::atomic<int> returned = 0;
+
 int Sum(int a, int b)
 {
 	printf(" %i + %i = %i\n", a, b, a + b);
+	returned++;
 	return a + b;
 }
 
 int Mul(int a, int b)
 {
 	printf(" %i * %i = %i\n", a, b, a * b);
+	returned++;
 	return a * b;
 }
 
@@ -83,7 +87,7 @@ int main()
 
 			rpc->Send(peer, icon7::FLAG_RELIABLE, "sum", 3, 23);
 
-			icon7::time::SleepMSec(5);
+			icon7::time::Sleep(icon7::time::milliseconds(5));
 
 			rpc->Call(peer, icon7::FLAG_RELIABLE,
 					  icon7::OnReturnCallback::Make<uint32_t>(
@@ -91,6 +95,7 @@ int main()
 							 uint32_t result) -> void {
 							  printf(" Multiplication result returned = %i\n",
 									 result);
+							  returned++;
 						  },
 						  [](icon7::Peer *peer) -> void {
 							  printf(" Multiplication timeout\n");
@@ -100,7 +105,10 @@ int main()
 		},
 		&rpc2, hostb, port);
 
-	icon7::time::SleepMSec(300);
+	for (int i = 0; i < 300 && returned.load() < 3; ++i) {
+		icon7::time::Sleep(icon7::time::milliseconds(1));
+	}
+	icon7::time::Sleep(icon7::time::milliseconds(1));
 
 	hosta = nullptr;
 	hostb = nullptr;

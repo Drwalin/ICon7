@@ -142,7 +142,7 @@ public:
 	OnReturnCallback &operator=(OnReturnCallback &) = delete;
 	OnReturnCallback &operator=(const OnReturnCallback &) = delete;
 
-	bool IsExpired(int64_t t = time::GetTemporaryTimestamp()) const;
+	bool IsExpired(time::Point t = time::GetTemporaryTimestamp()) const;
 	void Execute(Peer *peer, Flags flags, ByteReader &reader);
 	void ExecuteTimeout();
 
@@ -162,8 +162,8 @@ public:
 		cb->onTimeout = std::move(onTimeout);
 		ret.callback = std::move(cb);
 		ret.executionQueue = executionQueue;
-		ret.timeoutTimePoint =
-			time::GetTemporaryTimestamp() + timeoutMilliseconds * 1000000ll;
+		ret.timeoutTimePoint = time::GetTemporaryTimestamp() +
+							   time::milliseconds(timeoutMilliseconds);
 		ret.pointerHolder = pointerHolder;
 		return ret;
 	}
@@ -182,8 +182,8 @@ public:
 		cb->onTimeout = std::move(onTimeout);
 		ret.callback = std::move(cb);
 		ret.executionQueue = executionQueue;
-		ret.timeoutTimePoint =
-			time::GetTemporaryTimestamp() + timeoutMilliseconds * 1000000ll;
+		ret.timeoutTimePoint = time::GetTemporaryTimestamp() +
+							   time::milliseconds(timeoutMilliseconds);
 		ret.pointerHolder = pointerHolder;
 		return ret;
 	}
@@ -191,7 +191,7 @@ public:
 public:
 	CommandHandle<ExecuteReturnCallbackBase> callback;
 	CommandExecutionQueue *executionQueue;
-	int64_t timeoutTimePoint;
+	time::Point timeoutTimePoint;
 	std::shared_ptr<void> pointerHolder;
 };
 } // namespace icon7

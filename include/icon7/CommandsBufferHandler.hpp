@@ -33,7 +33,8 @@ public:
 			AllocateBuffer();
 		}
 		if (currentCommandsBuffer.countCommands == 0) {
-			forceEnqueueTimepoint = time::GetTemporaryTimestamp() + 200000000;
+			forceEnqueueTimepoint =
+				time::GetTemporaryTimestamp() + time::milliseconds(200);
 		}
 		if (currentCommandsBuffer.EnqueueCommand<T>(std::move(args)...) ==
 			false) {
@@ -53,7 +54,7 @@ public:
 	inline const static uint32_t bufferSize = 1024 * 16;
 	CommandExecutionQueue *queue;
 	CommandsBuffer currentCommandsBuffer;
-	int64_t forceEnqueueTimepoint;
+	time::Point forceEnqueueTimepoint;
 };
 } // namespace icon7
 

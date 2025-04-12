@@ -10,6 +10,8 @@
 
 #include <atomic>
 
+#include "Time.hpp"
+
 namespace icon7
 {
 struct PeerStats {
@@ -28,7 +30,7 @@ struct PeerStats {
 
 	volatile int64_t errorsCount = 0;
 
-	volatile uint64_t startTimestamp = 0;
+	volatile time::Timestamp startTimestamp = {0};
 };
 
 struct HostStats : public PeerStats {
@@ -70,7 +72,7 @@ struct MemoryStats {
 	alignas(64) std::atomic<int64_t> deallocations = 0;
 #endif
 
-	volatile uint64_t startTimestamp;
+	volatile time::Timestamp startTimestamp = {0};
 
 	MemoryStats();
 

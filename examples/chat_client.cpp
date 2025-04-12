@@ -61,7 +61,7 @@ int main(int argc, char **argv)
 		std::getline(std::cin, str);
 		if (str.substr(0, 4) == "quit" && str.size() <= 6) {
 			peer->Disconnect();
-			icon7::time::SleepMSec(50);
+			icon7::time::Sleep(icon7::time::milliseconds(50));
 			loop->QueueStopRunning();
 			loop->WaitStopRunning();
 			break;

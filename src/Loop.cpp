@@ -30,7 +30,7 @@ void Loop::WaitStopRunning()
 		QueueStopRunning();
 		WakeUp();
 
-		time::SleepUSec(100);
+		icon7::time::Sleep(icon7::time::microseconds(100));
 	}
 }
 
@@ -99,7 +99,8 @@ void Loop::_InternalSyncLoop()
 	while (IsQueuedStopAsync() == false) {
 		SingleLoopIteration();
 		if (microsecondsOfSleepBetweenIterations > 0) {
-			time::SleepUSec(microsecondsOfSleepBetweenIterations);
+			icon7::time::Sleep(icon7::time::microseconds(
+				microsecondsOfSleepBetweenIterations));
 		}
 	}
 	asyncRunnerFlags &= ~RUNNING;

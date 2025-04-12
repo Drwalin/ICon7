@@ -10,30 +10,42 @@
 
 #include <string>
 
+#include "../../concurrent/time.hpp"
+
 namespace icon7
 {
 namespace time
 {
-int64_t GetTemporaryTimestamp();
-int64_t TemporaryTimestampToTimestamp(int64_t tmpTimestamp);
-int64_t GetTimestamp();
+using namespace concurrent::time;
+using Point = point;
+using Diff = diff;
 
-int64_t DeltaNsBetweenTimestamps(int64_t begin, int64_t end);
-double DeltaSecBetweenTimestamps(int64_t begin, int64_t end);
-double DeltaMSecBetweenTimestamps(int64_t begin, int64_t end);
-double DeltaUSecBetweenTimestamps(int64_t begin, int64_t end);
-double NanosecondsToSeconds(int64_t ns);
+struct Timestamp {
+	int64_t ns;
+};
 
-std::string TimestampToString(int64_t timestamp, int subsecondsDigits);
+Point GetTemporaryTimestamp();
+Timestamp TemporaryTimestampToTimestamp(point tmpTimestamp);
+Timestamp GetTimestamp();
+
+double DeltaSecBetweenTimestamps(Timestamp begin, Timestamp end);
+double DeltaMSecBetweenTimestamps(Timestamp begin, Timestamp end);
+double DeltaUSecBetweenTimestamps(Timestamp begin, Timestamp end);
+Diff DeltaNsBetweenTimestamps(Timestamp begin, Timestamp end);
+double NanosecondsToSeconds(Diff ns);
+
+double DeltaSecBetweenTimepoints(Point begin, Point end);
+double DeltaMSecBetweenTimepoints(Point begin, Point end);
+double DeltaUSecBetweenTimepoints(Point begin, Point end);
+Diff DeltaNsBetweenTimepoints(Point begin, Point end);
+
+std::string TimestampToString(Timestamp timestamp, int subsecondsDigits);
 std::string GetCurrentTimestampString(int subsecondsDigits);
-int64_t StringToTimestamp(std::string str);
-void YMDFromTimestamp(int64_t timestamp, int &day, int &month, int &year);
-int64_t TimestampFromYMD(int day, int month, int year);
+Timestamp StringToTimestamp(std::string str);
+void YMDFromTimestamp(Timestamp timestamp, int &day, int &month, int &year);
+Timestamp TimestampFromYMD(int day, int month, int year);
 
-void SleepNSec(int64_t nanoseconds);
-void SleepUSec(int64_t microseconds);
-void SleepMSec(int64_t milliseconds);
-void SleepSec(double seconds);
+void Sleep(Diff timediff);
 } // namespace time
 } // namespace icon7
 

@@ -31,11 +31,13 @@ endif()
 
 add_definitions(-DCMAKE_EXPORT_COMPILE_COMMANDS=ON)
 
+add_subdirectory(concurrent)
 add_subdirectory(bitscpp)
 
 include_directories(include/)
 include_directories(uSockets/src/)
 include_directories(bitscpp/include/)
+include_directories(concurrent/)
 include_directories(${ZLIB_INCLUDE_DIRS})
 if(USOCKETS_USE_OPENSSL)
 	include_directories(${OPENSSL_INCLUDE_DIR})
@@ -83,6 +85,7 @@ add_library(icon7 STATIC
 	${source_files}
 )
 target_link_libraries(icon7 uSockets)
+target_link_libraries(icon7 concurrent)
 
 if(ASAN)
 	add_definitions(-fsanitize=address)

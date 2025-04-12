@@ -37,11 +37,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	const int totalSends = 10;
 	const int additionalPayloadSize = data[0] + 1;
 	const int connectionsCount = 17;
-	int delayBetweeEachTotalSendMilliseconds = 0;
+	int64_t delayBetweeEachTotalSendMilliseconds = 0;
 	const int64_t maxWaitAfterPayloadDone = 1000;
 	const int useSSL = data[1];
 
-	uint16_t port = 7312;
+	static uint16_t port = 7312;
 
 	const int serializeSendsModulo = data[2] + 1;
 	const int serializeSendsFract = data[3] + 1;
@@ -64,10 +64,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 
 	while (true) {
 		uint64_t totalReceived = 0, totalSent = 0, totalReturned = 0;
-		port++;
-		if (port <= 1024) {
-			port = 1025;
-		}
 
 		icon7::RPCEnvironment rpc;
 		rpc.RegisterMessage("sum", Sum);
@@ -103,6 +99,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 			loopb->Destroy();
 			loopa = nullptr;
 			loopb = nullptr;
+			port += (rand() % 15) + 1;
+			if (port <= 1024) {
+				port = 1025;
+			}
 			continue;
 		}
 
@@ -143,7 +143,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 					if (j == 999) {
 						LOG_WARN("Failed to etablish connection");
 					}
-					icon7::time::SleepMSec(1);
+					icon7::time::Sleep(icon7::time::milliseconds(1));
 				} else {
 					break;
 				}
@@ -176,17 +176,18 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 
 			for (int k = 0; k < totalSends; ++k) {
 				if (k > 0) {
-					icon7::time::SleepMSec(1);
+					icon7::time::Sleep(icon7::time::milliseconds(1));
 				}
 				for (auto p : validPeers) {
 					auto peer = p.get();
-					auto curTim = icon7::time::GetTemporaryTimestamp();
+					icon7::time::Point curTim =
+						icon7::time::GetTemporaryTimestamp();
 					auto onReturned = [curTim, &sumTim, &arrayOfLatency](
 										  icon7::Peer *peer, icon7::Flags flags,
 										  uint32_t result) -> void {
 						auto n = icon7::time::GetTemporaryTimestamp();
 						auto dt =
-							icon7::time::DeltaSecBetweenTimestamps(curTim, n);
+							icon7::time::DeltaSecBetweenTimepoints(curTim, n);
 						sumTim += dt;
 						uint32_t i = returned++;
 						arrayOfLatency[i] = dt;
@@ -202,8 +203,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 					sent++;
 				}
 				commandsBuffer->FlushBuffer();
-				icon7::time::SleepUSec(delayBetweeEachTotalSendMilliseconds *
-									   500ll);
+				icon7::time::Sleep(icon7::time::microseconds(
+					delayBetweeEachTotalSendMilliseconds * 500));
 
 				for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
 					if (l % serializeSendsModulo < serializeSendsFract) {
@@ -237,7 +238,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 			if (oldReceived != received.load() ||
 				oldReturned != returned.load()) {
 				const auto now = icon7::time::GetTemporaryTimestamp();
-				if ((now - startWaitTimepoint) > 10l*1000ll*1000ll*1000ll) {
+				if ((now - startWaitTimepoint) > icon7::time::seconds(10)) {
 					notPassedTests++;
 					break;
 				}
@@ -245,7 +246,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 				oldReceived = received.load();
 				oldReturned = returned.load();
 			}
-			icon7::time::SleepUSec(10);
+			icon7::time::Sleep(icon7::time::microseconds(10));
 		}
 
 		for (auto &p : validPeers) {
