@@ -21,7 +21,7 @@ using Point = point;
 using Diff = diff;
 
 struct Timestamp {
-	int64_t ns;
+	int64_t ns = 0;
 };
 
 Point GetTemporaryTimestamp();
@@ -46,6 +46,21 @@ void YMDFromTimestamp(Timestamp timestamp, int &day, int &month, int &year);
 Timestamp TimestampFromYMD(int day, int month, int year);
 
 void Sleep(Diff timediff);
+
+inline bool operator<(Timestamp l, Timestamp r) { return l.ns < r.ns; }
+inline bool operator<=(Timestamp l, Timestamp r) { return l.ns <= r.ns; }
+inline bool operator>(Timestamp l, Timestamp r) { return l.ns > r.ns; }
+inline bool operator>=(Timestamp l, Timestamp r) { return l.ns >= r.ns; }
+inline bool operator==(Timestamp l, Timestamp r) { return l.ns == r.ns; }
+inline bool operator!=(Timestamp l, Timestamp r) { return l.ns != r.ns; }
+
+inline Timestamp operator+(Timestamp p, Diff d) { return {p.ns + d.ns}; }
+inline Timestamp operator-(Timestamp p, Diff d) { return {p.ns - d.ns}; }
+
+inline Timestamp &operator+=(Timestamp &p, Diff d) { p.ns += d.ns; return p; }
+inline Timestamp &operator-=(Timestamp &p, Diff d) { p.ns -= d.ns; return p; }
+
+inline Diff operator-(Timestamp a, Timestamp b) { return {a.ns - b.ns}; }
 } // namespace time
 } // namespace icon7
 
