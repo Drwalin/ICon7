@@ -9,7 +9,7 @@
 
 namespace icon7
 {
-bool OnReturnCallback::IsExpired(int64_t t) const
+bool OnReturnCallback::IsExpired(time::Point t) const
 {
 	return t > timeoutTimePoint;
 }

@@ -105,7 +105,7 @@ void CommandExecutionQueue::WaitStopAsyncExecution()
 {
 	QueueStopAsyncExecution();
 	while (IsRunningAsync()) {
-		time::SleepUSec(10);
+		icon7::time::Sleep(icon7::time::microseconds(10));
 	}
 }
 
@@ -137,7 +137,7 @@ void CommandExecutionQueue::ExecuteLoop(uint32_t sleepMicrosecondsOnNoActions,
 				sleepTime = 1;
 			if (sleepTime > maxSleepDuration)
 				sleepTime = maxSleepDuration;
-			time::SleepUSec(sleepTime);
+			icon7::time::Sleep(icon7::time::microseconds(sleepTime));
 		} else {
 			accumulativeNopCounter = 0;
 		}

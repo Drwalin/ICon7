@@ -208,14 +208,14 @@ void AsyncThreadMemoryAmountMetrics(std::string fileName)
 					  "\n");
 		fflush(file);
 		int64_t VmPeak = 0, VmHWM = 0;
-		const int64_t start = icon7::time::GetTemporaryTimestamp();
-		const int64_t period = 250ll * 1000ll * 1000ll;
+		const icon7::time::Point start = icon7::time::GetTemporaryTimestamp();
+		const icon7::time::Diff period = icon7::time::microseconds(250);
 		const int64_t procId = syscall(SYS_gettid);
 		const int64_t pageSize = getpagesize();
 		while (true) {
-			const int64_t now = icon7::time::GetTemporaryTimestamp();
+			const icon7::time::Point now = icon7::time::GetTemporaryTimestamp();
 			double deltaSeconds =
-				icon7::time::DeltaSecBetweenTimestamps(start, now);
+				icon7::time::NanosecondsToSeconds(now - start);
 
 			const int64_t allocations =
 				icon7::MemoryPool::stats.smallAllocations +
@@ -245,9 +245,9 @@ void AsyncThreadMemoryAmountMetrics(std::string fileName)
 			fflush(file);
 
 			if (deltaSeconds < 10) {
-				icon7::time::SleepMSec(deltaSeconds + 1);
+				icon7::time::Sleep(icon7::time::milliseconds(deltaSeconds + 1));
 			} else {
-				icon7::time::SleepNSec(period);
+				icon7::time::Sleep(period);
 			}
 		}
 		fclose(file);
@@ -274,8 +274,8 @@ int main(int argc, char **argv)
 		{"-additional-payload", "-payload"}, 1, 1, 256 * 1024 * 1024);
 	const int connectionsCount =
 		args.GetInt({"-connections", "-con"}, 171, 1, 1000000);
-	int delayBetweeEachTotalSendMilliseconds =
-		args.GetInt({"-delay", "-d"}, 0, 0, 10000);
+	icon7::time::Diff delayBetweeEachTotalSend = icon7::time::microseconds(
+		args.GetInt({"-delay", "-d"}, 0, 0, 10000) * 500); // gets milliseconds
 	const int64_t maxWaitAfterPayloadDone =
 		args.GetInt({"-max-wait-after-payload"}, 1 * 60 * 1000, 0,
 					1000ll * 3600ll * 24ll * 365ll);
@@ -371,7 +371,7 @@ int main(int argc, char **argv)
 		hostb->EnqueueCommand(
 			icon7::CommandHandle<CommandPrintThreadId>::Create("Sender"));
 
-		const int64_t beginingBeforeConnectingInIteration =
+		const auto beginingBeforeConnectingInIteration =
 			icon7::time::GetTemporaryTimestamp();
 
 		for (int pq = 0; pq < testsPerHostsPairCount; ++pq) {
@@ -416,7 +416,7 @@ int main(int argc, char **argv)
 						if (j == 999) {
 							LOG_WARN("Failed to etablish connection");
 						}
-						icon7::time::SleepMSec(1);
+						icon7::time::Sleep(icon7::time::milliseconds(1));
 					} else {
 						break;
 					}
@@ -454,8 +454,7 @@ int main(int argc, char **argv)
 
 				for (int k = 0; k < totalSends; ++k) {
 					if (k > 0) {
-						icon7::time::SleepUSec(
-							delayBetweeEachTotalSendMilliseconds * 500ll);
+						icon7::time::Sleep(delayBetweeEachTotalSend);
 					}
 					for (auto p : validPeers) {
 						auto peer = p.get();
@@ -465,8 +464,8 @@ int main(int argc, char **argv)
 											  icon7::Flags flags,
 											  uint32_t result) -> void {
 							auto n = icon7::time::GetTemporaryTimestamp();
-							auto dt = icon7::time::DeltaSecBetweenTimestamps(
-								curTim, n);
+							auto dt =
+								icon7::time::NanosecondsToSeconds(n - curTim);
 							sumTim += dt;
 							uint32_t i = returned++;
 							arrayOfLatency[i] = dt;
@@ -482,8 +481,7 @@ int main(int argc, char **argv)
 						sent++;
 					}
 					commandsBuffer->FlushBuffer();
-					icon7::time::SleepUSec(
-						delayBetweeEachTotalSendMilliseconds * 500ll);
+					icon7::time::Sleep(delayBetweeEachTotalSend);
 
 					for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
 						if (l % serializeSendsModulo < serializeSendsFract) {
@@ -510,15 +508,15 @@ int main(int argc, char **argv)
 				}
 			}
 
-			const int64_t _E = icon7::time::GetTemporaryTimestamp();
-			double _sec = icon7::time::DeltaSecBetweenTimestamps(_S, _E);
+			const auto _E = icon7::time::GetTemporaryTimestamp();
+			double _sec = icon7::time::NanosecondsToSeconds(_E - _S);
 			double kops = (received.load() + returned.load()) / _sec / 1000.0;
 			double mibps = kops * sendFrameSize * 1000.0 / 1024.0 / 1024.0;
 			LOG_INFO("Instantenous throughput: %f Kops (%f MiBps)", kops,
 					 mibps);
 
-			_sec = icon7::time::DeltaSecBetweenTimestamps(
-				beginingBeforeConnectingInIteration, _E);
+			_sec = icon7::time::NanosecondsToSeconds(
+				_E - beginingBeforeConnectingInIteration);
 			kops = (totalReceived + totalReturned + received.load() +
 					returned.load()) /
 				   _sec / 1000.0;
@@ -563,13 +561,12 @@ int main(int argc, char **argv)
 					startWaitTimepoint = icon7::time::GetTemporaryTimestamp();
 				} else {
 					const auto now = icon7::time::GetTemporaryTimestamp();
-					if (icon7::time::DeltaSecBetweenTimestamps(
-							startWaitTimepoint, now) > 5.0) {
+					if ((now - startWaitTimepoint) > icon7::time::seconds(5)) {
 						notPassedTests++;
 						break;
 					}
 				}
-				icon7::time::SleepUSec(950);
+				icon7::time::Sleep(icon7::time::microseconds(950));
 			}
 
 			if (printMoreStats) {

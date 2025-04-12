@@ -10,7 +10,6 @@
 #endif
 
 #include <chrono>
-#include <thread>
 
 #include "../include/icon7/Time.hpp"
 
@@ -22,13 +21,12 @@ struct DayTimeBegin {
 	DayTimeBegin()
 	{
 		date = std::chrono::utc_clock::now();
-		time = std::chrono::steady_clock::now();
-		timeSinceEpoch = time.time_since_epoch().count();
+		timeSinceEpoch = now();
 		nanosecondsSinceEpoch =
 			std::chrono::duration_cast<std::chrono::nanoseconds, int64_t>(
 				date.time_since_epoch())
 				.count() -
-			timeSinceEpoch;
+			timeSinceEpoch.ns;
 
 #ifdef tm_gmtoff
 		time_t secs;
@@ -42,8 +40,7 @@ struct DayTimeBegin {
 			hoursOffset * 3600ll * 1000ll * 1000ll * 1000ll;
 	}
 	std::chrono::utc_clock::time_point date;
-	std::chrono::steady_clock::time_point time;
-	int64_t timeSinceEpoch;
+	Point timeSinceEpoch;
 	int64_t nanosecondsSinceEpoch;
 	int64_t hoursOffset;
 	int64_t hoursOffsetNanoseconds;
@@ -51,44 +48,61 @@ struct DayTimeBegin {
 
 static const DayTimeBegin glob;
 
-int64_t GetTimestamp()
+Timestamp GetTimestamp()
 {
 	return TemporaryTimestampToTimestamp(GetTemporaryTimestamp());
 }
 
-int64_t GetTemporaryTimestamp()
+Point GetTemporaryTimestamp() { return now(); }
+
+Timestamp TemporaryTimestampToTimestamp(Point tmpTimestamp)
 {
-	return std::chrono::steady_clock::now().time_since_epoch().count();
+	return {glob.nanosecondsSinceEpoch + tmpTimestamp.ns};
 }
 
-int64_t TemporaryTimestampToTimestamp(int64_t tmpTimestamp)
+Diff DeltaNsBetweenTimestamps(Timestamp begin, Timestamp end)
 {
-	return glob.nanosecondsSinceEpoch + tmpTimestamp;
+	return {end.ns - begin.ns};
 }
 
-int64_t DeltaNsBetweenTimestamps(int64_t begin, int64_t end)
-{
-	return end - begin;
-}
-
-double DeltaSecBetweenTimestamps(int64_t begin, int64_t end)
+double DeltaSecBetweenTimestamps(Timestamp begin, Timestamp end)
 {
 	return NanosecondsToSeconds(DeltaNsBetweenTimestamps(begin, end));
 }
 
-double DeltaMSecBetweenTimestamps(int64_t begin, int64_t end)
+double DeltaMSecBetweenTimestamps(Timestamp begin, Timestamp end)
 {
-	return DeltaNsBetweenTimestamps(begin, end) / (1000.0 * 1000.0);
+	return DeltaNsBetweenTimestamps(begin, end).ns / (1000.0 * 1000.0);
 }
 
-double DeltaUSecBetweenTimestamps(int64_t begin, int64_t end)
+double DeltaUSecBetweenTimestamps(Timestamp begin, Timestamp end)
 {
-	return DeltaNsBetweenTimestamps(begin, end) / 1000.0;
+	return DeltaNsBetweenTimestamps(begin, end).ns / 1000.0;
 }
 
-double NanosecondsToSeconds(int64_t ns)
+double NanosecondsToSeconds(Diff ns)
 {
-	return ns / (1000.0 * 1000.0 * 1000.0);
+	return ns.ns / (1000.0 * 1000.0 * 1000.0);
+}
+
+Diff DeltaNsBetweenTimepoints(Point begin, Point end)
+{
+	return {end.ns - begin.ns};
+}
+
+double DeltaSecBetweenTimepoints(Point begin, Point end)
+{
+	return NanosecondsToSeconds(DeltaNsBetweenTimepoints(begin, end));
+}
+
+double DeltaMSecBetweenTimepoints(Point begin, Point end)
+{
+	return DeltaNsBetweenTimepoints(begin, end).ns / (1000.0 * 1000.0);
+}
+
+double DeltaUSecBetweenTimepoints(Point begin, Point end)
+{
+	return DeltaNsBetweenTimepoints(begin, end).ns / 1000.0;
 }
 
 int IsLeapYear(int year)
@@ -107,9 +121,9 @@ struct YMD {
 	int day;
 };
 
-void YMDFromTimestamp(int64_t timestamp, int &day, int &month, int &year)
+void YMDFromTimestamp(Timestamp timestamp, int &day, int &month, int &year)
 {
-	int days = timestamp / (24ll * 3600ll * 1000ll * 1000ll * 1000ll);
+	int days = timestamp.ns / (24ll * 3600ll * 1000ll * 1000ll * 1000ll);
 
 	year = 1970 + (days - 370) / 366;
 	int leapYears = LeapYearsBefore(year - 1) - LeapYearsBefore(1970);
@@ -142,14 +156,14 @@ void YMDFromTimestamp(int64_t timestamp, int &day, int &month, int &year)
 	day = days + 1;
 }
 
-YMD YMDFromTimestamp(int64_t timestamp)
+YMD YMDFromTimestamp(Timestamp timestamp)
 {
 	YMD ymd;
 	YMDFromTimestamp(timestamp, ymd.day, ymd.month, ymd.year);
 	return ymd;
 }
 
-int64_t TimestampFromYMD(int day, int month, int year)
+Timestamp TimestampFromYMD(int day, int month, int year)
 {
 	int64_t days = 0;
 	int leapYears = LeapYearsBefore(year - 1) - LeapYearsBefore(1970);
@@ -165,18 +179,18 @@ int64_t TimestampFromYMD(int day, int month, int year)
 		days += daysPerMonth[i];
 	}
 
-	return days * 24ll * 3600ll * 1000ll * 1000ll * 1000ll;
+	return {days * 24ll * 3600ll * 1000ll * 1000ll * 1000ll};
 }
-int64_t TimestampFromYMD(YMD ymd)
+Timestamp TimestampFromYMD(YMD ymd)
 {
 	return TimestampFromYMD(ymd.day, ymd.month, ymd.year);
 }
 
-std::string TimestampToString(int64_t timestamp, int subsecondDigits)
+std::string TimestampToString(Timestamp timestamp, int subsecondDigits)
 {
-	timestamp -= glob.hoursOffsetNanoseconds;
+	timestamp.ns -= glob.hoursOffsetNanoseconds;
 
-	const std::chrono::nanoseconds nanoseconds(timestamp);
+	const std::chrono::nanoseconds nanoseconds(timestamp.ns);
 	const std::chrono::seconds seconds =
 		std::chrono::duration_cast<std::chrono::seconds, int64_t>(nanoseconds);
 	const std::chrono::nanoseconds subseconds = nanoseconds - seconds;
@@ -221,7 +235,7 @@ std::string GetCurrentTimestampString(int subsecondDigits)
 	return TimestampToString(GetTimestamp(), subsecondDigits);
 }
 
-int64_t StringToTimestamp(std::string str)
+Timestamp StringToTimestamp(std::string str)
 {
 	int years = 0, months = 0, days = 0, hours = 0, minutes = 0, seconds = 0;
 	sscanf(str.c_str(), "%d-%d-%d+%d:%d:%d", &years, &months, &days, &hours,
@@ -242,9 +256,9 @@ int64_t StringToTimestamp(std::string str)
 	subsecondsStr.resize(9, '0');
 	int64_t subseconds = atoi(subsecondsStr.c_str());
 
-	int64_t t =
-		TimestampFromYMD({years, months, days}) / (1000ll * 1000ll * 1000ll) +
-		(hours * 60 + minutes) * 60 + seconds;
+	int64_t t = TimestampFromYMD({years, months, days}).ns /
+					(1000ll * 1000ll * 1000ll) +
+				(hours * 60 + minutes) * 60 + seconds;
 
 	int64_t tpSeconds =
 		std::chrono::duration_cast<std::chrono::seconds, int64_t>(
@@ -253,24 +267,9 @@ int64_t StringToTimestamp(std::string str)
 
 	tpSeconds += utcOffset * 3600ll;
 	int64_t ns = ((int64_t)tpSeconds) * 1000000000ll + subseconds;
-	return ns;
+	return {ns};
 }
 
-void SleepNSec(int64_t nanoseconds)
-{
-	std::this_thread::sleep_for(std::chrono::nanoseconds(nanoseconds));
-}
-
-void SleepUSec(int64_t microseconds)
-{
-	std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
-}
-
-void SleepMSec(int64_t milliseconds)
-{
-	std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
-}
-
-void SleepSec(double seconds) { SleepMSec(seconds * 1000.0); }
+void Sleep(Diff dt) { sleep_for(dt); }
 } // namespace time
 } // namespace icon7

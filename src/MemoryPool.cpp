@@ -16,7 +16,7 @@
 
 namespace icon7
 {
-MemoryStats::MemoryStats() { startTimestamp = time::GetTimestamp(); }
+MemoryStats::MemoryStats() { startTimestamp.ns = time::GetTimestamp().ns; }
 
 MemoryStats MemoryPool::stats = {};
 
