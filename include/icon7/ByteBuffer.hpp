@@ -146,7 +146,7 @@ public:
 	}
 
 	inline uint8_t *data() { return storage->data(); }			   // NOLINT
-	inline uint8_t *const data() const { return storage->data(); } // NOLINT
+	inline uint8_t *data() const { return storage->data(); } // NOLINT
 	inline size_t size() const { return storage->size; }		   // NOLINT
 	inline void resize(size_t newSize)
 	{
