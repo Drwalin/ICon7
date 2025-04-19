@@ -37,10 +37,6 @@ public:
 					 uint32_t maxSleepDuration);
 	uint32_t Execute(uint32_t maxToDequeue);
 
-	CommandsBufferHandler *GetThreadLocalBuffer();
-	std::unique_ptr<CommandsBufferHandler> CreateCommandBufferHandler();
-	void FlushThreadLocalCommandsBuffer();
-
 public:
 	struct CoroutineAwaitable {
 		inline CoroutineAwaitable(CommandExecutionQueue *queue,
