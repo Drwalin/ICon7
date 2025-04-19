@@ -14,6 +14,7 @@
 #include "../include/icon7/FramingProtocol.hpp"
 #include "../include/icon7/Debug.hpp"
 #include "../include/icon7/Flags.hpp"
+#include "icon7/Time.hpp"
 
 #include "../include/icon7/Peer.hpp"
 
@@ -70,7 +71,12 @@ void Peer::Send(ByteBuffer &frame)
 		stats.errorsCount += 1;
 		host->stats.errorsCount += 1;
 		host->loop->stats.errorsCount += 1;
-		LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
+		static time::Point last = time::GetTemporaryTimestamp();
+		if (last + time::seconds(1) < time::GetTemporaryTimestamp() ||
+			last - time::seconds(10) > time::GetTemporaryTimestamp()) {
+			last = time::GetTemporaryTimestamp();
+			LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
+		}
 		// TODO: inform about dropping packets
 		return;
 	}
@@ -86,7 +92,12 @@ void Peer::SendLocalThread(ByteBuffer &frame)
 		stats.errorsCount += 1;
 		host->stats.errorsCount += 1;
 		host->loop->stats.errorsCount += 1;
-		LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
+		static time::Point last = time::GetTemporaryTimestamp();
+		if (last + time::seconds(1) < time::GetTemporaryTimestamp() ||
+			last - time::seconds(10) > time::GetTemporaryTimestamp()) {
+			last = time::GetTemporaryTimestamp();
+			LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
+		}
 		// TODO: inform about dropping packets
 		return;
 	}
@@ -101,7 +112,12 @@ void Peer::Send(ByteBuffer &&frame)
 		stats.errorsCount += 1;
 		host->stats.errorsCount += 1;
 		host->loop->stats.errorsCount += 1;
-		LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
+		static time::Point last = time::GetTemporaryTimestamp();
+		if (last + time::seconds(1) < time::GetTemporaryTimestamp() ||
+			last - time::seconds(10) > time::GetTemporaryTimestamp()) {
+			last = time::GetTemporaryTimestamp();
+			LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
+		}
 		// TODO: inform about dropping packets
 		return;
 	}
@@ -117,7 +133,12 @@ void Peer::SendLocalThread(ByteBuffer &&frame)
 		stats.errorsCount += 1;
 		host->stats.errorsCount += 1;
 		host->loop->stats.errorsCount += 1;
-		LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
+		static time::Point last = time::GetTemporaryTimestamp();
+		if (last + time::seconds(1) < time::GetTemporaryTimestamp() ||
+			last - time::seconds(10) > time::GetTemporaryTimestamp()) {
+			last = time::GetTemporaryTimestamp();
+			LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
+		}
 		// TODO: inform about dropping packets
 		return;
 	}
