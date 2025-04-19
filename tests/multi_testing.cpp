@@ -209,13 +209,14 @@ void AsyncThreadMemoryAmountMetrics(std::string fileName)
 		fflush(file);
 		int64_t VmPeak = 0, VmHWM = 0;
 		const icon7::time::Point start = icon7::time::GetTemporaryTimestamp();
-		const icon7::time::Diff period = icon7::time::microseconds(250);
+		const icon7::time::Diff period = icon7::time::milliseconds(10);
 		const int64_t procId = syscall(SYS_gettid);
 		const int64_t pageSize = getpagesize();
 		while (true) {
 			const icon7::time::Point now = icon7::time::GetTemporaryTimestamp();
-			double deltaSeconds =
-				icon7::time::NanosecondsToSeconds(now - start);
+			const icon7::time::Diff delta = now - start;
+			const double deltaSeconds =
+				icon7::time::NanosecondsToSeconds(delta);
 
 			const int64_t allocations =
 				icon7::MemoryPool::stats.smallAllocations +
@@ -244,8 +245,8 @@ void AsyncThreadMemoryAmountMetrics(std::string fileName)
 					VmRSS * pageSize / (1024.0 * 1024.0));
 			fflush(file);
 
-			if (deltaSeconds < 10) {
-				icon7::time::Sleep(icon7::time::milliseconds(deltaSeconds + 1));
+			if (delta < period * 1000) {
+				icon7::time::Sleep(delta / 1000);
 			} else {
 				icon7::time::Sleep(period);
 			}
@@ -449,8 +450,8 @@ int main(int argc, char **argv)
 			const auto _S = icon7::time::GetTemporaryTimestamp();
 			std::atomic<double> sumTim = 0;
 			{
-				auto commandsBuffer =
-					hostb->GetCommandExecutionQueue()->GetThreadLocalBuffer();
+				icon7::CommandsBufferHandler commandsBuffer{
+					hostb->GetCommandExecutionQueue()};
 
 				for (int k = 0; k < totalSends; ++k) {
 					if (k > 0) {
@@ -470,7 +471,7 @@ int main(int argc, char **argv)
 							uint32_t i = returned++;
 							arrayOfLatency[i] = dt;
 						};
-						rpc2.Call(commandsBuffer, peer, icon7::FLAG_RELIABLE,
+						rpc2.Call(&commandsBuffer, peer, icon7::FLAG_RELIABLE,
 								  icon7::OnReturnCallback::Make<uint32_t>(
 									  std::move(onReturned),
 									  [](icon7::Peer *peer) -> void {
@@ -480,7 +481,7 @@ int main(int argc, char **argv)
 								  "mul", 5, 13, additionalPayload.data());
 						sent++;
 					}
-					commandsBuffer->FlushBuffer();
+					commandsBuffer.FlushBuffer();
 					icon7::time::Sleep(delayBetweeEachTotalSend);
 
 					for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
@@ -504,7 +505,7 @@ int main(int argc, char **argv)
 							}
 						}
 					}
-					commandsBuffer->FlushBuffer();
+					commandsBuffer.FlushBuffer();
 				}
 			}
 

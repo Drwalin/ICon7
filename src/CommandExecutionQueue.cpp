@@ -6,7 +6,6 @@
 #include <memory>
 #include <thread>
 #include <utility>
-#include <unordered_map>
 
 #include "../concurrentqueue/concurrentqueue.h"
 
@@ -15,8 +14,8 @@
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/CommandsBufferHandler.hpp"
 #include "../include/icon7/CoroutineHelper.hpp"
-
 #include "../include/icon7/Debug.hpp"
+
 #include "../include/icon7/CommandExecutionQueue.hpp"
 
 namespace icon7
@@ -175,28 +174,5 @@ uint32_t CommandExecutionQueue::Execute(uint32_t maxToDequeue)
 }
 
 bool CommandExecutionQueue::HasAny() const { return queue->size_approx() != 0; }
-
-CommandsBufferHandler *CommandExecutionQueue::GetThreadLocalBuffer()
-{
-	thread_local std::unordered_map<CommandExecutionQueue *,
-									std::unique_ptr<CommandsBufferHandler>>
-		buffers;
-	auto &b = buffers[this];
-	if (b.get() == nullptr) {
-		b = CreateCommandBufferHandler();
-	}
-	return b.get();
-}
-
-std::unique_ptr<CommandsBufferHandler>
-CommandExecutionQueue::CreateCommandBufferHandler()
-{
-	return std::make_unique<CommandsBufferHandler>(this);
-}
-
-void CommandExecutionQueue::FlushThreadLocalCommandsBuffer()
-{
-	GetThreadLocalBuffer()->FlushBuffer();
-}
 
 } // namespace icon7
