@@ -110,9 +110,6 @@ protected:
 public:
 	std::shared_ptr<Loop> loop;
 
-protected:
-	std::vector<std::shared_ptr<Peer>> toRemoveFromQueue;
-
 public:
 	HostStats stats;
 };
