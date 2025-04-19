@@ -209,7 +209,7 @@ void AsyncThreadMemoryAmountMetrics(std::string fileName)
 		fflush(file);
 		int64_t VmPeak = 0, VmHWM = 0;
 		const icon7::time::Point start = icon7::time::GetTemporaryTimestamp();
-		const icon7::time::Diff period = icon7::time::milliseconds(10);
+		const icon7::time::Diff period = icon7::time::milliseconds(250);
 		const int64_t procId = syscall(SYS_gettid);
 		const int64_t pageSize = getpagesize();
 		while (true) {
@@ -312,7 +312,6 @@ int main(int argc, char **argv)
 	for (int i = 0; i < testsCount; ++i) {
 		uint64_t totalReceived = 0, totalSent = 0, totalReturned = 0;
 		LOG_INFO("Iteration: %i started", i);
-		port++;
 		if (port <= 1024) {
 			port = 1025;
 		}
@@ -347,6 +346,7 @@ int main(int argc, char **argv)
 
 		listenFuture.wait_for_milliseconds(150);
 		if (listenFuture.get() == false) {
+			port++;
 			LOG_FATAL("Cannot listen on port: %i", (int)port);
 			loopa->Destroy();
 			loopb->Destroy();
