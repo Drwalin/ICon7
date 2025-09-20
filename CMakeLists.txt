@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.9)
 project(ICon7)
 cmake_policy(SET CMP0115 OLD)
 
+include (precompile_stl_and_lib_headers.cmake)
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -86,6 +88,7 @@ add_library(icon7 STATIC
 )
 target_link_libraries(icon7 uSockets)
 target_link_libraries(icon7 concurrent)
+add_common_precompiled_headers(icon7)
 
 if(ASAN)
 	add_definitions(-fsanitize=address)
