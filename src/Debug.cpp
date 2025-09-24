@@ -8,6 +8,7 @@
 #include <cstring>
 
 #include <mutex>
+#include <shared_mutex>
 #include <regex>
 #include <unordered_map>
 
@@ -234,27 +235,35 @@ void GlobalDisablePrintingTime(bool disableTime)
 std::string GetPrettyFunctionName(const std::string function)
 {
 #ifdef ICON7_LOG_USE_PRETTY_FUNCTION
-	thread_local std::unordered_map<std::string, std::string> names;
+	static std::shared_mutex mutex;
+	static std::unordered_map<std::string, std::string> names;
+	mutex.lock_shared();
 	auto it = names.find(function);
 	if (it != names.end()) {
+		mutex.unlock_shared();
 		return it->second;
 	}
+	mutex.unlock_shared();
 
 	std::string funcName = function;
-	funcName = std::regex_replace(funcName, std::regex("\\[[^\\[\\]]+\\]"), "");
-	funcName = std::regex_replace(funcName,
-								  std::regex(" ?(static|virtual|const) ?"), "");
-	funcName = std::regex_replace(funcName,
-								  std::regex(" ?(static|virtual|const) ?"), "");
-	funcName = std::regex_replace(funcName,
-								  std::regex(" ?(static|virtual|const) ?"), "");
-	funcName =
-		std::regex_replace(funcName, std::regex("\\([^\\(\\)]+\\)"), "()");
-	funcName = std::regex_replace(
-		funcName, std::regex(".*[: >]([a-zA-Z0-9_]*::[a-z0-9A-Z_]*)+\\(.*"),
-		"$1");
-	funcName += "()";
+// 	funcName = std::regex_replace(funcName, std::regex("\\[[^\\[\\]]+\\]"), "");
+// 	funcName = std::regex_replace(funcName,
+// 								  std::regex(" ?(static|virtual|const) ?"), "");
+// 	funcName = std::regex_replace(funcName,
+// 								  std::regex(" ?(static|virtual|const) ?"), "");
+// 	funcName = std::regex_replace(funcName,
+// 								  std::regex(" ?(static|virtual|const) ?"), "");
+// 	funcName =
+// 		std::regex_replace(funcName, std::regex("\\([^\\(\\)]+\\)"), "()");
+// 	funcName = std::regex_replace(
+// 		funcName, std::regex(".*[: >]([a-zA-Z0-9_]*::[a-z0-9A-Z_]*)+\\(.*"),
+// 		"$1");
+// 	funcName += "()";
+	
+	mutex.lock();
 	names[function] = funcName;
+	mutex.unlock();
+	
 	return funcName;
 #else
 	return function + "()";
