@@ -246,9 +246,6 @@ std::string GetPrettyFunctionName(const std::string function)
 
 	std::string funcName = function;
 
-	printf("                                   Original func name: ``%s``\n",
-		   funcName.c_str());
-
 	for (int i = 0; i < funcName.size(); ++i) {
 		if (funcName[i] == '[') {
 			for (int j = i + 1; j < funcName.size(); ++j) {
