@@ -11,6 +11,7 @@
 #include <string>
 
 #include "../../concurrent/time.hpp"
+#include "Forward.hpp"
 
 namespace icon7
 {
@@ -64,4 +65,14 @@ inline Diff operator-(Timestamp a, Timestamp b) { return {a.ns - b.ns}; }
 } // namespace time
 } // namespace icon7
 
+namespace bitscpp {
+ByteReader<true>& op(ByteReader<true>& s, icon7::time::Point& v);
+ByteWriter<icon7::ByteBuffer>& op(ByteWriter<icon7::ByteBuffer>& s, const icon7::time::Point& v);
+
+ByteReader<true>& op(ByteReader<true>& s, icon7::time::Diff& v);
+ByteWriter<icon7::ByteBuffer>& op(ByteWriter<icon7::ByteBuffer>& s, const icon7::time::Diff& v);
+
+ByteReader<true>& op(ByteReader<true>& s, icon7::time::Timestamp& v);
+ByteWriter<icon7::ByteBuffer>& op(ByteWriter<icon7::ByteBuffer>& s, const icon7::time::Timestamp& v);
+} // namespace bitscpp
 #endif
