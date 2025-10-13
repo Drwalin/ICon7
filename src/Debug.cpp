@@ -9,7 +9,6 @@
 
 #include <mutex>
 #include <shared_mutex>
-#include <regex>
 #include <unordered_map>
 
 #include "../include/icon7/Time.hpp"
@@ -246,24 +245,97 @@ std::string GetPrettyFunctionName(const std::string function)
 	mutex.unlock_shared();
 
 	std::string funcName = function;
-// 	funcName = std::regex_replace(funcName, std::regex("\\[[^\\[\\]]+\\]"), "");
-// 	funcName = std::regex_replace(funcName,
-// 								  std::regex(" ?(static|virtual|const) ?"), "");
-// 	funcName = std::regex_replace(funcName,
-// 								  std::regex(" ?(static|virtual|const) ?"), "");
-// 	funcName = std::regex_replace(funcName,
-// 								  std::regex(" ?(static|virtual|const) ?"), "");
-// 	funcName =
-// 		std::regex_replace(funcName, std::regex("\\([^\\(\\)]+\\)"), "()");
-// 	funcName = std::regex_replace(
-// 		funcName, std::regex(".*[: >]([a-zA-Z0-9_]*::[a-z0-9A-Z_]*)+\\(.*"),
-// 		"$1");
-// 	funcName += "()";
-	
+
+	printf("                                   Original func name: ``%s``\n",
+		   funcName.c_str());
+
+	for (int i = 0; i < funcName.size(); ++i) {
+		if (funcName[i] == '[') {
+			for (int j = i + 1; j < funcName.size(); ++j) {
+				if (funcName[j] == '[') {
+					break;
+				}
+				if (funcName[j] == ']') {
+					funcName.erase(i, j + 1 - i);
+					i = 0;
+					break;
+				}
+			}
+		}
+	}
+
+	for (;;) {
+		auto p = funcName.find("static");
+
+		if (p == std::string::npos) {
+			p = funcName.find("virtual");
+			if (p == std::string::npos) {
+				p = funcName.find("const");
+				if (p == std::string::npos) {
+					break;
+				} else {
+					funcName.erase(p, 5);
+				}
+			} else {
+				funcName.erase(p, 7);
+			}
+		} else {
+			funcName.erase(p, 6);
+		}
+
+		if (p < funcName.size()) {
+			if (funcName[p] == ' ') {
+				funcName.erase(p, 1);
+			}
+		}
+
+		if (p - 1 < funcName.size() && p - 1 > 0) {
+			if (funcName[p - 1] == ' ') {
+				funcName.erase(p - 1, 1);
+			}
+		}
+	}
+
+	for (int i = 0; i < funcName.size(); ++i) {
+		if (funcName[i] == '(') {
+			for (int j = i + 1; j < funcName.size(); ++j) {
+				if (funcName[j] == '(') {
+					break;
+				}
+				if (funcName[j] == ')') {
+					if (j == i + 1) {
+						break;
+					}
+					funcName.replace(i, j - i + 1, "()");
+					i = 0;
+					break;
+				}
+			}
+		}
+	}
+
+	while (funcName.ends_with(" ")) {
+		funcName.erase(funcName.size() - 1, 1);
+	}
+
+	if (funcName.ends_with("()") == false) {
+		funcName += "()";
+	}
+
+	for (auto p = funcName.find("()()"); p != std::string::npos;
+		 p = funcName.find("()()")) {
+		funcName.erase(p, 2);
+	}
+
+	for (auto p = funcName.find("::()::"); p != std::string::npos;
+		 p = funcName.find("::()::")) {
+		funcName.erase(p, 4);
+	}
+
 	mutex.lock();
 	names[function] = funcName;
 	mutex.unlock();
-	
+
 	return funcName;
 #else
 	return function + "()";
