@@ -18,8 +18,6 @@ namespace icon7
 {
 MemoryStats::MemoryStats() { startTimestamp.ns = time::GetTimestamp().ns; }
 
-MemoryStats MemoryPool::stats = {};
-
 AllocatedObject<void> MemoryPool::Allocate(size_t bytes)
 {
 #if ICON7_USE_RPMALLOC
@@ -43,11 +41,11 @@ AllocatedObject<void> MemoryPool::Allocate(size_t bytes)
 		bytes = _bytes;
 	}
 
-	int64_t max = (stats.allocatedBytes += bytes) - stats.deallocatedBytes;
+	int64_t max = (Stats().allocatedBytes += bytes) - Stats().deallocatedBytes;
 	{
-		int64_t v = stats.maxInUseAtOnce;
+		int64_t v = Stats().maxInUseAtOnce;
 		while (max > v) {
-			if (stats.maxInUseAtOnce.compare_exchange_weak(
+			if (Stats().maxInUseAtOnce.compare_exchange_weak(
 					v, max, std::memory_order_release,
 					std::memory_order_relaxed)) {
 				break;
@@ -56,22 +54,22 @@ AllocatedObject<void> MemoryPool::Allocate(size_t bytes)
 	}
 
 	if (bytes <= MemoryStats::MAX_BYTES_FOR_SMALL_ALLOCATIONS) {
-		stats.smallAllocations += 1;
+		Stats().smallAllocations += 1;
 	} else if (bytes <= MemoryStats::MAX_BYTES_FOR_MEDIUM_ALLOCATIONS) {
-		stats.mediumAllocations += 1;
+		Stats().mediumAllocations += 1;
 	} else {
-		stats.largeAllocations += 1;
+		Stats().largeAllocations += 1;
 	}
 
 	return {ptr, _bytes};
 #else
-	stats.allocatedBytes += bytes;
+	Stats().allocatedBytes += bytes;
 	if (bytes <= MemoryStats::MAX_BYTES_FOR_SMALL_ALLOCATIONS) {
-		stats.smallAllocations += 1;
+		Stats().smallAllocations += 1;
 	} else if (bytes <= MemoryStats::MAX_BYTES_FOR_MEDIUM_ALLOCATIONS) {
-		stats.mediumAllocations += 1;
+		Stats().mediumAllocations += 1;
 	} else {
-		stats.largeAllocations += 1;
+		Stats().largeAllocations += 1;
 	}
 
 	return {malloc(bytes), bytes};
@@ -83,20 +81,26 @@ void MemoryPool::Release(void *ptr, size_t bytes)
 #if ICON7_USE_RPMALLOC
 	bytes = rpmalloc_usable_size(ptr);
 
-	stats.deallocatedBytes += bytes;
+	Stats().deallocatedBytes += bytes;
 	if (bytes <= MemoryStats::MAX_BYTES_FOR_SMALL_ALLOCATIONS) {
-		stats.smallDeallocations += 1;
+		Stats().smallDeallocations += 1;
 	} else if (bytes <= MemoryStats::MAX_BYTES_FOR_MEDIUM_ALLOCATIONS) {
-		stats.mediumDeallocations += 1;
+		Stats().mediumDeallocations += 1;
 	} else {
-		stats.largeDeallocations += 1;
+		Stats().largeDeallocations += 1;
 	}
 
 	rpfree(ptr);
 	return;
 #else
-	stats.deallocations -= 1;
+	Stats().deallocations -= 1;
 	free(ptr);
 #endif
+}
+
+MemoryStats &MemoryPool::Stats()
+{
+	static MemoryStats stats;
+	return stats;
 }
 } // namespace icon7

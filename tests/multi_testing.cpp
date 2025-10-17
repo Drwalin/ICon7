@@ -219,14 +219,14 @@ void AsyncThreadMemoryAmountMetrics(std::string fileName)
 				icon7::time::NanosecondsToSeconds(delta);
 
 			const int64_t allocations =
-				icon7::MemoryPool::stats.smallAllocations +
-				icon7::MemoryPool::stats.mediumAllocations +
-				icon7::MemoryPool::stats.largeAllocations;
+				icon7::MemoryPool::Stats().smallAllocations +
+				icon7::MemoryPool::Stats().mediumAllocations +
+				icon7::MemoryPool::Stats().largeAllocations;
 			const int64_t totalAllocated =
-				icon7::MemoryPool::stats.allocatedBytes;
+				icon7::MemoryPool::Stats().allocatedBytes;
 			const int64_t currentlyInUse =
-				(totalAllocated - icon7::MemoryPool::stats.deallocatedBytes);
-			const int64_t inUsePeak = icon7::MemoryPool::stats.maxInUseAtOnce;
+				(totalAllocated - icon7::MemoryPool::Stats().deallocatedBytes);
+			const int64_t inUsePeak = icon7::MemoryPool::Stats().maxInUseAtOnce;
 
 			ProcPidStatm statm = proc_pid_statm(procId);
 			const int64_t VmSize = statm.VmSize;
@@ -297,7 +297,7 @@ int main(int argc, char **argv)
 	int64_t totalToReturnCount = 0;
 
 	std::vector<double> arrayOfLatency;
-	arrayOfLatency.reserve(totalSends * connectionsCount);
+	arrayOfLatency.resize(totalSends * connectionsCount);
 
 	std::vector<char> additionalPayload;
 	additionalPayload.resize(additionalPayloadSize);

@@ -45,7 +45,7 @@ public:
 		Release(ptr, bytes);
 	}
 
-	static MemoryStats stats;
+	static MemoryStats &Stats();
 };
 } // namespace icon7
 

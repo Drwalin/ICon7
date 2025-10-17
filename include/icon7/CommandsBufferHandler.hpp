@@ -51,7 +51,7 @@ public:
 
 private:
 public:
-	inline const static uint32_t bufferSize = 1024 * 16;
+	inline constexpr static uint32_t bufferSize = 1024 * 16;
 	CommandExecutionQueue *queue;
 	CommandsBuffer currentCommandsBuffer;
 	time::Point forceEnqueueTimepoint;
