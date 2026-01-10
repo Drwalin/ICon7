@@ -72,10 +72,6 @@ struct MemoryStats {
 	alignas(64) std::atomic<int64_t> deallocations = 0;
 #endif
 
-	volatile time::Timestamp startTimestamp = {0};
-
-	MemoryStats();
-
 	inline const static size_t MAX_BYTES_FOR_SMALL_ALLOCATIONS = 256;
 	inline const static size_t MAX_BYTES_FOR_MEDIUM_ALLOCATIONS = 4096;
 };

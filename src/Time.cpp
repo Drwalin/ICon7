@@ -20,10 +20,12 @@ namespace icon7
 {
 namespace time
 {
+// using UtcClock = std::chrono::utc_clock;
+using UtcClock = std::chrono::steady_clock;
 struct DayTimeBegin {
 	DayTimeBegin()
 	{
-		date = std::chrono::utc_clock::now();
+		date = UtcClock::now();
 		timeSinceEpoch = now();
 		nanosecondsSinceEpoch =
 			std::chrono::duration_cast<std::chrono::nanoseconds, int64_t>(
@@ -42,14 +44,18 @@ struct DayTimeBegin {
 		hoursOffsetNanoseconds =
 			hoursOffset * 3600ll * 1000ll * 1000ll * 1000ll;
 	}
-	std::chrono::utc_clock::time_point date;
+	UtcClock::time_point date;
 	Point timeSinceEpoch;
 	int64_t nanosecondsSinceEpoch;
 	int64_t hoursOffset;
 	int64_t hoursOffsetNanoseconds;
 };
 
-static const DayTimeBegin glob;
+static const DayTimeBegin &glob()
+{
+	const static DayTimeBegin v;
+	return v;
+}
 
 Timestamp GetTimestamp()
 {
@@ -60,7 +66,7 @@ Point GetTemporaryTimestamp() { return now(); }
 
 Timestamp TemporaryTimestampToTimestamp(Point tmpTimestamp)
 {
-	return {glob.nanosecondsSinceEpoch + tmpTimestamp.ns};
+	return {glob().nanosecondsSinceEpoch + tmpTimestamp.ns};
 }
 
 Diff DeltaNsBetweenTimestamps(Timestamp begin, Timestamp end)
@@ -191,7 +197,7 @@ Timestamp TimestampFromYMD(YMD ymd)
 
 std::string TimestampToString(Timestamp timestamp, int subsecondDigits)
 {
-	timestamp.ns -= glob.hoursOffsetNanoseconds;
+	timestamp.ns -= glob().hoursOffsetNanoseconds;
 
 	const std::chrono::nanoseconds nanoseconds(timestamp.ns);
 	const std::chrono::seconds seconds =
@@ -228,7 +234,7 @@ std::string TimestampToString(Timestamp timestamp, int subsecondDigits)
 
 	str += subsecondsStr;
 	char tmp[32];
-	sprintf(tmp, "U%+i", -(int)glob.hoursOffset);
+	sprintf(tmp, "U%+i", -(int)glob().hoursOffset);
 	str += tmp;
 	return str;
 }

@@ -3,8 +3,6 @@
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
-#include "../include/icon7/Time.hpp"
-
 #if ICON7_USE_RPMALLOC
 #include "../include/icon7/Debug.hpp"
 #include "../rpmalloc/rpmalloc/rpmalloc.h"
@@ -16,8 +14,6 @@
 
 namespace icon7
 {
-MemoryStats::MemoryStats() { startTimestamp.ns = time::GetTimestamp().ns; }
-
 AllocatedObject<void> MemoryPool::Allocate(size_t bytes)
 {
 #if ICON7_USE_RPMALLOC
@@ -93,7 +89,7 @@ void MemoryPool::Release(void *ptr, size_t bytes)
 	rpfree(ptr);
 	return;
 #else
-	Stats().deallocations -= 1;
+	Stats().deallocations += 1;
 	free(ptr);
 #endif
 }
