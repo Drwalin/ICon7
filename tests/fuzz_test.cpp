@@ -69,15 +69,15 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 		rpc.RegisterMessage("sum", Sum);
 		rpc.RegisterMessage("mul", Mul);
 		std::shared_ptr<icon7::uS::Loop> loopa =
-			std::make_shared<icon7::uS::Loop>();
+			std::make_shared<icon7::uS::Loop>("loop_server");
 		loopa->Init(1);
-		std::shared_ptr<icon7::uS::tcp::Host> hosta =
-			loopa->CreateHost(useSSL, "../cert/user.key", "../cert/user.crt",
-							  "", nullptr, "../cert/rootca.crt",
-							  "ECDHE-ECDSA-AES256-GCM-SHA384:"
-							  "ECDHE-ECDSA-AES128-GCM-SHA256:"
-							  "ECDHE-ECDSA-CHACHA20-POLY1305:"
-							  "DHE-RSA-AES256-GCM-SHA384:");
+		std::shared_ptr<icon7::uS::tcp::Host> hosta = loopa->CreateHost(
+			"host_server", useSSL, "../cert/user.key", "../cert/user.crt", "",
+			nullptr, "../cert/rootca.crt",
+			"ECDHE-ECDSA-AES256-GCM-SHA384:"
+			"ECDHE-ECDSA-AES128-GCM-SHA256:"
+			"ECDHE-ECDSA-CHACHA20-POLY1305:"
+			"DHE-RSA-AES256-GCM-SHA384:");
 		hosta->SetRpcEnvironment(&rpc);
 		loopa->RunAsync();
 		auto listenFuture = hosta->ListenOnPort("127.0.0.1", port, icon7::IPv4);
@@ -86,10 +86,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 		rpc2.RegisterMessage("sum", Sum);
 		rpc2.RegisterMessage("mul", Mul);
 		std::shared_ptr<icon7::uS::Loop> loopb =
-			std::make_shared<icon7::uS::Loop>();
+			std::make_shared<icon7::uS::Loop>("loop_client");
 		loopb->Init(1);
-		std::shared_ptr<icon7::uS::tcp::Host> hostb = loopb->CreateHost(
-			useSSL, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+		std::shared_ptr<icon7::uS::tcp::Host> hostb =
+			loopb->CreateHost("host_client", useSSL, nullptr, nullptr, nullptr,
+							  nullptr, nullptr, nullptr);
 		hostb->SetRpcEnvironment(&rpc2);
 		loopb->RunAsync();
 
@@ -171,8 +172,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 
 		std::atomic<double> sumTim = 0;
 		{
-			auto commandsBuffer =
-				hostb->GetCommandExecutionQueue()->GetThreadLocalBuffer();
+			icon7::CommandsBufferHandler *commandsBuffer =
+				new icon7::CommandsBufferHandler(
+					hostb->GetCommandExecutionQueue());
 
 			for (int k = 0; k < totalSends; ++k) {
 				if (k > 0) {

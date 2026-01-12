@@ -4,6 +4,7 @@
 // You should have received a copy of the MIT License along with this program.
 
 #include <thread>
+#include <string>
 
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/RPCEnvironment.hpp"
@@ -14,7 +15,7 @@
 
 namespace icon7
 {
-Loop::Loop()
+Loop::Loop(std::string objectName) : objectName(objectName)
 {
 	userData = 0;
 	userPointer = nullptr;

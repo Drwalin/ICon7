@@ -16,7 +16,7 @@ namespace uS
 {
 namespace tcp
 {
-Host::Host()
+Host::Host(std::string objectName) : icon7::Host(objectName)
 {
 	SSL = 0;
 	socketContext = nullptr;

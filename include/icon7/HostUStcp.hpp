@@ -25,7 +25,7 @@ class Peer;
 class Host : public icon7::Host
 {
 public:
-	Host();
+	Host(std::string objectName);
 	virtual ~Host();
 
 	Host(Host &) = delete;

@@ -9,6 +9,7 @@
 #include <memory>
 #include <thread>
 #include <unordered_set>
+#include <string>
 
 #include "Stats.hpp"
 #include "CommandExecutionQueue.hpp"
@@ -62,7 +63,7 @@ public:
 	std::shared_ptr<void> userSmartPtr;
 
 protected:
-	Loop();
+	Loop(std::string objectName);
 
 protected:
 	std::unordered_set<std::shared_ptr<Host>> hosts;
@@ -75,6 +76,7 @@ protected:
 
 public:
 	LoopStats stats;
+	const std::string objectName;
 };
 } // namespace icon7
 

@@ -93,7 +93,7 @@ public:
 	std::shared_ptr<void> userSmartPtr;
 
 protected:
-	Host();
+	Host(std::string objectName);
 
 	friend class Peer;
 
@@ -112,6 +112,7 @@ public:
 
 public:
 	HostStats stats;
+	const std::string objectName;
 };
 
 void Initialize();

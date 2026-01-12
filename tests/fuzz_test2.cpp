@@ -37,7 +37,8 @@ icon7::CoroutineSchedulable Test(icon7::uS::Loop *loop, const uint8_t *data,
 	rpc.RegisterMessage("sum", Sum);
 	rpc.RegisterMessage("mul", Mul);
 	std::shared_ptr<icon7::uS::tcp::Host> host =
-		loop->CreateHost(useSSL, "../cert/user.key", "../cert/user.crt", "",
+		loop->CreateHost("host",
+						 useSSL, "../cert/user.key", "../cert/user.crt", "",
 						 nullptr, "../cert/rootca.crt",
 						 "ECDHE-ECDSA-AES256-GCM-SHA384:"
 						 "ECDHE-ECDSA-AES128-GCM-SHA256:"
@@ -92,7 +93,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	received = 0;
 	icon7::Initialize();
 
-	std::shared_ptr<icon7::uS::Loop> loop = std::make_shared<icon7::uS::Loop>();
+	std::shared_ptr<icon7::uS::Loop> loop = std::make_shared<icon7::uS::Loop>("loop");
 	loop->Init(1);
 	loop->SetSleepBetweenUnlockedIterations(0);
 	loop->_LocalSetNoWaitLoop(true);

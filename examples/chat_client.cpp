@@ -42,9 +42,11 @@ int main(int argc, char **argv)
 			   message.c_str());
 	});
 
-	std::shared_ptr<icon7::uS::Loop> loop = std::make_shared<icon7::uS::Loop>();
+	std::shared_ptr<icon7::uS::Loop> loop =
+		std::make_shared<icon7::uS::Loop>("loop_client");
 	loop->Init(1);
-	std::shared_ptr<icon7::uS::tcp::Host> _host = loop->CreateHost(false);
+	std::shared_ptr<icon7::uS::tcp::Host> _host =
+		loop->CreateHost("host_client", false);
 
 	icon7::Host *host = _host.get();
 	host->SetRpcEnvironment(&rpc);

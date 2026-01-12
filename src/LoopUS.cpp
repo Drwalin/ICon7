@@ -12,7 +12,7 @@ namespace icon7
 {
 namespace uS
 {
-Loop::Loop() {}
+Loop::Loop(std::string objectName) : icon7::Loop(objectName) {}
 
 Loop::~Loop() {}
 
@@ -51,12 +51,13 @@ bool Loop::Init(int timerWakeupRepeatMs)
 }
 
 std::shared_ptr<uS::tcp::Host>
-Loop::CreateHost(bool useSSL, const char *key_file_name,
-				 const char *cert_file_name, const char *passphrase,
-				 const char *dh_params_file_name, const char *ca_file_name,
-				 const char *ssl_ciphers)
+Loop::CreateHost(std::string hostObjectName, bool useSSL,
+				 const char *key_file_name, const char *cert_file_name,
+				 const char *passphrase, const char *dh_params_file_name,
+				 const char *ca_file_name, const char *ssl_ciphers)
 {
-	std::shared_ptr<uS::tcp::Host> host = std::make_shared<uS::tcp::Host>();
+	std::shared_ptr<uS::tcp::Host> host =
+		std::make_shared<uS::tcp::Host>(hostObjectName);
 	if (host->Init(
 			std::dynamic_pointer_cast<uS::Loop>(this->shared_from_this()),
 			useSSL, key_file_name, cert_file_name, passphrase,

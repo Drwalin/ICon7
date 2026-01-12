@@ -20,7 +20,7 @@ namespace uS
 {
 namespace tcpudp
 {
-Host::Host()
+Host::Host(std::string objectName) : icon7::Host(objectName)
 {
 	udpSocket = nullptr;
 	receivingBuffer = nullptr;

@@ -28,7 +28,7 @@ class Peer;
 class Loop : public icon7::Loop
 {
 public:
-	Loop();
+	Loop(std::string objectName);
 	virtual ~Loop();
 
 	Loop(Loop &) = delete;
@@ -46,7 +46,8 @@ public:
 	virtual void WakeUp() override;
 
 	std::shared_ptr<uS::tcp::Host> CreateHost(
-		bool useSSL, const char *key_file_name = nullptr,
+		std::string hostObjectName, bool useSSL,
+		const char *key_file_name = nullptr,
 		const char *cert_file_name = nullptr, const char *passphrase = nullptr,
 		const char *dh_params_file_name = nullptr,
 		const char *ca_file_name = nullptr, const char *ssl_ciphers = nullptr);

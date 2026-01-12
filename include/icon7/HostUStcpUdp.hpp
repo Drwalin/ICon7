@@ -32,7 +32,7 @@ class Peer;
 class Host : public icon7::uS::tcp::Host
 {
 public:
-	Host();
+	Host(std::string objectName);
 	virtual ~Host();
 
 	virtual void _InternalDestroy() override;

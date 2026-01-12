@@ -13,7 +13,7 @@
 
 namespace icon7
 {
-Host::Host()
+Host::Host(std::string objectName) : objectName(objectName)
 {
 	userData = 0;
 	userPointer = nullptr;

@@ -41,9 +41,10 @@ int main()
 	rpc2.RegisterMessage("mul", Mul);
 
 	std::shared_ptr<icon7::uS::Loop> loopa =
-		std::make_shared<icon7::uS::Loop>();
+		std::make_shared<icon7::uS::Loop>("loop_server");
 	loopa->Init(1);
-	std::shared_ptr<icon7::uS::tcp::Host> hosta = loopa->CreateHost(false);
+	std::shared_ptr<icon7::uS::tcp::Host> hosta =
+		loopa->CreateHost("host_server", false);
 	hosta->SetRpcEnvironment(&rpc);
 	loopa->RunAsync();
 
@@ -59,9 +60,10 @@ int main()
 	}
 
 	std::shared_ptr<icon7::uS::Loop> loopb =
-		std::make_shared<icon7::uS::Loop>();
+		std::make_shared<icon7::uS::Loop>("loop_client");
 	loopb->Init(1);
-	std::shared_ptr<icon7::uS::tcp::Host> hostb = loopb->CreateHost(false);
+	std::shared_ptr<icon7::uS::tcp::Host> hostb =
+		loopb->CreateHost("host_client", false);
 	hostb->SetRpcEnvironment(&rpc2);
 	loopb->RunAsync();
 
