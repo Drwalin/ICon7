@@ -46,10 +46,9 @@ int main(int argc, char **argv)
 		std::make_shared<icon7::uS::Loop>("loop_client");
 	loop->Init(1);
 	std::shared_ptr<icon7::uS::tcp::Host> _host =
-		loop->CreateHost("host_client", false);
+		loop->CreateHost(&rpc, "host_client", false);
 
 	icon7::Host *host = _host.get();
-	host->SetRpcEnvironment(&rpc);
 	loop->RunAsync();
 
 	std::shared_ptr<icon7::Peer> peer =

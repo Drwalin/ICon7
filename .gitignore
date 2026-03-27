@@ -11,3 +11,4 @@ build
 release_test
 release
 .cache
+release-clang

@@ -16,7 +16,8 @@ namespace uS
 {
 namespace tcp
 {
-Host::Host(std::string objectName) : icon7::Host(objectName)
+Host::Host(std::string objectName, RPCEnvironment *rpcEnvironment)
+	: icon7::Host(objectName, rpcEnvironment)
 {
 	SSL = 0;
 	socketContext = nullptr;

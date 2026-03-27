@@ -13,7 +13,8 @@
 
 namespace icon7
 {
-Host::Host(std::string objectName) : objectName(objectName)
+Host::Host(std::string objectName, RPCEnvironment *rpcEnvironment)
+	: rpcEnvironment(rpcEnvironment), objectName(objectName)
 {
 	userData = 0;
 	userPointer = nullptr;
@@ -22,12 +23,7 @@ Host::Host(std::string objectName) : objectName(objectName)
 	rpcEnvironment = nullptr;
 }
 
-Host::~Host()
-{
-	if (rpcEnvironment) {
-		rpcEnvironment->host = this;
-	}
-}
+Host::~Host() {}
 
 void Host::_InternalDestroy()
 {
@@ -199,7 +195,9 @@ void Host::_InternalSingleLoopIteration()
 			p->_InternalOnWritable();
 		}
 	}
-	rpcEnvironment->CheckForTimeoutFunctionCalls(16);
+	if (rpcEnvironment) {
+		rpcEnvironment->CheckForTimeoutFunctionCalls(16);
+	}
 }
 
 void Host::InsertPeerToFlush(Peer *peer)
@@ -213,16 +211,6 @@ void Host::InsertPeerToFlush(Peer *peer)
 }
 
 RPCEnvironment *Host::GetRpcEnvironment() { return rpcEnvironment; }
-
-void Host::SetRpcEnvironment(RPCEnvironment *env)
-{
-	rpcEnvironment = env;
-	if (rpcEnvironment->host != nullptr) {
-		LOG_FATAL(
-			"icon7::RPCEnvironment is used by multiple icon7::Host objects.");
-	}
-	rpcEnvironment->host = this;
-}
 
 void Host::_InternalInsertPeerToFlush(Peer *peer)
 {

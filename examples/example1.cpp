@@ -44,8 +44,7 @@ int main()
 		std::make_shared<icon7::uS::Loop>("loop_server");
 	loopa->Init(1);
 	std::shared_ptr<icon7::uS::tcp::Host> hosta =
-		loopa->CreateHost("host_server", false);
-	hosta->SetRpcEnvironment(&rpc);
+		loopa->CreateHost(&rpc, "host_server", false);
 	loopa->RunAsync();
 
 	{
@@ -63,8 +62,7 @@ int main()
 		std::make_shared<icon7::uS::Loop>("loop_client");
 	loopb->Init(1);
 	std::shared_ptr<icon7::uS::tcp::Host> hostb =
-		loopb->CreateHost("host_client", false);
-	hostb->SetRpcEnvironment(&rpc2);
+		loopb->CreateHost(&rpc2, "host_client", false);
 	loopb->RunAsync();
 
 	{

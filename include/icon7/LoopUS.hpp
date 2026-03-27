@@ -46,7 +46,7 @@ public:
 	virtual void WakeUp() override;
 
 	std::shared_ptr<uS::tcp::Host> CreateHost(
-		std::string hostObjectName, bool useSSL,
+		RPCEnvironment *rpcEnvironment, std::string hostObjectName, bool useSSL,
 		const char *key_file_name = nullptr,
 		const char *cert_file_name = nullptr, const char *passphrase = nullptr,
 		const char *dh_params_file_name = nullptr,

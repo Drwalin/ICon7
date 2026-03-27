@@ -88,6 +88,7 @@ add_library(icon7 STATIC
 )
 target_link_libraries(icon7 uSockets)
 target_link_libraries(icon7 concurrent)
+target_link_libraries(icon7 bitscpp)
 add_common_precompiled_headers(icon7)
 
 if(ASAN)
@@ -165,14 +166,36 @@ if(ICON7_CLANG_FUZZTEST)
 		PRIVATE -fsanitize=address,fuzzer
 		icon7
 	)
-	
+
+	add_executable(fuzz_test1
+		tests/fuzz_test_threaded.cpp
+	)
+	target_compile_options(fuzz_test1
+		PRIVATE -fsanitize=address,fuzzer
+	)
+	target_link_libraries(fuzz_test1
+		PRIVATE -fsanitize=address,fuzzer
+		icon7
+	)
+
 	add_executable(fuzz_test2
-		tests/fuzz_test2
+		tests/fuzz_test_coroutined.cpp
 	)
 	target_compile_options(fuzz_test2
 		PRIVATE -fsanitize=address,fuzzer
 	)
 	target_link_libraries(fuzz_test2
+		PRIVATE -fsanitize=address,fuzzer
+		icon7
+	)
+
+	add_executable(fuzz_test3
+		tests/fuzz_test_manual_iterations.cpp
+	)
+	target_compile_options(fuzz_test3
+		PRIVATE -fsanitize=address,fuzzer
+	)
+	target_link_libraries(fuzz_test3
 		PRIVATE -fsanitize=address,fuzzer
 		icon7
 	)

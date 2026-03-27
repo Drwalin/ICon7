@@ -79,7 +79,7 @@ int main(int argc, char **argv)
 		std::make_shared<icon7::uS::Loop>("loop_server");
 	loop->Init(1);
 	std::shared_ptr<icon7::uS::tcp::Host> _host =
-		loop->CreateHost("host_server", false);
+		loop->CreateHost(&rpc, "host_server", false);
 
 	icon7::Host *host = _host.get();
 	host->SetOnDisconnect([](icon7::Peer *peer) {
@@ -90,7 +90,6 @@ int main(int argc, char **argv)
 			peer->userPointer = nullptr;
 		}
 	});
-	host->SetRpcEnvironment(&rpc);
 	loop->RunAsync();
 
 	auto Listen = [host, port](std::string addr) -> bool {

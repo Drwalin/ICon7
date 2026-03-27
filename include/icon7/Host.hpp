@@ -63,7 +63,6 @@ public:
 	void InsertPeerToFlush(Peer *peer);
 
 	RPCEnvironment *GetRpcEnvironment();
-	void SetRpcEnvironment(RPCEnvironment *env);
 
 	Loop *GetLoop();
 
@@ -93,7 +92,7 @@ public:
 	std::shared_ptr<void> userSmartPtr;
 
 protected:
-	Host(std::string objectName);
+	Host(std::string objectName, RPCEnvironment *rpcEnvironment);
 
 	friend class Peer;
 
