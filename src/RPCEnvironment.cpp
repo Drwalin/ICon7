@@ -5,6 +5,7 @@
 
 #include "../include/icon7/ByteReader.hpp"
 #include "../include/icon7/FramingProtocol.hpp"
+#include "../include/icon7/Loop.hpp"
 
 #include "../include/icon7/RPCEnvironment.hpp"
 
@@ -21,7 +22,7 @@ RPCEnvironment::~RPCEnvironment()
 }
 
 void RPCEnvironment::OnReceive(Peer *peer, ByteBuffer &frameData,
-							   uint32_t headerSize, Flags flags)
+							   uint32_t headerSize, Flags flags) const
 {
 	flags = FramingProtocol::GetPacketFlags(frameData.data(), flags);
 	ByteReader reader(std::move(frameData), headerSize);
@@ -29,7 +30,8 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteBuffer &frameData,
 	std::swap(frameData, reader._data);
 }
 
-void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader, Flags flags)
+void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader,
+							   Flags flags) const
 {
 	switch (flags & 6) {
 	case FLAGS_CALL:
@@ -44,8 +46,10 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader, Flags flags)
 	}
 }
 
-void RPCEnvironment::OnReceiveCall(Peer *peer, ByteReader &reader, Flags flags)
+void RPCEnvironment::OnReceiveCall(Peer *peer, ByteReader &reader,
+								   Flags flags) const
 {
+	LOG_INFO("DUPA");
 	uint32_t returnId = 0;
 	if ((flags & 6) == FLAGS_CALL) {
 		reader.op(returnId);
@@ -73,27 +77,17 @@ void RPCEnvironment::OnReceiveCall(Peer *peer, ByteReader &reader, Flags flags)
 }
 
 void RPCEnvironment::OnReceiveReturn(Peer *peer, ByteReader &reader,
-									 Flags flags)
+									 Flags flags) const
 {
+	LOG_INFO("DUPA");
 	uint32_t id = 0;
 	reader.op(id);
 	OnReturnCallback callback;
-	bool found = false;
-	{
-		auto it = returningCallbacks.find(id);
-		if (it != returningCallbacks.end()) {
-			auto it2 = it->second.find(peer);
-			if (it2 != it->second.end()) {
-				callback = std::move(it2->second);
-				it->second.erase(it2);
-				found = true;
-			}
-			if (it->second.empty()) {
-				returningCallbacks.erase(it);
-			}
-		}
-	}
-	if (found) {
+	auto cb = peer->returningCallbacks.Get(id);
+	if (cb != nullptr) {
+	LOG_INFO("DUPA");
+		callback = std::move(*cb);
+		peer->returningCallbacks.Remove(id);
 		callback.Execute(peer, flags, reader);
 	} else {
 		LOG_WARN("Remote function call returned value but OnReturnedCallback "
@@ -102,36 +96,18 @@ void RPCEnvironment::OnReceiveReturn(Peer *peer, ByteReader &reader,
 	}
 }
 
-void RPCEnvironment::CheckForTimeoutFunctionCalls(uint32_t maxChecks)
+void RPCEnvironment::CheckForTimeoutFunctionCalls(Loop *loop,
+												  uint32_t maxChecks) const
 {
 	auto now = time::GetTemporaryTimestamp();
-	auto it = returningCallbacks.find(lastCheckedId);
-	if (it == returningCallbacks.end())
-		it = returningCallbacks.begin();
-	else
-		++it;
-	if (it == returningCallbacks.end())
-		it = returningCallbacks.begin();
-	for (int i = 0; i < maxChecks && it != returningCallbacks.end(); ++i) {
-		lastCheckedId = it->first;
-		for (auto it2 = it->second.begin(); it2 != it->second.end(); ++i) {
-			if (it2->second.IsExpired(now)) {
-				timeouts.push_back(std::move(it2->second));
-				it2 = it->second.erase(it2);
-			} else {
-				++it2;
-			}
-		}
-		if (it->second.empty()) {
-			it = returningCallbacks.erase(it);
+	for (uint32_t i = 0; i < maxChecks; ++i) {
+		Peer *peer = loop->_InternalGetRandomPeer();
+		if (peer) {
+			peer->CheckForTimeoutFunctionCalls(now);
 		} else {
-			++it;
+			return;
 		}
 	}
-	for (auto &t : timeouts) {
-		t.ExecuteTimeout();
-	}
-	timeouts.clear();
 }
 
 void RPCEnvironment::RemoveRegisteredMessage(const std::string &name)
@@ -142,21 +118,5 @@ void RPCEnvironment::RemoveRegisteredMessage(const std::string &name)
 	}
 	delete it->second;
 	registeredMessages.erase(it);
-}
-
-uint32_t RPCEnvironment::GetNewReturnIdCallback(Peer *peer)
-{
-	uint32_t rcbId = 0;
-	for (;;) {
-		rcbId = ++(peer->returnIdGen);
-		if (rcbId != 0) {
-			auto &r = returningCallbacks[rcbId];
-			auto it = r.find(peer);
-			if (it == r.end()) {
-				break;
-			}
-		}
-	};
-	return rcbId;
 }
 } // namespace icon7

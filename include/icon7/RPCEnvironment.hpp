@@ -8,7 +8,6 @@
 
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 #include "ByteWriter.hpp"
 #include "Debug.hpp"
@@ -25,6 +24,52 @@ namespace icon7
 {
 class CommandExecutionQueue;
 
+namespace commands
+{
+namespace internal
+{
+class CommandCallSend final : public commands::ExecuteOnPeer
+{
+public:
+	CommandCallSend(CommandCallSend &&o)
+		: callback(std::move(o.callback)), buffer(std::move(o.buffer))
+	{
+		assert(_commandSize == sizeof(CommandCallSend));
+		flags = o.flags;
+		rpcEnv = o.rpcEnv;
+		peer = std::move(o.peer);
+	}
+
+	CommandCallSend(std::shared_ptr<Peer> &&peer, RPCEnvironment const *rpcEnv,
+					OnReturnCallback &&callback, Flags flags, ByteBuffer &&buffer)
+		: ExecuteOnPeer(peer), rpcEnv(rpcEnv), callback(std::move(callback)),
+		  flags(flags), buffer(std::move(buffer))
+	{
+	}
+	virtual ~CommandCallSend() {}
+
+	RPCEnvironment const *rpcEnv;
+	OnReturnCallback callback;
+	Flags flags;
+	ByteBuffer buffer;
+
+	virtual void Execute() override
+	{
+		const uint32_t rcbId = peer->_InternalGetNextValidReturnCallbackId();
+		const uint32_t rcbId_v = bitscpp::HostToNetworkUint(rcbId);
+		memcpy(buffer.data(), &rcbId_v, sizeof(rcbId_v));
+		peer->returningCallbacks.InsertOrSet(rcbId, std::move(callback));
+		flags |= FLAGS_CALL;
+		if (FramingProtocol::WriteHeaderIntoBuffer(buffer, flags)) {
+			peer->SendLocalThread(std::move(buffer));
+		} else {
+			LOG_FATAL("Trying to write header into invalid ByteBuffer.");
+		}
+	}
+};
+} // namespace internal
+} // namespace commands
+
 class RPCEnvironment
 {
 public:
@@ -32,14 +77,14 @@ public:
 	~RPCEnvironment();
 
 	void OnReceive(Peer *peer, ByteBuffer &frameData, uint32_t headerSize,
-				   Flags flags);
+				   Flags flags) const;
 	/*
 	 * expects that reader already filled flags fully and reader is at body
 	 * offset
 	 */
-	void OnReceive(Peer *peer, ByteReader &reader, Flags flags);
-	void OnReceiveCall(Peer *peer, ByteReader &reader, Flags flags);
-	void OnReceiveReturn(Peer *peer, ByteReader &reader, Flags flags);
+	void OnReceive(Peer *peer, ByteReader &reader, Flags flags) const;
+	void OnReceiveCall(Peer *peer, ByteReader &reader, Flags flags) const;
+	void OnReceiveReturn(Peer *peer, ByteReader &reader, Flags flags) const;
 
 	template <typename Fun>
 	MessageConverter *
@@ -94,7 +139,7 @@ public:
 
 	template <typename... Targs>
 	void Send(Peer *peer, Flags flags, const std::string &name,
-			  const Targs &...args)
+			  const Targs &...args) const
 	{
 		ByteBuffer buffer(100);
 		SerializeSend(buffer, flags, name, args...);
@@ -136,84 +181,44 @@ public:
 		return buffer;
 	}
 
-	class CommandCallSend final : public commands::ExecuteOnPeer
-	{
-	public:
-		CommandCallSend(std::shared_ptr<Peer> peer, RPCEnvironment *rpcEnv,
-						OnReturnCallback callback, Flags flags,
-						ByteBuffer buffer)
-			: ExecuteOnPeer(peer), rpcEnv(rpcEnv),
-			  callback(std::move(callback)), flags(flags), buffer(buffer)
-		{
-		}
-		virtual ~CommandCallSend() {}
-
-		RPCEnvironment *rpcEnv;
-		OnReturnCallback callback;
-		Flags flags;
-		ByteBuffer buffer;
-
-		virtual void Execute() override
-		{
-			const uint32_t rcbId = rpcEnv->GetNewReturnIdCallback(peer.get());
-			const uint32_t rcbId_v = bitscpp::HostToNetworkUint(rcbId);
-			memcpy(buffer.data(), &rcbId_v, sizeof(rcbId_v));
-			rpcEnv->returningCallbacks[rcbId][peer.get()] = std::move(callback);
-			flags |= FLAGS_CALL;
-			if (FramingProtocol::WriteHeaderIntoBuffer(buffer, flags)) {
-				peer->SendLocalThread(std::move(buffer));
-			} else {
-				LOG_FATAL("Trying to write header into invalid ByteBuffer.");
-			}
-		}
-	};
-
 	template <typename... Targs>
 	void Call(CommandsBufferHandler *commandsBuffer, Peer *peer, Flags flags,
 			  OnReturnCallback &&callback, const std::string &name,
-			  const Targs &...args)
+			  const Targs &...args) const
 	{
 		ByteWriter writer(100);
 		writer.op((uint32_t)0);
 		writer.op(name);
 		(writer.op(args), ...);
 
-		commandsBuffer->EnqueueCommand<CommandCallSend>(
+		commandsBuffer->EnqueueCommand<commands::internal::CommandCallSend>(
 			peer->shared_from_this(), this, std::move(callback), flags,
-			writer._data);
+			std::move(writer._data));
 	}
 
 	template <typename... Targs>
 	void Call(Peer *peer, Flags flags, OnReturnCallback &&callback,
-			  const std::string &name, const Targs &...args)
+			  const std::string &name, const Targs &...args) const
 	{
 		ByteWriter writer(100);
 		writer.op((uint32_t)0);
 		writer.op(name);
 		(writer.op(args), ...);
 
-		auto cb = CommandHandle<CommandCallSend>::Create(
+		auto cb = CommandHandle<commands::internal::CommandCallSend>::Create(
 			peer->shared_from_this(), this, std::move(callback), flags,
-			writer._data);
+			std::move(writer._data));
 		peer->host->EnqueueCommand(std::move(cb));
 	}
 
-	void CheckForTimeoutFunctionCalls(uint32_t maxChecks = 10);
-
 	void RemoveRegisteredMessage(const std::string &name);
-
-	uint32_t GetNewReturnIdCallback(Peer *peer);
 
 	friend class Host;
 
+	void CheckForTimeoutFunctionCalls(Loop *loop, uint32_t maxChecks) const;
+
 protected:
 	std::unordered_map<std::string, MessageConverter *> registeredMessages;
-
-	std::unordered_map<uint32_t, std::unordered_map<Peer *, OnReturnCallback>>
-		returningCallbacks;
-	uint32_t lastCheckedId = 1;
-
-	std::vector<OnReturnCallback> timeouts;
 };
 } // namespace icon7
 

@@ -41,10 +41,10 @@ protected:
 
 protected:
 	us_socket_t *socket;
-	int SSL;
+	int32_t SSL;
+	uint32_t writeBufferOffset = 0;
 
 	ByteBuffer writeBuffer;
-	uint32_t writeBufferOffset = 0;
 };
 } // namespace tcp
 } // namespace uS

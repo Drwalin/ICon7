@@ -3,148 +3,96 @@
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
-#include "../concurrentqueue/concurrentqueue.h"
-
-#include "../include/icon7/ConcurrentQueueTraits.hpp"
 #include "../include/icon7/Host.hpp"
 #include "../include/icon7/Loop.hpp"
 #include "../include/icon7/RPCEnvironment.hpp"
-#include "../include/icon7/SendFrameStruct.hpp"
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/FramingProtocol.hpp"
 #include "../include/icon7/Debug.hpp"
 #include "../include/icon7/Flags.hpp"
-#include "icon7/Time.hpp"
+#include "../include/icon7/Time.hpp"
 
 #include "../include/icon7/Peer.hpp"
 
 namespace icon7
 {
-
-Peer::Peer(Host *host)
-	: host(host),
-	  queue(new moodycamel::ConcurrentQueue<ByteBufferStorageHeader *,
-											ConcurrentQueueDefaultTraits>()),
-	  consumerToken(new moodycamel::ConsumerToken(*queue))
+Peer::Peer(Host *host) : host(host)
 {
 	userData = 0;
 	userPointer = nullptr;
 	onDisconnect = nullptr;
 	peerFlags = 0;
-	sendingQueueSize = 0;
-	localQueue.reserve(192);
+	localQueue.reserve(32);
+	globalQueue.reserve(32);
 	localQueueOffset = 0;
 }
 
 Peer::~Peer()
 {
 	for (int i = localQueueOffset; i < localQueue.size(); ++i) {
-		if (localQueue[localQueueOffset].data.storage) {
-			localQueue[localQueueOffset].data.storage->unref();
-			localQueue[localQueueOffset].data.storage = nullptr;
+		if (localQueue[i].data.storage) {
+			localQueue[i].data.storage->unref();
+			localQueue[i].data.storage = nullptr;
 		}
 	}
-	localQueueOffset = 0;
-	ByteBufferStorageHeader *ar[MAX_LOCAL_QUEUE_SIZE];
-	for (int i = 0; i < 16; ++i) {
-		while (true) {
-			size_t dequeued = queue->try_dequeue_bulk(*consumerToken, ar,
-													  MAX_LOCAL_QUEUE_SIZE);
-			if (dequeued == 0) {
-				break;
-			}
-			for (int i = 0; i < dequeued; ++i) {
-				ar[i]->unref();
-			}
+	for (int i = 0; i < globalQueue.size(); ++i) {
+		if (globalQueue[i].data.storage) {
+			globalQueue[i].data.storage->unref();
+			globalQueue[i].data.storage = nullptr;
 		}
 	}
-
-	delete queue;
-	queue = nullptr;
-	delete consumerToken;
-	consumerToken = nullptr;
 }
 
 void Peer::Send(ByteBuffer &frame)
 {
-	if (IsDisconnecting()) {
-		stats.errorsCount += 1;
-		host->stats.errorsCount += 1;
-		host->loop->stats.errorsCount += 1;
-		static time::Point last = time::GetTemporaryTimestamp();
-		if (last + time::seconds(1) < time::GetTemporaryTimestamp() ||
-			last - time::seconds(10) > time::GetTemporaryTimestamp()) {
-			last = time::GetTemporaryTimestamp();
-			LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
-		}
-		// TODO: inform about dropping packets
-		return;
-	}
-	sendingQueueSize++;
-	frame.storage->ref();
-	queue->enqueue(frame.storage);
-	// host->InsertPeerToFlush(this);
+	ByteBuffer frameLocal = frame;
+	Send(std::move(frameLocal));
 }
 
 void Peer::SendLocalThread(ByteBuffer &frame)
 {
-	if (IsDisconnecting()) {
-		stats.errorsCount += 1;
-		host->stats.errorsCount += 1;
-		host->loop->stats.errorsCount += 1;
-		static time::Point last = time::GetTemporaryTimestamp();
-		if (last + time::seconds(1) < time::GetTemporaryTimestamp() ||
-			last - time::seconds(10) > time::GetTemporaryTimestamp()) {
-			last = time::GetTemporaryTimestamp();
-			LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
-		}
-		// TODO: inform about dropping packets
-		return;
-	}
-	sendingQueueSize++;
-	localQueue.push_back(frame);
-	// host->_InternalInsertPeerToFlush(this);
+	ByteBuffer frameLocal = frame;
+	SendLocalThread(std::move(frameLocal));
 }
 
 void Peer::Send(ByteBuffer &&frame)
 {
 	if (IsDisconnecting()) {
-		stats.errorsCount += 1;
-		host->stats.errorsCount += 1;
-		host->loop->stats.errorsCount += 1;
-		static time::Point last = time::GetTemporaryTimestamp();
-		if (last + time::seconds(1) < time::GetTemporaryTimestamp() ||
-			last - time::seconds(10) > time::GetTemporaryTimestamp()) {
-			last = time::GetTemporaryTimestamp();
-			LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
-		}
-		// TODO: inform about dropping packets
+		_InternalErrorSendOnDisconnecting();
 		return;
 	}
-	sendingQueueSize++;
-	queue->enqueue(frame.storage);
+	auto com =
+		CommandHandle<commands::internal::ExecutePeerSendFrame>::Create();
+	com->peer = weak_from_this();
+	com->frame = std::move(frame);
+	host->EnqueueCommand(std::move(com));
 	frame.storage = nullptr;
-	// host->InsertPeerToFlush(this);
 }
 
 void Peer::SendLocalThread(ByteBuffer &&frame)
 {
 	if (IsDisconnecting()) {
-		stats.errorsCount += 1;
-		host->stats.errorsCount += 1;
-		host->loop->stats.errorsCount += 1;
-		static time::Point last = time::GetTemporaryTimestamp();
-		if (last + time::seconds(1) < time::GetTemporaryTimestamp() ||
-			last - time::seconds(10) > time::GetTemporaryTimestamp()) {
-			last = time::GetTemporaryTimestamp();
-			LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
-		}
-		// TODO: inform about dropping packets
+		_InternalErrorSendOnDisconnecting();
 		return;
 	}
-	sendingQueueSize++;
-	localQueue.emplace_back(std::move(frame));
-	// host->_InternalInsertPeerToFlush(this);
+	if (_InternalHasQueuedSends() == false &&
+		_InternalHasBufferedSends() == false) {
+		host->_InternalInsertPeerToFlush(this);
+	}
+	globalQueue.emplace_back(std::move(frame));
+}
+
+void Peer::_InternalErrorSendOnDisconnecting()
+{
+	stats.errorsCount += 1;
+	host->stats.errorsCount += 1;
+	host->loop->stats.errorsCount += 1;
+	static time::Point last = time::GetTemporaryTimestamp();
+	if (last + time::seconds(1) < time::GetTemporaryTimestamp() ||
+		last - time::seconds(10) > time::GetTemporaryTimestamp()) {
+		last = time::GetTemporaryTimestamp();
+		LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
+	}
 }
 
 void Peer::Disconnect()
@@ -254,7 +202,10 @@ void Peer::_InternalOnTimeout() { _InternalDisconnect(); }
 
 void Peer::_InternalOnLongTimeout() { _InternalDisconnect(); }
 
-bool Peer::_InternalHasQueuedSends() const { return sendingQueueSize != 0; }
+bool Peer::_InternalHasQueuedSends() const
+{
+	return localQueueOffset != localQueue.size() || globalQueue.size() != 0;
+}
 
 void Peer::SetReadyToUse() { peerFlags |= BIT_READY; }
 
@@ -263,44 +214,43 @@ void Peer::DequeueToLocalQueue()
 	if (localQueue.size() != localQueueOffset) {
 		return;
 	}
-
-	ByteBufferStorageHeader *ar[MAX_LOCAL_QUEUE_SIZE];
-	uint32_t dequeued =
-		queue->try_dequeue_bulk(*consumerToken, ar, MAX_LOCAL_QUEUE_SIZE);
-	localQueue.resize(dequeued);
-	ByteBuffer buffer;
-	for (int i = 0; i < dequeued; ++i) {
-		buffer.storage = ar[i];
-		localQueue[i] = std::move(buffer);
+	if (localQueueOffset != 0) {
+		localQueueOffset = 0;
+		localQueue.clear();
 	}
-	localQueueOffset = 0;
+	if (globalQueue.empty()) {
+		return;
+	}
+	std::swap(localQueue, globalQueue);
 }
 
 bool Peer::_InternalFlushQueuedSends()
 {
 	bool ret = true;
-	const uint32_t queuedFrames = sendingQueueSize.load();
+	const uint32_t queuedFrames =
+		globalQueue.size() + localQueue.size() - localQueueOffset;
 	uint32_t sentFrames = 0;
-	for (uint32_t i = 0; i < 300; ++i) {
-		if (localQueue.size() == localQueueOffset) {
-			DequeueToLocalQueue();
-		}
-		if (localQueue.size() == localQueueOffset) {
-			ret = true;
-			break;
-		}
-		const bool hasAnyMore = queuedFrames - sentFrames > 1;
-		if (_InternalSend(localQueue[localQueueOffset], hasAnyMore)) {
-			sentFrames++;
-			localQueue[localQueueOffset].data.storage->unref();
-			localQueue[localQueueOffset].data.storage = nullptr;
-			localQueueOffset++;
-		} else {
-			ret = false;
-			break;
+	uint32_t i = 0;
+	for (int I = 0; I < 2; ++I) {
+		DequeueToLocalQueue();
+		for (; i < 300; ++i) {
+			if (localQueue.size() == localQueueOffset) {
+				ret = true;
+				break;
+			}
+			const bool hasAnyMore = (queuedFrames - sentFrames) > 1;
+			if (_InternalSend(localQueue[localQueueOffset], hasAnyMore)) {
+				sentFrames++;
+				localQueue[localQueueOffset].data.storage->unref();
+				localQueue[localQueueOffset].data.storage = nullptr;
+				localQueueOffset++;
+			} else {
+				ret = false;
+				I = 3;
+				break;
+			}
 		}
 	}
-	sendingQueueSize -= sentFrames;
 
 	stats.framesSent += sentFrames;
 	host->stats.framesSent += sentFrames;
@@ -309,6 +259,28 @@ bool Peer::_InternalFlushQueuedSends()
 	return ret;
 }
 
+uint32_t Peer::_InternalGetNextValidReturnCallbackId()
+{
+	uint32_t id;
+	do {
+		id = ++returnIdGen;
+	} while (returningCallbacks.Has(id));
+	return id;
+}
+
 void Peer::_InternalClearInternalDataOnClose() { peerFlags |= BIT_CLOSED; }
 
+void Peer::CheckForTimeoutFunctionCalls(time::Point now)
+{
+	auto *it = returningCallbacks.GetRandom();
+	if (it == nullptr) {
+		return;
+	}
+	OnReturnCallback &cb = it->v;
+
+	if (cb.IsExpired(now)) {
+		cb.ExecuteTimeout();
+		returningCallbacks.Remove(it->key);
+	}
+}
 } // namespace icon7

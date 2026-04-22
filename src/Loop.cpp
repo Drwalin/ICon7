@@ -132,4 +132,21 @@ void Loop::SetSleepBetweenUnlockedIterations(int32_t microseconds)
 {
 	microsecondsOfSleepBetweenIterations = microseconds;
 }
+
+Peer *Loop::_InternalGetRandomPeer()
+{
+	// TODO: optimize
+	if (hosts.size() == 0) {
+		return nullptr;
+	}
+	int r = rand() % hosts.size(), i = 0;
+	for (auto &h : hosts) {
+		if (i == r) {
+			return h->_InternalGetRandomPeer();
+		} else {
+			++i;
+		}
+	}
+	return nullptr;
+}
 } // namespace icon7

@@ -62,7 +62,7 @@ public:
 
 	void InsertPeerToFlush(Peer *peer);
 
-	RPCEnvironment *GetRpcEnvironment();
+	const RPCEnvironment *GetRpcEnvironment();
 
 	Loop *GetLoop();
 
@@ -86,6 +86,8 @@ public: // thread unsafe, safe only in hosts loop thread
 
 	virtual void _InternalStopListening() = 0;
 
+	Peer *_InternalGetRandomPeer();
+
 public:
 	uint64_t userData;
 	void *userPointer;
@@ -100,9 +102,10 @@ protected:
 	void (*onConnect)(Peer *);
 	void (*onDisconnect)(Peer *);
 
-	RPCEnvironment *rpcEnvironment;
+	const RPCEnvironment *rpcEnvironment;
 
 	std::unordered_set<std::shared_ptr<Peer>> peers;
+	std::vector<Peer *> peersToSend;
 
 	CommandExecutionQueue *commandQueue;
 

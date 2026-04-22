@@ -56,6 +56,7 @@ public: // thread unsafe, safe only in hosts loop thread
 	virtual void SingleLoopIteration();
 	virtual void _InternalSingleLoopIteration();
 	void _InternalSyncLoop();
+	Peer *_InternalGetRandomPeer();
 
 public:
 	uint64_t userData;

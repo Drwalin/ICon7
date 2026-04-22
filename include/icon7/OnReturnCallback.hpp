@@ -9,10 +9,11 @@
 #include "Time.hpp"
 #include "Command.hpp"
 #include "Host.hpp"
-#include "Peer.hpp"
+// #include "Peer.hpp"
 
 namespace icon7
 {
+class Peer;
 
 class ExecuteReturnCallbackBase : public commands::ExecuteOnPeer
 {
@@ -148,10 +149,10 @@ public:
 
 private:
 public:
-	template <typename Tret, typename Tfunc, typename Ttimeout>
+	template <typename Tret, typename Tfunc, typename Ttimeout, typename TPeer>
 	static OnReturnCallback
 	Make(Tfunc &&onReturned, Ttimeout &&onTimeout, uint32_t timeoutMilliseconds,
-		 Peer *peer, CommandExecutionQueue *executionQueue = nullptr,
+		 TPeer *peer, CommandExecutionQueue *executionQueue = nullptr,
 		 std::shared_ptr<void> pointerHolder = nullptr)
 	{
 		OnReturnCallback ret;
@@ -168,10 +169,10 @@ public:
 		return ret;
 	}
 
-	template <typename Tfunc, typename Ttimeout>
+	template <typename Tfunc, typename Ttimeout, typename TPeer>
 	static OnReturnCallback
 	Make(Tfunc &&onReturned, Ttimeout &&onTimeout, uint32_t timeoutMilliseconds,
-		 Peer *peer, CommandExecutionQueue *executionQueue = nullptr,
+		 TPeer *peer, CommandExecutionQueue *executionQueue = nullptr,
 		 std::shared_ptr<void> pointerHolder = nullptr)
 	{
 		OnReturnCallback ret;

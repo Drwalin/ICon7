@@ -498,8 +498,9 @@ int main(int argc, char **argv)
 						} else {
 							for (auto p : validPeers) {
 								auto peer = p.get();
-								rpc2.Send(peer, icon7::FLAG_RELIABLE, "sum", 3,
-										  23, additionalPayload.data());
+								rpc2.Send(peer,
+										  icon7::FLAG_RELIABLE, "sum", 3, 23,
+										  additionalPayload.data());
 								sent++;
 							}
 						}

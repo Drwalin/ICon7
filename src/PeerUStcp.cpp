@@ -159,6 +159,8 @@ bool Peer::_InternalFlushBufferedSends(bool hasMore)
 			}
 		} else {
 			// TODO: what to do here?
+			// This is probably when write buffer of socket is full, so nothing
+			// could be sent
 		}
 	}
 	return false;

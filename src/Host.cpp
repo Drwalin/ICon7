@@ -3,6 +3,8 @@
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
+#include <cassert>
+
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/Peer.hpp"
 #include "../include/icon7/RPCEnvironment.hpp"
@@ -190,14 +192,13 @@ void Host::EnqueueCommand(CommandHandle<Command> &&command)
 
 void Host::_InternalSingleLoopIteration()
 {
+	assert(rpcEnvironment);
 	for (auto &p : peers) {
 		if (p->_InternalHasBufferedSends() || p->_InternalHasQueuedSends()) {
 			p->_InternalOnWritable();
 		}
 	}
-	if (rpcEnvironment) {
-		rpcEnvironment->CheckForTimeoutFunctionCalls(16);
-	}
+	rpcEnvironment->CheckForTimeoutFunctionCalls(loop.get(), 16);
 }
 
 void Host::InsertPeerToFlush(Peer *peer)
@@ -210,11 +211,16 @@ void Host::InsertPeerToFlush(Peer *peer)
 	*/
 }
 
-RPCEnvironment *Host::GetRpcEnvironment() { return rpcEnvironment; }
+const RPCEnvironment *Host::GetRpcEnvironment() { return rpcEnvironment; }
 
 void Host::_InternalInsertPeerToFlush(Peer *peer)
 {
+	if (peer->_InternalHasQueuedSends() == false &&
+			peer->_InternalHasBufferedSends() == false) {
+		// TODO: implement
+// 		assert(!"Unimplemented");
 	// 	peersToFlush.insert(peer->shared_from_this());
+	}
 }
 
 void Host::ForEachPeer(void(func)(icon7::Peer *))
@@ -229,6 +235,22 @@ void Host::ForEachPeer(std::function<void(icon7::Peer *)> func)
 	for (auto &p : peers) {
 		func(p.get());
 	}
+}
+
+Peer *Host::_InternalGetRandomPeer()
+{
+	if (peers.size() == 0) {
+		return nullptr;
+	}
+	int r = rand() % peers.size(), i = 0;
+	for (auto &p : peers) {
+		if (i == r) {
+			return p.get();
+		} else {
+			++i;
+		}
+	}
+	return nullptr;
 }
 
 void Initialize() {}

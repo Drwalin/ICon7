@@ -13,10 +13,22 @@
 #include "Stats.hpp"
 #include "FrameDecoder.hpp"
 #include "Forward.hpp"
+#include "OnReturnCallback.hpp"
+#include "SendFrameStruct.hpp"
+#include "FlatHashMap.hpp"
 
 namespace icon7
 {
 class Host;
+
+class RPCEnvironment;
+namespace commands
+{
+namespace internal
+{
+class CommandCallSend;
+}
+} // namespace commands
 
 class Peer : public std::enable_shared_from_this<Peer>
 {
@@ -96,9 +108,16 @@ protected:
 	_InternalOnPacketWithControllSequenceBackend(ByteBuffer &buffer,
 												 uint32_t headerSize);
 
+	uint32_t _InternalGetNextValidReturnCallbackId();
+
+	void _InternalErrorSendOnDisconnecting();
+
+	void CheckForTimeoutFunctionCalls(time::Point now);
+
 	friend class Host;
 	friend class commands::internal::ExecuteDisconnect;
 	friend class RPCEnvironment;
+	friend class commands::internal::CommandCallSend;
 
 protected:
 	Peer(Host *host);
@@ -109,21 +128,19 @@ protected:
 	inline const static uint32_t BIT_ERROR_CONNECT = 8;
 
 protected:
-	std::atomic<uint32_t> sendingQueueSize;
 	std::atomic<uint32_t> peerFlags;
 
 	alignas(64) void (*onDisconnect)(Peer *);
 	uint32_t returnIdGen = 0;
 
+	std::vector<SendFrameStruct> globalQueue;
 	std::vector<SendFrameStruct> localQueue;
 
 	FrameDecoder frameDecoder;
 	uint32_t localQueueOffset;
 	const static inline uint32_t MAX_LOCAL_QUEUE_SIZE = 128;
 
-	moodycamel::ConcurrentQueue<ByteBufferStorageHeader *,
-								ConcurrentQueueDefaultTraits> *queue;
-	moodycamel::ConsumerToken *consumerToken;
+	FlatHashMap<uint32_t, OnReturnCallback, Hash<uint32_t>> returningCallbacks;
 
 public:
 	icon7::PeerStats stats;

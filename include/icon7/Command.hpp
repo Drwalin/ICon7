@@ -295,6 +295,18 @@ public:
 
 	virtual void Execute() override;
 };
+
+class ExecutePeerSendFrame : public Command
+{
+public:
+	virtual ~ExecutePeerSendFrame() {}
+	ExecutePeerSendFrame() {}
+
+	std::weak_ptr<Peer> peer;
+	ByteBuffer frame;
+
+	virtual void Execute() override;
+};
 } // namespace internal
 } // namespace commands
 } // namespace icon7
