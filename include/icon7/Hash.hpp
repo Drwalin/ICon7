@@ -78,6 +78,22 @@ struct Hash <uint32_t> {
 	}
 };
 
+template<>
+struct Hash <int32_t> {
+	static constexpr uint32_t hash(const int32_t k, uint64_t base = StartHash32())
+	{
+		return Hash32((uint32_t)k, base);
+	}
+};
+
+template<>
+struct Hash <int64_t> {
+	static constexpr uint32_t hash(const int64_t k, uint64_t base = StartHash32())
+	{
+		return Hash32((uint64_t)k, base);
+	}
+};
+
 template<typename T>
 struct Hash <T *> {
 	uint32_t hash(const T *k, uint64_t base = sizeof(T*)==sizeof(uint64_t) ? StartHash64() : StartHash32())

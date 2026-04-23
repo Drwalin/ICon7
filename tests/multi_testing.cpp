@@ -534,12 +534,11 @@ int main(int argc, char **argv)
 						vs[i] *= 1000.0;
 					}
 				}
-				LOG_INFO("Latency [ms] | avg: %.2f  std: %.2f    p0: %.2f   "
-						 "p1: %.2f   p5: %.2f   p10: %.2f   p25: %.2f   p50: "
-						 "%.2f   p80: %.2f   p90: %.2f   p95: %.2f   p99: %.2f "
+				LOG_INFO("Latency [ms] | avg: %.2f  std: %.2f    p0: %.2f   p50: "
+						 "%.2f   p90: %.2f   p95: %.2f   p99: %.2f "
 						 "  p99.9: %.2f   p100: %.2f",
-						 stats.mean, stats.stddev, stats.p0, stats.p1, stats.p5,
-						 stats.p10, stats.p25, stats.p50, stats.p80, stats.p90,
+						 stats.mean, stats.stddev, stats.p0, stats.p50,
+						 stats.p90,
 						 stats.p95, stats.p99, stats.p999, stats.p100);
 				LOG_INFO("received/sent = %li/%li ; "
 						 "returned/called = %li/%li",

@@ -49,7 +49,6 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 void RPCEnvironment::OnReceiveCall(Peer *peer, ByteReader &reader,
 								   Flags flags) const
 {
-	LOG_INFO("DUPA");
 	uint32_t returnId = 0;
 	if ((flags & 6) == FLAGS_CALL) {
 		reader.op(returnId);
@@ -79,13 +78,11 @@ void RPCEnvironment::OnReceiveCall(Peer *peer, ByteReader &reader,
 void RPCEnvironment::OnReceiveReturn(Peer *peer, ByteReader &reader,
 									 Flags flags) const
 {
-	LOG_INFO("DUPA");
 	uint32_t id = 0;
 	reader.op(id);
 	OnReturnCallback callback;
 	auto cb = peer->returningCallbacks.Get(id);
 	if (cb != nullptr) {
-	LOG_INFO("DUPA");
 		callback = std::move(*cb);
 		peer->returningCallbacks.Remove(id);
 		callback.Execute(peer, flags, reader);

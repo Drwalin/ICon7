@@ -149,6 +149,12 @@ if(ICON7_BUILD_TEST)
 	)
 	target_link_libraries(multi_test icon7)
 	target_compile_definitions(multi_test PUBLIC ICON7_LOG_DEFAULT_LOG_LEVEL=LL_IGNORE)
+
+	add_executable(test_flat_hash_map
+		tests/test_flat_hash_map.cpp
+	)
+	target_link_libraries(test_flat_hash_map icon7)
+	target_compile_definitions(test_flat_hash_map PUBLIC ICON7_LOG_DEFAULT_LOG_LEVEL=LL_IGNORE)
 endif()
 
 if(ICON7_BUILD_EXAMPLES)
