@@ -15,8 +15,11 @@ struct ProducerToken;
 
 namespace bitscpp
 {
-template <typename T> class ByteWriter;
-template <bool V> class ByteReader;
+namespace v2
+{
+class ByteWriter_ByteBuffer;
+class ByteReader;
+} // namespace v2
 } // namespace bitscpp
 
 namespace icon7

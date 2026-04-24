@@ -54,8 +54,7 @@ ByteBufferStorageHeader::Reallocate(ByteBufferStorageHeader *ptr,
 	return ret;
 }
 
-bitscpp::v2::ByteReader &
-ByteBuffer::__ByteStream_op(bitscpp::v2::ByteReader &s)
+void ByteBuffer::serialize(bitscpp::v2::ByteReader &s)
 {
 	int32_t size = 0;
 	s.op(size);
@@ -65,11 +64,9 @@ ByteBuffer::__ByteStream_op(bitscpp::v2::ByteReader &s)
 		Init(size);
 		s.op((uint8_t *)data(), size);
 	}
-	return s;
 }
 
-bitscpp::v2::ByteWriter_ByteBuffer &
-ByteBuffer::__ByteStream_op(bitscpp::v2::ByteWriter_ByteBuffer &s)
+void ByteBuffer::serialize(bitscpp::v2::ByteWriter_ByteBuffer &s)
 {
 	if (storage) {
 		const uint32_t size = this->size();
@@ -81,6 +78,7 @@ ByteBuffer::__ByteStream_op(bitscpp::v2::ByteWriter_ByteBuffer &s)
 		const uint32_t size = 0;
 		s.op(size);
 	}
-	return s;
 }
 } // namespace icon7
+
+#include "../../ICon7/bitscpp/src/ByteWriter_v2.cpp"

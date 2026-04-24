@@ -75,16 +75,16 @@ inline Diff operator-(Timestamp a, Timestamp b) { return {a.ns - b.ns}; }
 
 namespace bitscpp
 {
-ByteReader<true> &op(ByteReader<true> &s, icon7::time::Point &v);
-ByteWriter<icon7::ByteBuffer> &op(ByteWriter<icon7::ByteBuffer> &s,
-								  const icon7::time::Point &v);
+namespace v2
+{
+void serialize(ByteReader &s, icon7::time::Point &v);
+void serialize(ByteWriter_ByteBuffer &s, const icon7::time::Point &v);
 
-ByteReader<true> &op(ByteReader<true> &s, icon7::time::Diff &v);
-ByteWriter<icon7::ByteBuffer> &op(ByteWriter<icon7::ByteBuffer> &s,
-								  const icon7::time::Diff &v);
+void serialize(ByteReader &s, icon7::time::Diff &v);
+void serialize(ByteWriter_ByteBuffer &s, const icon7::time::Diff &v);
 
-ByteReader<true> &op(ByteReader<true> &s, icon7::time::Timestamp &v);
-ByteWriter<icon7::ByteBuffer> &op(ByteWriter<icon7::ByteBuffer> &s,
-								  const icon7::time::Timestamp &v);
+void serialize(ByteReader &s, icon7::time::Timestamp &v);
+void serialize(ByteWriter_ByteBuffer &s, const icon7::time::Timestamp &v);
+} // namespace v2
 } // namespace bitscpp
 #endif

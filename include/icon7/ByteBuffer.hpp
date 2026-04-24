@@ -180,9 +180,8 @@ public:
 		}
 	}
 
-	bitscpp::v2::ByteReader &__ByteStream_op(bitscpp::v2::ByteReader &s);
-	bitscpp::v2::ByteWriter_ByteBuffer &
-	__ByteStream_op(bitscpp::v2::ByteWriter_ByteBuffer &s);
+	void serialize(bitscpp::v2::ByteReader &s);
+	void serialize(bitscpp::v2::ByteWriter_ByteBuffer &s);
 
 public:
 	ByteBufferStorageHeader *storage = nullptr;

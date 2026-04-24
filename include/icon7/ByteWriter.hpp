@@ -8,13 +8,11 @@
 
 #include "ByteBuffer.hpp"
 
-#ifndef BITSCPP_BYTE_WRITER_V2_BT_TYPE
+#undef BITSCPP_BYTE_WRITER_V2_BT_TYPE
 #define BITSCPP_BYTE_WRITER_V2_BT_TYPE icon7::ByteBuffer
-#endif
 
-#ifndef BITSCPP_BYTE_WRITER_V2_NAME_SUFFIX
+#undef BITSCPP_BYTE_WRITER_V2_NAME_SUFFIX
 #define BITSCPP_BYTE_WRITER_V2_NAME_SUFFIX _ByteBuffer
-#endif
 
 #include "../../bitscpp/include/bitscpp/ByteWriter_v2.hpp"
 
@@ -31,7 +29,7 @@ public:
 public:
 	~ByteWriter() {};
 
-	ByteWriter(ByteBuffer &&buf) : Base(&_data), _data(std::move(buf))
+	ByteWriter(ByteBuffer &&buf) : _data(std::move(buf))
 	{
 		if (_data.storage == nullptr) {
 			_data = ByteBuffer(108);
@@ -42,14 +40,13 @@ public:
 		_data.storage->offset += 8;
 	}
 
-	ByteWriter(ByteWriter &&o)
-		: bitscpp::v2::ByteWriter_ByteBuffer(&_data), _data(std::move(o._data))
+	ByteWriter(ByteWriter &&o) : _data(std::move(o._data))
 	{
 	}
 
 	inline ByteBuffer &Buffer() { return _data; }
 
-	ByteWriter(uint32_t initialCapacity) : Base(nullptr), _data(initialCapacity + 8)
+	ByteWriter(uint32_t initialCapacity) : _data(initialCapacity + 8)
 	{
 		_data.storage->size = 0;
 		// additional store in form of:

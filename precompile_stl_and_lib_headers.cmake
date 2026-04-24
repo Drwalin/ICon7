@@ -22,8 +22,12 @@ function(add_common_precompiled_headers target)
 		"${CMAKE_CURRENT_FUNCTION_LIST_DIR}/concurrentqueue/concurrentqueue.h"
 	)
 
-	file(GLOB_RECURSE files "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/bitscpp/include/*")
 	target_precompile_headers(${target} PUBLIC
-		"${CMAKE_CURRENT_SOURCE_DIR}/include/icon7/ByteBuffer.hpp"
+		"${CMAKE_CURRENT_FUNCTION_LIST_DIR}/include/icon7/ByteBuffer.hpp"
+		"${CMAKE_CURRENT_FUNCTION_LIST_DIR}/bitscpp/include/bitscpp/ByteWriter.hpp"
+		"${CMAKE_CURRENT_FUNCTION_LIST_DIR}/bitscpp/include/bitscpp/ByteReader.hpp"
+		"${CMAKE_CURRENT_FUNCTION_LIST_DIR}/bitscpp/include/bitscpp/ByteReader_v2.hpp"
+		"${CMAKE_CURRENT_FUNCTION_LIST_DIR}/bitscpp/include/bitscpp/Endianness.hpp"
+		"${CMAKE_CURRENT_FUNCTION_LIST_DIR}/bitscpp/include/bitscpp/V2_Specification.hpp"
 		${files})
 endfunction()
