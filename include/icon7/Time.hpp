@@ -58,21 +58,33 @@ inline bool operator!=(Timestamp l, Timestamp r) { return l.ns != r.ns; }
 inline Timestamp operator+(Timestamp p, Diff d) { return {p.ns + d.ns}; }
 inline Timestamp operator-(Timestamp p, Diff d) { return {p.ns - d.ns}; }
 
-inline Timestamp &operator+=(Timestamp &p, Diff d) { p.ns += d.ns; return p; }
-inline Timestamp &operator-=(Timestamp &p, Diff d) { p.ns -= d.ns; return p; }
+inline Timestamp &operator+=(Timestamp &p, Diff d)
+{
+	p.ns += d.ns;
+	return p;
+}
+inline Timestamp &operator-=(Timestamp &p, Diff d)
+{
+	p.ns -= d.ns;
+	return p;
+}
 
 inline Diff operator-(Timestamp a, Timestamp b) { return {a.ns - b.ns}; }
 } // namespace time
 } // namespace icon7
 
-namespace bitscpp {
-ByteReader<true>& op(ByteReader<true>& s, icon7::time::Point& v);
-ByteWriter<icon7::ByteBuffer>& op(ByteWriter<icon7::ByteBuffer>& s, const icon7::time::Point& v);
+namespace bitscpp
+{
+ByteReader<true> &op(ByteReader<true> &s, icon7::time::Point &v);
+ByteWriter<icon7::ByteBuffer> &op(ByteWriter<icon7::ByteBuffer> &s,
+								  const icon7::time::Point &v);
 
-ByteReader<true>& op(ByteReader<true>& s, icon7::time::Diff& v);
-ByteWriter<icon7::ByteBuffer>& op(ByteWriter<icon7::ByteBuffer>& s, const icon7::time::Diff& v);
+ByteReader<true> &op(ByteReader<true> &s, icon7::time::Diff &v);
+ByteWriter<icon7::ByteBuffer> &op(ByteWriter<icon7::ByteBuffer> &s,
+								  const icon7::time::Diff &v);
 
-ByteReader<true>& op(ByteReader<true>& s, icon7::time::Timestamp& v);
-ByteWriter<icon7::ByteBuffer>& op(ByteWriter<icon7::ByteBuffer>& s, const icon7::time::Timestamp& v);
+ByteReader<true> &op(ByteReader<true> &s, icon7::time::Timestamp &v);
+ByteWriter<icon7::ByteBuffer> &op(ByteWriter<icon7::ByteBuffer> &s,
+								  const icon7::time::Timestamp &v);
 } // namespace bitscpp
 #endif

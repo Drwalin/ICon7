@@ -41,7 +41,8 @@ public:
 	}
 
 	CommandCallSend(std::shared_ptr<Peer> &&peer, RPCEnvironment const *rpcEnv,
-					OnReturnCallback &&callback, Flags flags, ByteBuffer &&buffer)
+					OnReturnCallback &&callback, Flags flags,
+					ByteBuffer &&buffer)
 		: ExecuteOnPeer(peer), rpcEnv(rpcEnv), callback(std::move(callback)),
 		  flags(flags), buffer(std::move(buffer))
 	{

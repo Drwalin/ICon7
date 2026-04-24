@@ -10,7 +10,8 @@
 
 namespace icon7
 {
-static uint64_t InitRandom() {
+static uint64_t InitRandom()
+{
 	static std::mutex mutex;
 	mutex.lock();
 	static std::random_device rd{};
@@ -20,8 +21,9 @@ static uint64_t InitRandom() {
 	return v;
 }
 
-uint64_t RandHashBase() {
+uint64_t RandHashBase()
+{
 	thread_local std::mt19937_64 mt(InitRandom());
 	return mt();
 }
-}
+} // namespace icon7

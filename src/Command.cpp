@@ -56,7 +56,8 @@ void ExecuteListen::Execute()
 
 void ExecuteDisconnect::Execute() { peer->_InternalDisconnect(); }
 
-void ExecutePeerSendFrame::Execute() {
+void ExecutePeerSendFrame::Execute()
+{
 	std::shared_ptr<Peer> p = peer.lock();
 	if (p.get()) {
 		p->SendLocalThread(std::move(frame));

@@ -30,8 +30,8 @@ int Mul(int a, int b)
 	return a * b;
 }
 
-void Test(icon7::uS::Loop *loop, const uint8_t *data,
-								 size_t size, icon7::RPCEnvironment &rpc)
+void Test(icon7::uS::Loop *loop, const uint8_t *data, size_t size,
+		  icon7::RPCEnvironment &rpc)
 {
 	const int useSSL = (data[0] & 0) ? 1 : 0;
 	thread_local uint16_t port = 0;
@@ -40,9 +40,8 @@ void Test(icon7::uS::Loop *loop, const uint8_t *data,
 	rpc.RegisterMessage("mul", Mul);
 
 	std::shared_ptr<icon7::uS::tcp::Host> host =
-		loop->CreateHost(&rpc, "host",
-						 useSSL, "../cert/user.key", "../cert/user.crt", "",
-						 nullptr, "../cert/rootca.crt",
+		loop->CreateHost(&rpc, "host", useSSL, "../cert/user.key",
+						 "../cert/user.crt", "", nullptr, "../cert/rootca.crt",
 						 "ECDHE-ECDSA-AES256-GCM-SHA384:"
 						 "ECDHE-ECDSA-AES128-GCM-SHA256:"
 						 "ECDHE-ECDSA-CHACHA20-POLY1305:"
@@ -57,7 +56,7 @@ void Test(icon7::uS::Loop *loop, const uint8_t *data,
 		}
 
 		auto listenFuture = host->ListenOnPort("127.0.0.1", port, icon7::IPv4);
-		
+
 		if (listenFuture.get())
 			break;
 		port = 0;
@@ -71,7 +70,7 @@ void Test(icon7::uS::Loop *loop, const uint8_t *data,
 		icon7::ByteBuffer buffer(size + 256);
 		buffer.append(data + 1, size - 1);
 		peer->Send(buffer);
-		
+
 		std::this_thread::sleep_for(std::chrono::milliseconds(3));
 
 		loop->QueueStopRunning();
@@ -91,7 +90,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	received = 0;
 	icon7::Initialize();
 
-	std::shared_ptr<icon7::uS::Loop> loop = std::make_shared<icon7::uS::Loop>("loop");
+	std::shared_ptr<icon7::uS::Loop> loop =
+		std::make_shared<icon7::uS::Loop>("loop");
 	loop->Init(1);
 	loop->SetSleepBetweenUnlockedIterations(0);
 

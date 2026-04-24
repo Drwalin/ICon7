@@ -216,10 +216,10 @@ const RPCEnvironment *Host::GetRpcEnvironment() { return rpcEnvironment; }
 void Host::_InternalInsertPeerToFlush(Peer *peer)
 {
 	if (peer->_InternalHasQueuedSends() == false &&
-			peer->_InternalHasBufferedSends() == false) {
+		peer->_InternalHasBufferedSends() == false) {
 		// TODO: implement
-// 		assert(!"Unimplemented");
-	// 	peersToFlush.insert(peer->shared_from_this());
+		// 		assert(!"Unimplemented");
+		// 	peersToFlush.insert(peer->shared_from_this());
 	}
 }
 

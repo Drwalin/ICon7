@@ -283,30 +283,34 @@ void Sleep(Diff dt) { sleep_for(dt); }
 } // namespace time
 } // namespace icon7
 
-namespace bitscpp {
-ByteReader<true>& op(ByteReader<true>& s, icon7::time::Point& v)
+namespace bitscpp
+{
+ByteReader<true> &op(ByteReader<true> &s, icon7::time::Point &v)
 {
 	return s.op(v.ns);
 }
-ByteWriter<icon7::ByteBuffer>& op(ByteWriter<icon7::ByteBuffer>& s, const icon7::time::Point& v)
-{
-	return s.op(v.ns);
-}
-
-ByteReader<true>& op(ByteReader<true>& s, icon7::time::Diff& v)
-{
-	return s.op(v.ns);
-}
-ByteWriter<icon7::ByteBuffer>& op(ByteWriter<icon7::ByteBuffer>& s, const icon7::time::Diff& v)
+ByteWriter<icon7::ByteBuffer> &op(ByteWriter<icon7::ByteBuffer> &s,
+								  const icon7::time::Point &v)
 {
 	return s.op(v.ns);
 }
 
-ByteReader<true>& op(ByteReader<true>& s, icon7::time::Timestamp& v)
+ByteReader<true> &op(ByteReader<true> &s, icon7::time::Diff &v)
 {
 	return s.op(v.ns);
 }
-ByteWriter<icon7::ByteBuffer>& op(ByteWriter<icon7::ByteBuffer>& s, const icon7::time::Timestamp& v)
+ByteWriter<icon7::ByteBuffer> &op(ByteWriter<icon7::ByteBuffer> &s,
+								  const icon7::time::Diff &v)
+{
+	return s.op(v.ns);
+}
+
+ByteReader<true> &op(ByteReader<true> &s, icon7::time::Timestamp &v)
+{
+	return s.op(v.ns);
+}
+ByteWriter<icon7::ByteBuffer> &op(ByteWriter<icon7::ByteBuffer> &s,
+								  const icon7::time::Timestamp &v)
 {
 	return s.op(v.ns);
 }

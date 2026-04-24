@@ -72,8 +72,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 			std::make_shared<icon7::uS::Loop>("loop_server");
 		loopa->Init(1);
 		std::shared_ptr<icon7::uS::tcp::Host> hosta = loopa->CreateHost(
-			&rpc, "host_server", useSSL, "../cert/user.key", "../cert/user.crt", "",
-			nullptr, "../cert/rootca.crt",
+			&rpc, "host_server", useSSL, "../cert/user.key", "../cert/user.crt",
+			"", nullptr, "../cert/rootca.crt",
 			"ECDHE-ECDSA-AES256-GCM-SHA384:"
 			"ECDHE-ECDSA-AES128-GCM-SHA256:"
 			"ECDHE-ECDSA-CHACHA20-POLY1305:"
@@ -88,8 +88,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 			std::make_shared<icon7::uS::Loop>("loop_client");
 		loopb->Init(1);
 		std::shared_ptr<icon7::uS::tcp::Host> hostb =
-			loopb->CreateHost(&rpc2, "host_client", useSSL, nullptr, nullptr, nullptr,
-							  nullptr, nullptr, nullptr);
+			loopb->CreateHost(&rpc2, "host_client", useSSL, nullptr, nullptr,
+							  nullptr, nullptr, nullptr, nullptr);
 		loopb->RunAsync();
 
 		listenFuture.wait_for_milliseconds(150);

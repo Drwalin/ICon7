@@ -498,9 +498,8 @@ int main(int argc, char **argv)
 						} else {
 							for (auto p : validPeers) {
 								auto peer = p.get();
-								rpc2.Send(peer,
-										  icon7::FLAG_RELIABLE, "sum", 3, 23,
-										  additionalPayload.data());
+								rpc2.Send(peer, icon7::FLAG_RELIABLE, "sum", 3,
+										  23, additionalPayload.data());
 								sent++;
 							}
 						}
@@ -534,12 +533,12 @@ int main(int argc, char **argv)
 						vs[i] *= 1000.0;
 					}
 				}
-				LOG_INFO("Latency [ms] | avg: %.2f  std: %.2f    p0: %.2f   p50: "
-						 "%.2f   p90: %.2f   p95: %.2f   p99: %.2f "
-						 "  p99.9: %.2f   p100: %.2f",
-						 stats.mean, stats.stddev, stats.p0, stats.p50,
-						 stats.p90,
-						 stats.p95, stats.p99, stats.p999, stats.p100);
+				LOG_INFO(
+					"Latency [ms] | avg: %.2f  std: %.2f    p0: %.2f   p50: "
+					"%.2f   p90: %.2f   p95: %.2f   p99: %.2f   p99.9: %.2f   "
+					"p100: %.2f",
+					stats.mean, stats.stddev, stats.p0, stats.p50, stats.p90,
+					stats.p95, stats.p99, stats.p999, stats.p100);
 				LOG_INFO("received/sent = %li/%li ; "
 						 "returned/called = %li/%li",
 						 received.load(), sent.load(), returned.load(),

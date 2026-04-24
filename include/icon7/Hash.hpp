@@ -28,7 +28,7 @@ constexpr uint32_t Hash32(const uint32_t a, const uint32_t b)
 {
 	constexpr uint32_t prime = 0x01000193;
 	const uint32_t h = (b ^ a);
-	
+
 	if constexpr (ICON7_USE_FNV_MULT) {
 		return h * prime;
 	} else {
@@ -47,7 +47,7 @@ constexpr uint64_t Hash64(const uint64_t a, const uint64_t b)
 {
 	constexpr uint64_t prime = 0x00000100000001b3llu;
 	const uint64_t h = (b ^ a);
-	
+
 	if constexpr (ICON7_USE_FNV_MULT) {
 		return h * prime;
 	} else {
@@ -57,50 +57,50 @@ constexpr uint64_t Hash64(const uint64_t a, const uint64_t b)
 	}
 }
 
-template<typename T>
-struct Hash {
+template <typename T> struct Hash {
 	static constexpr uint32_t hash(const T k, uint64_t base);
 };
 
-template<>
-struct Hash <uint64_t> {
-	static constexpr uint32_t hash(const uint64_t k, uint64_t base = StartHash64())
+template <> struct Hash<uint64_t> {
+	static constexpr uint32_t hash(const uint64_t k,
+								   uint64_t base = StartHash64())
 	{
 		return Hash64(k, base);
 	}
 };
 
-template<>
-struct Hash <uint32_t> {
-	static constexpr uint32_t hash(const uint32_t k, uint64_t base = StartHash32())
+template <> struct Hash<uint32_t> {
+	static constexpr uint32_t hash(const uint32_t k,
+								   uint64_t base = StartHash32())
 	{
 		return Hash32(k, base);
 	}
 };
 
-template<>
-struct Hash <int32_t> {
-	static constexpr uint32_t hash(const int32_t k, uint64_t base = StartHash32())
+template <> struct Hash<int32_t> {
+	static constexpr uint32_t hash(const int32_t k,
+								   uint64_t base = StartHash32())
 	{
 		return Hash32((uint32_t)k, base);
 	}
 };
 
-template<>
-struct Hash <int64_t> {
-	static constexpr uint32_t hash(const int64_t k, uint64_t base = StartHash32())
+template <> struct Hash<int64_t> {
+	static constexpr uint32_t hash(const int64_t k,
+								   uint64_t base = StartHash32())
 	{
 		return Hash32((uint64_t)k, base);
 	}
 };
 
-template<typename T>
-struct Hash <T *> {
-	uint32_t hash(const T *k, uint64_t base = sizeof(T*)==sizeof(uint64_t) ? StartHash64() : StartHash32())
+template <typename T> struct Hash<T *> {
+	uint32_t hash(const T *k, uint64_t base = sizeof(T *) == sizeof(uint64_t)
+												  ? StartHash64()
+												  : StartHash32())
 	{
-		if constexpr (sizeof(T*) == sizeof(uint64_t)) {
+		if constexpr (sizeof(T *) == sizeof(uint64_t)) {
 			return Hash<uint64_t>::hash((uint64_t)k, base);
-		} else if constexpr (sizeof(T*) == sizeof(uint32_t)) {
+		} else if constexpr (sizeof(T *) == sizeof(uint32_t)) {
 			return Hash<uint32_t>::hash((uint32_t)k, base);
 		} else {
 			static_assert(!"sizeof(T*) needs to be 4 or 8 bytes, but is not.");
@@ -108,38 +108,37 @@ struct Hash <T *> {
 	}
 };
 
-template<typename T>
-struct Hash <std::shared_ptr<T>> {
+template <typename T> struct Hash<std::shared_ptr<T>> {
 	uint32_t hash(const std::shared_ptr<T> &k, uint64_t base = StartHash64())
 	{
-		return Hash<T*>(k.get(), base);
+		return Hash<T *>(k.get(), base);
 	}
 };
 
-template<>
-struct Hash <std::string_view> {
-	static constexpr uint32_t hash(const std::string_view k, uint64_t base = StartHash64())
+template <> struct Hash<std::string_view> {
+	static constexpr uint32_t hash(const std::string_view k,
+								   uint64_t base = StartHash64())
 	{
 		const char *ptr = k.data();
 		const uint32_t size = k.size();
 		uint32_t i = 0;
 		uint64_t h = base;
-		for (; i+8 < size; i += 8) {
-			uint64_t v = *(const uint64_t*)(ptr+i);
+		for (; i + 8 < size; i += 8) {
+			uint64_t v = *(const uint64_t *)(ptr + i);
 			h = Hash64(h, v);
 		}
 		uint64_t v = 0;
-		memcpy(&v, ptr+i, size - i);
+		memcpy(&v, ptr + i, size - i);
 		return Hash64(h, v);
 	}
 };
 
-template<>
-struct Hash <std::string> {
-	static constexpr uint32_t hash(const std::string &k, uint64_t base = StartHash64())
+template <> struct Hash<std::string> {
+	static constexpr uint32_t hash(const std::string &k,
+								   uint64_t base = StartHash64())
 	{
 		return Hash<std::string_view>::hash(std::string_view(k), base);
 	}
 };
-}
+} // namespace icon7
 #endif
