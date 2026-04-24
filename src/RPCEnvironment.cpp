@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2025 Marek Zalewski aka Drwalin
+// Copyright (C) 2023-2026 Marek Zalewski aka Drwalin
 //
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
@@ -94,7 +94,7 @@ void RPCEnvironment::OnReceiveReturn(Peer *peer, ByteReader &reader,
 }
 
 void RPCEnvironment::CheckForTimeoutFunctionCalls(Loop *loop,
-												  uint32_t maxChecks) const
+												  uint32_t maxChecks)
 {
 	auto now = time::GetTemporaryTimestamp();
 	for (uint32_t i = 0; i < maxChecks; ++i) {

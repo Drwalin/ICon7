@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2025 Marek Zalewski aka Drwalin
+// Copyright (C) 2023-2026 Marek Zalewski aka Drwalin
 //
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
@@ -36,20 +36,17 @@ public:
 	{
 		assert(_commandSize == sizeof(CommandCallSend));
 		flags = o.flags;
-		rpcEnv = o.rpcEnv;
 		peer = std::move(o.peer);
 	}
 
-	CommandCallSend(std::shared_ptr<Peer> &&peer, RPCEnvironment const *rpcEnv,
-					OnReturnCallback &&callback, Flags flags,
-					ByteBuffer &&buffer)
-		: ExecuteOnPeer(peer), rpcEnv(rpcEnv), callback(std::move(callback)),
-		  flags(flags), buffer(std::move(buffer))
+	CommandCallSend(std::shared_ptr<Peer> &&peer, OnReturnCallback &&callback,
+					Flags flags, ByteBuffer &&buffer)
+		: ExecuteOnPeer(peer), callback(std::move(callback)), flags(flags),
+		  buffer(std::move(buffer))
 	{
 	}
 	virtual ~CommandCallSend() {}
 
-	RPCEnvironment const *rpcEnv;
 	OnReturnCallback callback;
 	Flags flags;
 	ByteBuffer buffer;
@@ -139,8 +136,8 @@ public:
 	}
 
 	template <typename... Targs>
-	void Send(Peer *peer, Flags flags, const std::string &name,
-			  const Targs &...args) const
+	static void Send(Peer *peer, Flags flags, const std::string &name,
+					 const Targs &...args)
 	{
 		ByteBuffer buffer(100);
 		SerializeSend(buffer, flags, name, args...);
@@ -183,9 +180,9 @@ public:
 	}
 
 	template <typename... Targs>
-	void Call(CommandsBufferHandler *commandsBuffer, Peer *peer, Flags flags,
-			  OnReturnCallback &&callback, const std::string &name,
-			  const Targs &...args) const
+	static void Call(CommandsBufferHandler *commandsBuffer, Peer *peer,
+					 Flags flags, OnReturnCallback &&callback,
+					 const std::string &name, const Targs &...args)
 	{
 		ByteWriter writer(100);
 		writer.op((uint32_t)0);
@@ -193,13 +190,13 @@ public:
 		(writer.op(args), ...);
 
 		commandsBuffer->EnqueueCommand<commands::internal::CommandCallSend>(
-			peer->shared_from_this(), this, std::move(callback), flags,
+			peer->shared_from_this(), std::move(callback), flags,
 			std::move(writer._data));
 	}
 
 	template <typename... Targs>
-	void Call(Peer *peer, Flags flags, OnReturnCallback &&callback,
-			  const std::string &name, const Targs &...args) const
+	static void Call(Peer *peer, Flags flags, OnReturnCallback &&callback,
+					 const std::string &name, const Targs &...args)
 	{
 		ByteWriter writer(100);
 		writer.op((uint32_t)0);
@@ -207,7 +204,7 @@ public:
 		(writer.op(args), ...);
 
 		auto cb = CommandHandle<commands::internal::CommandCallSend>::Create(
-			peer->shared_from_this(), this, std::move(callback), flags,
+			peer->shared_from_this(), std::move(callback), flags,
 			std::move(writer._data));
 		peer->host->EnqueueCommand(std::move(cb));
 	}
@@ -216,7 +213,7 @@ public:
 
 	friend class Host;
 
-	void CheckForTimeoutFunctionCalls(Loop *loop, uint32_t maxChecks) const;
+	static void CheckForTimeoutFunctionCalls(Loop *loop, uint32_t maxChecks);
 
 protected:
 	std::unordered_map<std::string, MessageConverter *> registeredMessages;

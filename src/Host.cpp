@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2025 Marek Zalewski aka Drwalin
+// Copyright (C) 2023-2026 Marek Zalewski aka Drwalin
 //
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
@@ -193,22 +193,17 @@ void Host::EnqueueCommand(CommandHandle<Command> &&command)
 void Host::_InternalSingleLoopIteration()
 {
 	assert(rpcEnvironment);
+	FlushPendingPeers();
+	RPCEnvironment::CheckForTimeoutFunctionCalls(loop.get(), 16);
+}
+
+void Host::FlushPendingPeers()
+{
 	for (auto &p : peers) {
 		if (p->_InternalHasBufferedSends() || p->_InternalHasQueuedSends()) {
 			p->_InternalOnWritable();
 		}
 	}
-	rpcEnvironment->CheckForTimeoutFunctionCalls(loop.get(), 16);
-}
-
-void Host::InsertPeerToFlush(Peer *peer)
-{
-	// TODO: optimise this to remove passing command to host thread
-	// i.e.: implement concurrent bit set of active peers
-	/*
-	commandQueue.GetThreadLocalBuffer()->EnqueueCommand<commands::internal::ExecuteAddPeerToFlush>(
-		peer->shared_from_this(), this);
-	*/
 }
 
 const RPCEnvironment *Host::GetRpcEnvironment() { return rpcEnvironment; }
