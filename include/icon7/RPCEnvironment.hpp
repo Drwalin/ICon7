@@ -19,6 +19,7 @@
 #include "CommandsBufferHandler.hpp"
 #include "OnReturnCallback.hpp"
 #include "MessageConverter.hpp"
+#include "../../bitscpp/include/bitscpp/Endianness.hpp"
 
 namespace icon7
 {
@@ -185,7 +186,7 @@ public:
 					 const std::string &name, const Targs &...args)
 	{
 		ByteWriter writer(100);
-		writer.op((uint32_t)0);
+		writer.op_untyped_uint32(0);
 		writer.op(name);
 		(writer.op(args), ...);
 
@@ -199,7 +200,7 @@ public:
 					 const std::string &name, const Targs &...args)
 	{
 		ByteWriter writer(100);
-		writer.op((uint32_t)0);
+		writer.op_untyped_uint32(0);
 		writer.op(name);
 		(writer.op(args), ...);
 

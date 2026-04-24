@@ -33,8 +33,13 @@ endif()
 
 add_definitions(-DCMAKE_EXPORT_COMPILE_COMMANDS=ON)
 
+add_compile_definitions(BITSCPP_BYTE_WRITER_V2_BT_TYPE=icon7::ByteBuffer)
+add_compile_definitions(BITSCPP_BYTE_WRITER_V2_NAME_SUFFIX=_ByteBuffer)
+
 add_subdirectory(concurrent)
 add_subdirectory(bitscpp)
+
+target_precompile_headers(bitscpp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/icon7/ByteBuffer.hpp")
 
 include_directories(include/)
 include_directories(uSockets/src/)

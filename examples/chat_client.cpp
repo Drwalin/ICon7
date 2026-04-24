@@ -9,6 +9,7 @@
 #include <icon7/Flags.hpp>
 #include <icon7/PeerUStcp.hpp>
 #include <icon7/HostUStcp.hpp>
+#include <random>
 #include "../include/icon7/LoopUS.hpp"
 
 std::unordered_map<std::string, icon7::Peer *> peers;
@@ -56,6 +57,7 @@ int main(int argc, char **argv)
 
 	printf("To exit write: quit\n");
 
+	FILE *f = fopen((std::string("/tmp/out.log.")+std::to_string(std::random_device()())).c_str(), "a+");
 	while (true) {
 		printf("[%s]:", peer->IsReadyToUse() ? "ready" : "not_ready");
 		std::string str;
@@ -89,9 +91,12 @@ int main(int argc, char **argv)
 						 10000, peer.get()),
 					 "Msg", recipient, str.substr(end + 1));
 		} else {
+			fprintf(f, "Broadcasting `%s`\n", str.c_str());
+			fflush(f);
 			rpc.Send(peer.get(), icon7::FLAG_RELIABLE, "Broadcast", str);
 		}
 	}
+	fclose(f);
 
 	loop->Destroy();
 	loop = nullptr;

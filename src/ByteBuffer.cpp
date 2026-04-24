@@ -54,8 +54,8 @@ ByteBufferStorageHeader::Reallocate(ByteBufferStorageHeader *ptr,
 	return ret;
 }
 
-bitscpp::ByteReader<true> &
-ByteBuffer::__ByteStream_op(bitscpp::ByteReader<true> &s)
+bitscpp::v2::ByteReader &
+ByteBuffer::__ByteStream_op(bitscpp::v2::ByteReader &s)
 {
 	int32_t size = 0;
 	s.op(size);
@@ -68,8 +68,8 @@ ByteBuffer::__ByteStream_op(bitscpp::ByteReader<true> &s)
 	return s;
 }
 
-bitscpp::ByteWriter<icon7::ByteBuffer> &
-ByteBuffer::__ByteStream_op(bitscpp::ByteWriter<icon7::ByteBuffer> &s)
+bitscpp::v2::ByteWriter_ByteBuffer &
+ByteBuffer::__ByteStream_op(bitscpp::v2::ByteWriter_ByteBuffer &s)
 {
 	if (storage) {
 		const uint32_t size = this->size();

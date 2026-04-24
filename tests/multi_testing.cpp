@@ -477,7 +477,7 @@ int main(int argc, char **argv)
 										  printf(" Multiplication timeout\n");
 									  },
 									  24 * 3600 * 1000, peer),
-								  "mul", 5, 13, additionalPayload.data());
+								  "mul", 5, 13, additionalPayload);
 						sent++;
 					}
 					commandsBuffer.FlushBuffer();
@@ -488,7 +488,7 @@ int main(int argc, char **argv)
 							icon7::ByteBuffer buffer(100);
 							rpc2.SerializeSend(buffer, icon7::FLAG_RELIABLE,
 											   "sum", 3, 23,
-											   additionalPayload.data());
+											   additionalPayload);
 							sendFrameSize = buffer.size();
 							for (auto p : validPeers) {
 								auto peer = p.get();
@@ -499,7 +499,7 @@ int main(int argc, char **argv)
 							for (auto p : validPeers) {
 								auto peer = p.get();
 								rpc2.Send(peer, icon7::FLAG_RELIABLE, "sum", 3,
-										  23, additionalPayload.data());
+										  23, additionalPayload);
 								sent++;
 							}
 						}

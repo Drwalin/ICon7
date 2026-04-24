@@ -23,5 +23,7 @@ function(add_common_precompiled_headers target)
 	)
 
 	file(GLOB_RECURSE files "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/bitscpp/include/*")
-	target_precompile_headers(${target} PUBLIC ${files})
+	target_precompile_headers(${target} PUBLIC
+		"${CMAKE_CURRENT_SOURCE_DIR}/include/icon7/ByteBuffer.hpp"
+		${files})
 endfunction()

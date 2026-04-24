@@ -51,7 +51,7 @@ void RPCEnvironment::OnReceiveCall(Peer *peer, ByteReader &reader,
 {
 	uint32_t returnId = 0;
 	if ((flags & 6) == FLAGS_CALL) {
-		reader.op(returnId);
+		reader.op_untyped_uint32(returnId);
 	}
 	std::string name;
 	reader.op(name);
@@ -78,18 +78,18 @@ void RPCEnvironment::OnReceiveCall(Peer *peer, ByteReader &reader,
 void RPCEnvironment::OnReceiveReturn(Peer *peer, ByteReader &reader,
 									 Flags flags) const
 {
-	uint32_t id = 0;
-	reader.op(id);
+	uint32_t returnId = 0;
+	reader.op_untyped_uint32(returnId);
 	OnReturnCallback callback;
-	auto cb = peer->returningCallbacks.Get(id);
+	auto cb = peer->returningCallbacks.Get(returnId);
 	if (cb != nullptr) {
 		callback = std::move(*cb);
-		peer->returningCallbacks.Remove(id);
+		peer->returningCallbacks.Remove(returnId);
 		callback.Execute(peer, flags, reader);
 	} else {
 		LOG_WARN("Remote function call returned value but OnReturnedCallback "
 				 "already expired. returnId = %u",
-				 id);
+				 returnId);
 	}
 }
 

@@ -264,7 +264,7 @@ uint32_t Peer::_InternalGetNextValidReturnCallbackId()
 	uint32_t id;
 	do {
 		id = ++returnIdGen;
-	} while (returningCallbacks.Has(id));
+	} while (returningCallbacks.Has(id) || id == 0);
 	return id;
 }
 

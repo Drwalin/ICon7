@@ -65,7 +65,7 @@ public:
 		Tret ret = onReceive(std::get<SeqArgs>(args)...);
 		if (returnId && ((flags & 6) == FLAGS_CALL)) {
 			ByteWriter writer(100);
-			writer.op(returnId);
+			writer.op_untyped_uint32(returnId);
 			writer.op(ret);
 			if (FramingProtocol::WriteHeaderIntoBuffer(
 					writer._data, ((flags | Flags(6)) ^ Flags(6)) |
@@ -92,7 +92,7 @@ public:
 		onReceive(std::get<SeqArgs>(args)...);
 		if (returnId && ((flags & 6) == FLAGS_CALL)) {
 			ByteWriter writer(100);
-			writer.op(returnId);
+			writer.op_untyped_uint32(returnId);
 			if (FramingProtocol::WriteHeaderIntoBuffer(
 					writer._data, ((flags | Flags(6)) ^ Flags(6)) |
 									  FLAGS_CALL_RETURN_FEEDBACK)) {
@@ -138,8 +138,12 @@ private:
 		(PeerFlagsArgumentsReader::ReadType(peer, flags, reader,
 											std::get<SeqArgs>(args)),
 		 ...);
-		MessageReturnExecutor<Tret>::Execute(onReceive, args, peer, flags,
-											 returnId, seq);
+		if (reader.get_errors() != 0) {
+			LOG_ERROR("Failed to execute function call, error in ByteReader.");
+		} else {
+			MessageReturnExecutor<Tret>::Execute(onReceive, args, peer, flags,
+												 returnId, seq);
+		}
 	}
 
 private:
@@ -177,8 +181,12 @@ private:
 		(PeerFlagsArgumentsReader::ReadType(peer, flags, reader,
 											std::get<SeqArgs>(args)),
 		 ...);
-		MessageReturnExecutor<Tret>::Execute(onReceive, args, peer, flags,
-											 returnId, seq);
+		if (reader.get_errors() != 0) {
+			LOG_ERROR("Failed to execute function call, error in ByteReader.");
+		} else {
+			MessageReturnExecutor<Tret>::Execute(onReceive, args, peer, flags,
+												 returnId, seq);
+		}
 	}
 
 private:
@@ -216,11 +224,15 @@ private:
 		(PeerFlagsArgumentsReader::ReadType(peer, flags, reader,
 											std::get<SeqArgs>(args)),
 		 ...);
-		MessageReturnExecutor<Tret>::Execute(
-			[this](Targs... args) -> Tret {
-				return (object->*onReceive)(args...);
-			},
-			args, peer, flags, returnId, seq);
+		if (reader.get_errors() != 0) {
+			LOG_ERROR("Failed to execute function call, error in ByteReader.");
+		} else {
+			MessageReturnExecutor<Tret>::Execute(
+				[this](Targs... args) -> Tret {
+					return (object->*onReceive)(args...);
+				},
+				args, peer, flags, returnId, seq);
+		}
 	}
 
 private:

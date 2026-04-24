@@ -43,14 +43,20 @@ int main(int argc, char **argv)
 			return true;
 		});
 	rpc.RegisterMessage("Broadcast",
-						[](icon7::Peer *peer, std::string message) {
+						[](icon7::Peer *peer, std::string_view message) {
 							std::string nickname = "";
 							if (peer->userPointer != nullptr) {
 								nickname = *(std::string *)(peer->userPointer);
 							}
 
+							printf("Received broadcasting call: `%s`\n", (std::string(message)).c_str());
+
 							peer->host->ForEachPeer([&](icon7::Peer *p2) {
 								if (p2 != peer) {
+									auto on = (std::string*)(p2->userPointer);
+									printf("Sending broadcast from %s to %s\n",
+											nickname.c_str(),
+											on ? on->c_str() : "<anonymus>");
 									rpc.Send(p2, icon7::FLAG_RELIABLE,
 											 "Broadcasted", nickname, message);
 								}
@@ -58,7 +64,7 @@ int main(int argc, char **argv)
 						});
 	rpc.RegisterMessage("Msg",
 						[](icon7::Peer *peer, const std::string nickname,
-						   std::string message) -> bool {
+						   std::string_view message) -> bool {
 							std::string srcNickname = "";
 							if (peer->userPointer != nullptr) {
 								srcNickname =

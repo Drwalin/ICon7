@@ -8,13 +8,17 @@
 
 #include <cstring>
 #include <cstdint>
+#include <cassert>
 
 #include <atomic>
 
 namespace bitscpp
 {
-template <bool V> class ByteReader;
-template <typename T> class ByteWriter;
+namespace v2
+{
+class ByteReader;
+class ByteWriter_ByteBuffer;
+}
 } // namespace bitscpp
 
 namespace icon7
@@ -144,6 +148,18 @@ public:
 		memcpy(data() + size(), src, bytes);
 		storage->size += bytes;
 	}
+	
+	inline void push_back(uint8_t byte)
+	{
+		reserve(size() + 1);
+		data()[size()] = byte;
+		storage->size++;
+	}
+	
+	inline void write(const uint8_t *data, uint32_t bytes)
+	{
+		append(data, bytes);
+	}
 
 	inline uint8_t *data() { return storage->data(); }		 // NOLINT
 	inline uint8_t *data() const { return storage->data(); } // NOLINT
@@ -158,14 +174,15 @@ public:
 	inline size_t capacity() const { return storage->capacity; }
 	void reserve(size_t newCapacity)
 	{
+		assert(storage != nullptr);
 		if (newCapacity > storage->capacity) {
 			storage = ByteBufferStorageHeader::Reallocate(storage, newCapacity);
 		}
 	}
 
-	bitscpp::ByteReader<true> &__ByteStream_op(bitscpp::ByteReader<true> &s);
-	bitscpp::ByteWriter<icon7::ByteBuffer> &
-	__ByteStream_op(bitscpp::ByteWriter<icon7::ByteBuffer> &s);
+	bitscpp::v2::ByteReader &__ByteStream_op(bitscpp::v2::ByteReader &s);
+	bitscpp::v2::ByteWriter_ByteBuffer &
+	__ByteStream_op(bitscpp::v2::ByteWriter_ByteBuffer &s);
 
 public:
 	ByteBufferStorageHeader *storage = nullptr;
