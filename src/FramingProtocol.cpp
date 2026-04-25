@@ -9,6 +9,7 @@
 #include "../include/icon7/ByteBuffer.hpp"
 
 #include "../include/icon7/FramingProtocol.hpp"
+#include "../include/icon7/Debug.hpp"
 
 namespace icon7
 {
@@ -60,8 +61,13 @@ uint32_t FramingProtocol::GetPacketBodySize(uint8_t *header, uint8_t headerSize)
 [[nodiscard]] bool FramingProtocol::WriteHeaderIntoBuffer(ByteBuffer &buffer,
 														  Flags flags)
 {
-	if (buffer.storage->offset != sizeof(ByteBufferStorageHeader) + 8 ||
+	if (buffer.storage->offset < sizeof(ByteBufferStorageHeader) + 8 ||
 		buffer.size() == 0) {
+		LOG_FATAL("Error; buffer: size=%u  offset: %u  cap: %u",
+				buffer.storage->size,
+				buffer.storage->offset,
+				buffer.storage->capacity
+				);
 		return false;
 	}
 

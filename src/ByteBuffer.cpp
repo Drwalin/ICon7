@@ -15,7 +15,7 @@ namespace icon7
 {
 ByteBufferStorageHeader *ByteBufferStorageHeader::Allocate(uint32_t capacity)
 {
-	const uint32_t S = sizeof(ByteBufferStorageHeader);
+	const uint32_t S = sizeof(ByteBufferStorageHeader) + 8;
 	uint32_t trueCapacity = std::bit_ceil(capacity + S);
 	if (trueCapacity < 64)
 		trueCapacity = 64;
@@ -44,7 +44,7 @@ ByteBufferStorageHeader::Reallocate(ByteBufferStorageHeader *ptr,
 	ByteBufferStorageHeader *ret =
 		Allocate(newCapacity + ptr->offset - sizeof(ByteBufferStorageHeader));
 	int32_t offsetDiff = ret->offset - ptr->offset;
-	ret->offset -= offsetDiff;
+	ret->offset = ptr->offset;
 	ret->capacity += offsetDiff;
 	ret->size = ptr->size;
 	ret->refCounter = 1;

@@ -36,8 +36,8 @@ public:
 		}
 		_data.ResetCurrentStorageCapacitySizeOffset();
 		_data.storage->size = 0;
-		_data.storage->capacity -= 8;
-		_data.storage->offset += 8;
+// 		_data.storage->capacity -= 8;
+// 		_data.storage->offset += 8;
 	}
 
 	ByteWriter(ByteWriter &&o) : _data(std::move(o._data))
@@ -52,8 +52,8 @@ public:
 		// additional store in form of:
 		// [4] - icon7::Flags
 		// [4] - max store for header
-		_data.storage->capacity -= 8;
-		_data.storage->offset += 8;
+// 		_data.storage->capacity -= 8;
+// 		_data.storage->offset += 8;
 		Init(&_data);
 	}
 
@@ -61,8 +61,8 @@ public:
 	{
 		_data.Init(capacity);
 		_data.storage->size = 0;
-		_data.storage->capacity -= 8;
-		_data.storage->offset += 8;
+// 		_data.storage->capacity -= 8;
+// 		_data.storage->offset += 8;
 		Init(&_data);
 	}
 

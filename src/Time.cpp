@@ -287,14 +287,14 @@ namespace bitscpp
 {
 namespace v2
 {
-void op(ByteReader &s, icon7::time::Point &v) { s.op(v.ns); }
-void op(ByteWriter_ByteBuffer &s, const icon7::time::Point &v) { s.op(v.ns); }
+void serialize(ByteReader &s, icon7::time::Point &v) { s.op(v.ns); }
+void serialize(ByteWriter_ByteBuffer &s, const icon7::time::Point &v) { s.op(v.ns); }
 
-void op(ByteReader &s, icon7::time::Diff &v) { s.op(v.ns); }
-void op(ByteWriter_ByteBuffer &s, const icon7::time::Diff &v) { s.op(v.ns); }
+void serialize(ByteReader &s, icon7::time::Diff &v) { s.op(v.ns); }
+void serialize(ByteWriter_ByteBuffer &s, const icon7::time::Diff &v) { s.op(v.ns); }
 
-void op(ByteReader &s, icon7::time::Timestamp &v) { s.op(v.ns); }
-void op(ByteWriter_ByteBuffer &s, const icon7::time::Timestamp &v)
+void serialize(ByteReader &s, icon7::time::Timestamp &v) { s.op(v.ns); }
+void serialize(ByteWriter_ByteBuffer &s, const icon7::time::Timestamp &v)
 {
 	s.op(v.ns);
 }

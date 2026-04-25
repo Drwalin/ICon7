@@ -23,7 +23,7 @@ static uint64_t InitRandom()
 
 uint64_t RandHashBase()
 {
-	thread_local std::mt19937_64 mt(InitRandom());
+	/*thread_local */ static std::mt19937_64 mt(InitRandom());
 	return mt();
 }
 } // namespace icon7

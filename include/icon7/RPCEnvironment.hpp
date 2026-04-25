@@ -9,6 +9,8 @@
 #include <string>
 #include <unordered_map>
 
+#include "../../bitscpp/include/bitscpp/Endianness.hpp"
+
 #include "ByteWriter.hpp"
 #include "Debug.hpp"
 #include "ByteReader.hpp"
@@ -19,7 +21,7 @@
 #include "CommandsBufferHandler.hpp"
 #include "OnReturnCallback.hpp"
 #include "MessageConverter.hpp"
-#include "../../bitscpp/include/bitscpp/Endianness.hpp"
+#include "ByteWriter.hpp"
 
 namespace icon7
 {
@@ -145,16 +147,16 @@ public:
 		peer->Send(std::move(buffer));
 	}
 
-	static void InitializeSerializeSend(ByteWriter &writer,
+	static void InitializeSerializeSend(bitscpp::v2::ByteWriter_ByteBuffer &writer,
 										const std::string &name)
 	{
 		writer.op(name);
 	}
 
-	static void FinalizeSerializeSend(ByteWriter &writer, Flags &flags)
+	static void FinalizeSerializeSend(bitscpp::v2::ByteWriter_ByteBuffer &writer, Flags &flags)
 	{
 		flags |= FLAGS_CALL_NO_FEEDBACK;
-		if (FramingProtocol::WriteHeaderIntoBuffer(writer._data, flags) ==
+		if (FramingProtocol::WriteHeaderIntoBuffer(*writer._buffer, flags) ==
 			false) {
 			LOG_FATAL("Trying to write header into invalid ByteBuffer.");
 		}
@@ -164,11 +166,10 @@ public:
 	static void SerializeSend(ByteBuffer &buffer, Flags flags,
 							  const std::string &name, const Targs &...args)
 	{
-		ByteWriter writer(std::move(buffer));
+		bitscpp::v2::ByteWriter_ByteBuffer writer(&buffer);
 		InitializeSerializeSend(writer, name);
 		(writer.op(args), ...);
 		FinalizeSerializeSend(writer, flags);
-		buffer = std::move(writer._data);
 	}
 
 	template <typename... Targs>

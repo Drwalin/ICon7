@@ -135,6 +135,7 @@ public:
 
 	inline void clear()
 	{
+		assert(storage);
 		if (storage) {
 			storage->size = 0;
 		}
@@ -144,6 +145,7 @@ public:
 
 	inline void append(const uint8_t *src, uint32_t bytes)
 	{
+		assert(storage);
 		reserve(size() + bytes);
 		memcpy(data() + size(), src, bytes);
 		storage->size += bytes;
@@ -151,6 +153,7 @@ public:
 	
 	inline void push_back(uint8_t byte)
 	{
+		assert(storage);
 		reserve(size() + 1);
 		data()[size()] = byte;
 		storage->size++;
@@ -158,6 +161,7 @@ public:
 	
 	inline void write(const uint8_t *data, uint32_t bytes)
 	{
+		assert(storage);
 		append(data, bytes);
 	}
 
@@ -166,6 +170,7 @@ public:
 	inline size_t size() const { return storage->size; }	 // NOLINT
 	inline void resize(size_t newSize)
 	{
+		assert(storage);
 		if (capacity() < newSize) {
 			reserve(newSize);
 		}
@@ -174,7 +179,7 @@ public:
 	inline size_t capacity() const { return storage->capacity; }
 	void reserve(size_t newCapacity)
 	{
-		assert(storage != nullptr);
+		assert(storage);
 		if (newCapacity > storage->capacity) {
 			storage = ByteBufferStorageHeader::Reallocate(storage, newCapacity);
 		}
