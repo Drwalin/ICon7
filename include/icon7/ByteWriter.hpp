@@ -46,8 +46,8 @@ public:
 
 	void Reinit(uint32_t capacity)
 	{
-		_data.reserve(capacity);
 		_data.clear();
+		_data.reserve(capacity);
 		Init(&_data);
 	}
 
