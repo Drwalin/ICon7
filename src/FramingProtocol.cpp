@@ -7,9 +7,8 @@
 
 #include "../include/icon7/Flags.hpp"
 #include "../include/icon7/ByteBuffer.hpp"
-
-#include "../include/icon7/FramingProtocol.hpp"
 #include "../include/icon7/Debug.hpp"
+#include "../include/icon7/FramingProtocol.hpp"
 
 namespace icon7
 {
@@ -44,7 +43,7 @@ uint32_t FramingProtocol::GetPacketHeaderSize(uint8_t headerFirstByte)
 	return (headerFirstByte & 3) + 1;
 }
 
-Flags FramingProtocol::GetPacketFlags(uint8_t *header, Flags otherFlags)
+Flags FramingProtocol::GetPacketFlags(const uint8_t *header, Flags otherFlags)
 {
 	return otherFlags | Flags((header[0] >> 1) & 6);
 }
@@ -58,27 +57,27 @@ uint32_t FramingProtocol::GetPacketBodySize(uint8_t *header, uint8_t headerSize)
 	return (h >> 4) + 1;
 }
 
-[[nodiscard]] bool FramingProtocol::WriteHeaderIntoBuffer(ByteBuffer &buffer,
+[[nodiscard]] bool FramingProtocol::WriteHeaderIntoBuffer(ByteBufferWritable &buffer,
 														  Flags flags)
 {
-	if (buffer.storage->offset < sizeof(ByteBufferStorageHeader) + 8 ||
+	if (buffer._offset < sizeof(ByteBufferStorageHeader) + 4 ||
 		buffer.size() == 0) {
 		LOG_FATAL("Error; buffer: size=%u  offset: %u  cap: %u",
-				buffer.storage->size,
-				buffer.storage->offset,
-				buffer.storage->capacity
+				buffer._size,
+				buffer._offset,
+				buffer._capacity
 				);
 		return false;
 	}
 
-	memcpy(((uint8_t *)buffer.storage) + sizeof(ByteBufferStorageHeader),
-		   &flags, 4);
+	buffer._flags = flags;
 	uint32_t headerSize = FramingProtocol::GetHeaderSize(buffer.size());
 	uint8_t *header = buffer.data() - headerSize;
 	FramingProtocol::WriteHeader(header, headerSize, buffer.size(), flags);
-	buffer.storage->capacity += headerSize;
-	buffer.storage->size += headerSize;
-	buffer.storage->offset -= headerSize;
+	buffer._capacity += headerSize;
+	buffer._size += headerSize;
+	buffer._offset -= headerSize;
+	buffer.buffer -= headerSize;
 	return true;
 }
 } // namespace icon7

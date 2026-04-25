@@ -38,27 +38,31 @@ public:
 		: callback(std::move(o.callback)), buffer(std::move(o.buffer))
 	{
 		assert(_commandSize == sizeof(CommandCallSend));
-		flags = o.flags;
+		assert(buffer.buffer);
 		peer = std::move(o.peer);
+		flags = o.flags;
+		o.flags = 0;
 	}
 
 	CommandCallSend(std::shared_ptr<Peer> &&peer, OnReturnCallback &&callback,
-					Flags flags, ByteBuffer &&buffer)
-		: ExecuteOnPeer(peer), callback(std::move(callback)), flags(flags),
-		  buffer(std::move(buffer))
+					Flags flags, ByteBufferWritable &&buffer)
+		: ExecuteOnPeer(peer), callback(std::move(callback)),
+		  buffer(std::move(buffer)), flags(flags)
 	{
+		assert(this->buffer.buffer);
 	}
 	virtual ~CommandCallSend() {}
 
 	OnReturnCallback callback;
+	ByteBufferWritable buffer;
 	Flags flags;
-	ByteBuffer buffer;
 
 	virtual void Execute() override
 	{
+		assert(buffer.buffer);
 		const uint32_t rcbId = peer->_InternalGetNextValidReturnCallbackId();
 		const uint32_t rcbId_v = bitscpp::HostToNetworkUint(rcbId);
-		memcpy(buffer.data(), &rcbId_v, sizeof(rcbId_v));
+		memcpy((void*)buffer.data(), &rcbId_v, sizeof(rcbId_v));
 		peer->returningCallbacks.InsertOrSet(rcbId, std::move(callback));
 		flags |= FLAGS_CALL;
 		if (FramingProtocol::WriteHeaderIntoBuffer(buffer, flags)) {
@@ -77,7 +81,7 @@ public:
 	RPCEnvironment();
 	~RPCEnvironment();
 
-	void OnReceive(Peer *peer, ByteBuffer &frameData, uint32_t headerSize,
+	void OnReceive(Peer *peer, ByteBufferReadable &frameData, uint32_t headerSize,
 				   Flags flags) const;
 	/*
 	 * expects that reader already filled flags fully and reader is at body
@@ -142,7 +146,7 @@ public:
 	static void Send(Peer *peer, Flags flags, const std::string &name,
 					 const Targs &...args)
 	{
-		ByteBuffer buffer(100);
+		ByteBufferWritable buffer(100);
 		SerializeSend(buffer, flags, name, args...);
 		peer->Send(std::move(buffer));
 	}
@@ -163,7 +167,7 @@ public:
 	}
 
 	template <typename... Targs>
-	static void SerializeSend(ByteBuffer &buffer, Flags flags,
+	static void SerializeSend(ByteBufferWritable &buffer, Flags flags,
 							  const std::string &name, const Targs &...args)
 	{
 		bitscpp::v2::ByteWriter_ByteBuffer writer(&buffer);
@@ -173,10 +177,10 @@ public:
 	}
 
 	template <typename... Targs>
-	static ByteBuffer SerializeSend(Flags flags, const std::string &name,
+	static ByteBufferReadable SerializeSend(Flags flags, const std::string &name,
 									const Targs &...args)
 	{
-		ByteBuffer buffer(100);
+		ByteBufferWritable buffer(100);
 		SerializeSend(buffer, flags, name, args...);
 		return buffer;
 	}

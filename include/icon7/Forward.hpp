@@ -27,7 +27,8 @@ namespace icon7
 class ByteWriter;
 class ByteReader;
 struct ByteBufferStorageHeader;
-class ByteBuffer;
+class ByteBufferReadable;
+class ByteBufferWritable;
 class CommandExecutionQueue;
 struct CoroutineSchedulable;
 class Loop;

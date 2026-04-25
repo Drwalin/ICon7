@@ -193,7 +193,8 @@ ProcPidStat proc_pid_stat(int64_t pid)
 
 void AsyncThreadMemoryAmountMetrics(std::string fileName)
 {
-#if defined(__unix__) && ICON7_USE_RPMALLOC
+#if defined(__unix__)
+#if ICON7_USE_RPMALLOC
 	std::thread([=]() {
 		FILE *file = fopen(fileName.c_str(), "w");
 		fprintf(file, "# time[s] - "
@@ -253,6 +254,7 @@ void AsyncThreadMemoryAmountMetrics(std::string fileName)
 		}
 		fclose(file);
 	}).detach();
+#endif
 #endif
 }
 
@@ -485,14 +487,15 @@ int main(int argc, char **argv)
 
 					for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
 						if (l % serializeSendsModulo < serializeSendsFract) {
-							icon7::ByteBuffer buffer(100);
+							icon7::ByteBufferWritable buffer(100);
 							rpc2.SerializeSend(buffer, icon7::FLAG_RELIABLE,
 											   "sum", 3, 23,
 											   additionalPayload);
 							sendFrameSize = buffer.size();
+							icon7::ByteBufferReadable constBuffer(std::move(buffer));
 							for (auto p : validPeers) {
 								auto peer = p.get();
-								peer->Send(buffer);
+								peer->Send(constBuffer);
 								sent++;
 							}
 						} else {

@@ -12,7 +12,8 @@
 
 namespace icon7
 {
-class ByteBuffer;
+class ByteBufferWritable;
+class ByteBufferReadable;
 
 class FramingProtocol
 {
@@ -21,13 +22,13 @@ public:
 	static void WriteHeader(uint8_t *header, uint32_t headerSize,
 							uint32_t dataSize, Flags flags);
 	static uint32_t GetPacketHeaderSize(uint8_t headerFirstByte);
-	static Flags GetPacketFlags(uint8_t *header, Flags otherFlags);
+	static Flags GetPacketFlags(const uint8_t *header, Flags otherFlags);
 	static uint32_t GetPacketBodySize(uint8_t *header, uint8_t headerSize);
 
 	/*
-	 * returns false for invalid ByteBuffer object
+	 * returns false for invalid ByteBufferWritable object
 	 */
-	[[nodiscard]] static bool WriteHeaderIntoBuffer(ByteBuffer &buffer,
+	[[nodiscard]] static bool WriteHeaderIntoBuffer(ByteBufferWritable &buffer,
 													Flags flags);
 };
 } // namespace icon7

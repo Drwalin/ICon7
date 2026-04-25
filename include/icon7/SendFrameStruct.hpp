@@ -8,23 +8,21 @@
 
 #include <cstdint>
 
-#include "Flags.hpp"
 #include "ByteBuffer.hpp"
 
 namespace icon7
 {
 struct SendFrameStruct {
-	ByteBuffer data;
-	Flags flags = 0;
+	ByteBufferReadable data;
 	uint32_t bytesSent = 0;
 
 	inline uint32_t GetBytes() const { return data.size(); }
 
-	SendFrameStruct(ByteBuffer &dataWithoutHeader);
-	SendFrameStruct(ByteBuffer &&dataWithoutHeader);
+	SendFrameStruct(ByteBufferReadable &dataWithoutHeader);
+	SendFrameStruct(ByteBufferReadable &&dataWithoutHeader);
 	inline SendFrameStruct() {}
 	inline SendFrameStruct(SendFrameStruct &&o)
-		: data(std::move(o.data)), flags(o.flags), bytesSent(o.bytesSent)
+		: data(std::move(o.data)), bytesSent(o.bytesSent)
 	{
 		o.data.storage = nullptr;
 	}
@@ -32,14 +30,11 @@ struct SendFrameStruct {
 	{
 		data = std::move(o.data);
 		o.data.storage = nullptr;
-		flags = o.flags;
 		bytesSent = o.bytesSent;
 		return *this;
 	}
 	inline ~SendFrameStruct()
 	{
-		data.~ByteBuffer();
-		data.storage = nullptr;
 	}
 
 	SendFrameStruct(SendFrameStruct &) = delete;

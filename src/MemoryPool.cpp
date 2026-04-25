@@ -3,6 +3,8 @@
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
+#include <cassert>
+
 #if ICON7_USE_RPMALLOC
 #include "../include/icon7/Debug.hpp"
 #include "../rpmalloc/rpmalloc/rpmalloc.h"
@@ -28,10 +30,14 @@ AllocatedObject<void> MemoryPool::Allocate(size_t bytes)
 		____staticThreadLocalDestructorRpmalloc;
 
 	void *ptr = rpmalloc(bytes);
+	
+	assert((((uint64_t)ptr) & 0xF) == 0);
+	
+	assert(ptr);
 	size_t _bytes = rpmalloc_usable_size(ptr);
 	if (_bytes < bytes) {
 		rpfree(ptr);
-		LOG_FATAL("Allocated memory is smaller than requested");
+		LOG_FATAL("Allocated (%lu) memory is smaller than requested (%lu)", _bytes, bytes);
 		return {nullptr, 0};
 	} else {
 		bytes = _bytes;
@@ -56,7 +62,7 @@ AllocatedObject<void> MemoryPool::Allocate(size_t bytes)
 	} else {
 		Stats().largeAllocations += 1;
 	}
-
+	
 	return {ptr, _bytes};
 #else
 	Stats().allocatedBytes += bytes;
@@ -68,7 +74,12 @@ AllocatedObject<void> MemoryPool::Allocate(size_t bytes)
 		Stats().largeAllocations += 1;
 	}
 
-	return {malloc(bytes), bytes};
+	void *ptr = malloc(bytes);
+	
+	assert((((uint64_t)ptr) & 0xF) == 0);
+	
+	assert(ptr);
+	return {ptr, bytes};
 #endif
 }
 

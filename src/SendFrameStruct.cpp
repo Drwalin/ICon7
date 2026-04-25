@@ -7,18 +7,12 @@
 
 namespace icon7
 {
-SendFrameStruct::SendFrameStruct(ByteBuffer &data) : data(data)
+SendFrameStruct::SendFrameStruct(ByteBufferReadable &data) : data(data)
 {
-	memcpy(&flags,
-		   ((uint8_t *)this->data.storage) + sizeof(ByteBufferStorageHeader),
-		   4);
 	bytesSent = 0;
 }
-SendFrameStruct::SendFrameStruct(ByteBuffer &&data) : data(std::move(data))
+SendFrameStruct::SendFrameStruct(ByteBufferReadable &&data) : data(std::move(data))
 {
-	memcpy(&flags,
-		   ((uint8_t *)this->data.storage) + sizeof(ByteBufferStorageHeader),
-		   4);
 	bytesSent = 0;
 }
 } // namespace icon7

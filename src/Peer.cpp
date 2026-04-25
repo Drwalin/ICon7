@@ -43,19 +43,19 @@ Peer::~Peer()
 	}
 }
 
-void Peer::Send(ByteBuffer &frame)
+void Peer::Send(ByteBufferReadable &frame)
 {
-	ByteBuffer frameLocal = frame;
+	ByteBufferReadable frameLocal = frame;
 	Send(std::move(frameLocal));
 }
 
-void Peer::SendLocalThread(ByteBuffer &frame)
+void Peer::SendLocalThread(ByteBufferReadable &frame)
 {
-	ByteBuffer frameLocal = frame;
+	ByteBufferReadable frameLocal = frame;
 	SendLocalThread(std::move(frameLocal));
 }
 
-void Peer::Send(ByteBuffer &&frame)
+void Peer::Send(ByteBufferReadable &&frame)
 {
 	if (IsDisconnecting()) {
 		_InternalErrorSendOnDisconnecting();
@@ -69,7 +69,7 @@ void Peer::Send(ByteBuffer &&frame)
 	frame.storage = nullptr;
 }
 
-void Peer::SendLocalThread(ByteBuffer &&frame)
+void Peer::SendLocalThread(ByteBufferReadable &&frame)
 {
 	if (IsDisconnecting()) {
 		_InternalErrorSendOnDisconnecting();
@@ -116,13 +116,13 @@ void Peer::_InternalOnData(uint8_t *data, uint32_t length)
 	frameDecoder.PushData(data, length, _Internal_static_OnPacket, this);
 }
 
-void Peer::_Internal_static_OnPacket(ByteBuffer &buffer, uint32_t headerSize,
+void Peer::_Internal_static_OnPacket(ByteBufferReadable &buffer, uint32_t headerSize,
 									 void *peer)
 {
 	((Peer *)peer)->_InternalOnPacket(buffer, headerSize);
 }
 
-void Peer::_InternalOnPacket(ByteBuffer &buffer, uint32_t headerSize)
+void Peer::_InternalOnPacket(ByteBufferReadable &buffer, uint32_t headerSize)
 {
 	stats.framesReceived += 1;
 	host->stats.framesReceived += 1;
@@ -145,7 +145,7 @@ void Peer::_InternalOnPacket(ByteBuffer &buffer, uint32_t headerSize)
 	}
 }
 
-void Peer::_InternalOnPacketWithControllSequence(ByteBuffer &buffer,
+void Peer::_InternalOnPacketWithControllSequence(ByteBufferReadable &buffer,
 												 uint32_t headerSize)
 {
 	uint8_t vectorCall = buffer.data()[headerSize];
@@ -162,7 +162,7 @@ void Peer::_InternalOnPacketWithControllSequence(ByteBuffer &buffer,
 	}
 }
 
-void Peer::_InternalOnPacketWithControllSequenceBackend(ByteBuffer &buffer,
+void Peer::_InternalOnPacketWithControllSequenceBackend(ByteBufferReadable &buffer,
 														uint32_t headerSize)
 {
 	uint32_t vectorCall = buffer.data()[headerSize];

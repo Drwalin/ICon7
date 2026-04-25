@@ -42,10 +42,10 @@ public:
 	Peer &operator=(Peer &) = delete;
 	Peer &operator=(const Peer &) = delete;
 
-	virtual void Send(ByteBuffer &frame);
-	virtual void SendLocalThread(ByteBuffer &frame);
-	virtual void Send(ByteBuffer &&frame);
-	virtual void SendLocalThread(ByteBuffer &&frame);
+	virtual void Send(ByteBufferReadable &frame);
+	virtual void SendLocalThread(ByteBufferReadable &frame);
+	virtual void Send(ByteBufferReadable &&frame);
+	virtual void SendLocalThread(ByteBufferReadable &&frame);
 	void Disconnect();
 
 	inline bool IsReadyToUse() const { return peerFlags & BIT_READY; }
@@ -99,13 +99,13 @@ protected:
 
 	virtual void _InternalClearInternalDataOnClose();
 
-	static void _Internal_static_OnPacket(ByteBuffer &buffer,
+	static void _Internal_static_OnPacket(ByteBufferReadable &buffer,
 										  uint32_t headerSize, void *peer);
-	void _InternalOnPacket(ByteBuffer &buffer, uint32_t headerSize);
-	void _InternalOnPacketWithControllSequence(ByteBuffer &buffer,
+	void _InternalOnPacket(ByteBufferReadable &buffer, uint32_t headerSize);
+	void _InternalOnPacketWithControllSequence(ByteBufferReadable &buffer,
 											   uint32_t headerSize);
 	virtual void
-	_InternalOnPacketWithControllSequenceBackend(ByteBuffer &buffer,
+	_InternalOnPacketWithControllSequenceBackend(ByteBufferReadable &buffer,
 												 uint32_t headerSize);
 
 	uint32_t _InternalGetNextValidReturnCallbackId();

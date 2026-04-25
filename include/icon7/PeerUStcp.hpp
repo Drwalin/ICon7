@@ -44,7 +44,7 @@ protected:
 	int32_t SSL;
 	uint32_t writeBufferOffset = 0;
 
-	ByteBuffer writeBuffer;
+	ByteBufferWritable writeBuffer;
 };
 } // namespace tcp
 } // namespace uS

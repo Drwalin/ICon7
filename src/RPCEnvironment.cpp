@@ -21,7 +21,7 @@ RPCEnvironment::~RPCEnvironment()
 	registeredMessages.clear();
 }
 
-void RPCEnvironment::OnReceive(Peer *peer, ByteBuffer &frameData,
+void RPCEnvironment::OnReceive(Peer *peer, ByteBufferReadable &frameData,
 							   uint32_t headerSize, Flags flags) const
 {
 	flags = FramingProtocol::GetPacketFlags(frameData.data(), flags);

@@ -108,6 +108,7 @@ if(ICON7_USE_RPMALLOC)
 	target_compile_definitions(icon7 PUBLIC ICON7_USE_RPMALLOC=1)
 else()
 	target_compile_definitions(icon7 PUBLIC ICON7_USE_THREAD_CACHED_POOL=0)
+	target_compile_definitions(icon7 PUBLIC ICON7_USE_RPMALLOC=0)
 endif()
 
 if(NOT DEFINED ICON7_IGNORE_COMMON_LOG_PATH)

@@ -21,7 +21,7 @@ namespace tcp
 {
 Peer::Peer(uS::tcp::Host *host, us_socket_t *socket) : icon7::Peer(host)
 {
-	writeBuffer.Init(4000);
+	writeBuffer.reserve(4096-32);
 	this->socket = socket;
 	SSL = host->SSL;
 }
@@ -52,7 +52,7 @@ bool Peer::_InternalSend(SendFrameStruct &f, bool hasMore)
 
 	if (f.bytesSent < f.data.size()) {
 		uint32_t bytesToWrite = f.data.size() - f.bytesSent;
-		uint8_t *ptr = f.data.data() + f.bytesSent;
+		const uint8_t *ptr = f.data.data() + f.bytesSent;
 
 		if (writeBuffer.size() == writeBufferOffset &&
 			(bytesToWrite > 500 || hasMore == false)) {

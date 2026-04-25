@@ -15,18 +15,18 @@ namespace icon7
 class ByteReader : public bitscpp::v2::ByteReader
 {
 public:
-	ByteBuffer _data;
+	ByteBufferReadable _data;
 
 public:
 	inline ByteReader() : bitscpp::v2::ByteReader(nullptr, 0, 0) {}
 
-	inline ByteReader(ByteBuffer &data, uint32_t offset)
+	inline ByteReader(ByteBufferReadable &data, uint32_t offset)
 		: bitscpp::v2::ByteReader(data.data(), offset, data.size()),
 		  _data(data)
 	{
 	}
 
-	inline ByteReader(ByteBuffer &&data, uint32_t offset)
+	inline ByteReader(ByteBufferReadable &&data, uint32_t offset)
 		: bitscpp::v2::ByteReader(data.data(), offset, data.size()),
 		  _data(std::move(data))
 	{

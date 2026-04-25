@@ -70,7 +70,7 @@ public:
 			if (FramingProtocol::WriteHeaderIntoBuffer(
 					writer._data, ((flags | Flags(6)) ^ Flags(6)) |
 									  FLAGS_CALL_RETURN_FEEDBACK)) {
-				peer->Send(writer._data);
+				peer->Send(ByteBufferReadable(std::move(writer._data)));
 			} else {
 				LOG_FATAL("Trying to write header into invalid ByteBuffer.");
 			}
@@ -96,7 +96,7 @@ public:
 			if (FramingProtocol::WriteHeaderIntoBuffer(
 					writer._data, ((flags | Flags(6)) ^ Flags(6)) |
 									  FLAGS_CALL_RETURN_FEEDBACK)) {
-				peer->Send(writer._data);
+				peer->Send(ByteBufferReadable(std::move(writer._data)));
 			} else {
 				LOG_FATAL("Trying to write header into invalid ByteBuffer.");
 			}

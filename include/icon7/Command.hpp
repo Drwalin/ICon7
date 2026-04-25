@@ -303,7 +303,7 @@ public:
 	ExecutePeerSendFrame() {}
 
 	std::weak_ptr<Peer> peer;
-	ByteBuffer frame;
+	ByteBufferReadable frame;
 
 	virtual void Execute() override;
 };
