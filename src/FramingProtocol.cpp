@@ -8,6 +8,8 @@
 #include "../include/icon7/Flags.hpp"
 #include "../include/icon7/ByteBuffer.hpp"
 #include "../include/icon7/Debug.hpp"
+#include "../bitscpp/include/bitscpp/ByteReader_v2.hpp"
+
 #include "../include/icon7/FramingProtocol.hpp"
 
 namespace icon7
@@ -48,7 +50,8 @@ Flags FramingProtocol::GetPacketFlags(const uint8_t *header, Flags otherFlags)
 	return otherFlags | Flags((header[0] >> 1) & 6);
 }
 
-uint32_t FramingProtocol::GetPacketBodySize(uint8_t *header, uint8_t headerSize)
+uint32_t FramingProtocol::GetPacketBodySize(const uint8_t *header,
+											uint8_t headerSize)
 {
 	uint32_t h = 0;
 	for (int i = 0; i < headerSize; ++i) {
@@ -57,16 +60,13 @@ uint32_t FramingProtocol::GetPacketBodySize(uint8_t *header, uint8_t headerSize)
 	return (h >> 4) + 1;
 }
 
-[[nodiscard]] bool FramingProtocol::WriteHeaderIntoBuffer(ByteBufferWritable &buffer,
-														  Flags flags)
+[[nodiscard]] bool
+FramingProtocol::WriteHeaderIntoBuffer(ByteBufferWritable &buffer, Flags flags)
 {
 	if (buffer._offset < sizeof(ByteBufferStorageHeader) + 4 ||
 		buffer.size() == 0) {
-		LOG_FATAL("Error; buffer: size=%u  offset: %u  cap: %u",
-				buffer._size,
-				buffer._offset,
-				buffer._capacity
-				);
+		LOG_FATAL("Error; invalid buffer: size=%u  offset: %u  cap: %u",
+				  buffer._size, buffer._offset, buffer._capacity);
 		return false;
 	}
 
@@ -79,5 +79,83 @@ uint32_t FramingProtocol::GetPacketBodySize(uint8_t *header, uint8_t headerSize)
 	buffer._offset -= headerSize;
 	buffer.buffer -= headerSize;
 	return true;
+}
+
+void FramingProtocol::PrintDetailsAboutFrame(ByteBufferReadable &frame)
+{
+	const uint32_t totalSize = frame.size();
+	const uint32_t headerSize = GetPacketHeaderSize(frame.data()[0]);
+	uint32_t header;
+	memcpy(&header, frame.data(), headerSize);
+	const uint32_t calculatedBodySize = totalSize - headerSize;
+	const uint32_t storedInFrameBodySize =
+		GetPacketBodySize(frame.data(), headerSize);
+	const Flags flagsStored = frame.storage->flags;
+	const Flags flagsRead =
+		GetPacketFlags(frame.data(), flagsStored & FLAG_RELIABLE);
+
+	char str[1024];
+	memset(str, 0, 1024);
+	char *ptr = str;
+	const char *end = str+1023;
+
+	assert(storedInFrameBodySize == calculatedBodySize);
+	assert(flagsStored == flagsRead);
+
+	ptr += snprintf(ptr, end - ptr,
+			"totalSize: %i   "
+			"headerSize: %i   "
+			"storedBodySize: %i   "
+			"calculatedBodySize: %i   "
+			"flagsStored: %X   "
+			"flagsRead: %X   ",
+			totalSize,
+			headerSize,
+			storedInFrameBodySize,
+			calculatedBodySize,
+			flagsStored,
+			flagsRead
+			);
+
+	bitscpp::v2::ByteReader reader(frame.data(), headerSize, totalSize);
+
+	uint32_t callId;
+	std::string name;
+
+	switch (flagsRead & 6) {
+	case FLAGS_CALL:
+		reader.op_untyped_uint32(callId);
+		reader.op(name);
+		ptr += snprintf(ptr, end - ptr,
+				"CALL (%u): `%s`   ",
+				callId, name.c_str()
+				);
+		break;
+	case FLAGS_CALL_NO_FEEDBACK:
+		reader.op(name);
+		ptr += snprintf(ptr, end - ptr,
+				"SEND: `%s`   ",
+				name.c_str()
+				);
+		break;
+	case FLAGS_CALL_RETURN_FEEDBACK:
+		reader.op_untyped_uint32(callId);
+		ptr += snprintf(ptr, end - ptr,
+				"RETURN (%u)   ",
+				callId
+				);
+		break;
+	case FLAGS_PROTOCOL_CONTROLL_SEQUENCE:
+		callId = frame.data()[headerSize];
+		ptr += snprintf(ptr, end - ptr,
+				"CONTROL SEQUENCE: %u   ",
+				callId
+				);
+		break;
+	}
+
+	assert(reader.get_errors() == 0);
+
+	LOG_TRACE("%s", str);
 }
 } // namespace icon7

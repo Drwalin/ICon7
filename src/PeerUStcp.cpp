@@ -22,6 +22,9 @@ namespace tcp
 Peer::Peer(uS::tcp::Host *host, us_socket_t *socket) : icon7::Peer(host)
 {
 	writeBuffer.reserve(4096-32);
+	writeBuffer.buffer -= writeBuffer._offset - 1;
+	writeBuffer._capacity += writeBuffer._offset - 1;
+	writeBuffer._offset = 1;
 	this->socket = socket;
 	SSL = host->SSL;
 }
@@ -55,23 +58,23 @@ bool Peer::_InternalSend(SendFrameStruct &f, bool hasMore)
 		const uint8_t *ptr = f.data.data() + f.bytesSent;
 
 		if (writeBuffer.size() == writeBufferOffset &&
-			(bytesToWrite > 500 || hasMore == false)) {
-			if (f.bytesSent < f.data.size()) {
-				int b = us_socket_write(SSL, socket,
-										(char *)(f.data.data() + f.bytesSent),
-										f.data.size() - f.bytesSent, hasMore);
-				if (b < 0) {
-					LOG_ERROR("us_socket_write returned: %i", b);
-					stats.errorsCount += 1;
-					host->stats.errorsCount += 1;
-					host->loop->stats.errorsCount += 1;
-				} else if (b > 0) {
-					f.bytesSent += b;
-				} else {
-					// TODO: what to do here?
-					return false;
-				}
+			(bytesToWrite > 1200 || hasMore == false)) {
+
+			int b = us_socket_write(SSL, socket,
+									(char *)(f.data.data() + f.bytesSent),
+									f.data.size() - f.bytesSent, hasMore);
+			if (b < 0) {
+				LOG_ERROR("us_socket_write returned: %i", b);
+				stats.errorsCount += 1;
+				host->stats.errorsCount += 1;
+				host->loop->stats.errorsCount += 1;
+			} else if (b > 0) {
+				f.bytesSent += b;
+			} else {
+				// TODO: what to do here?
+				return false;
 			}
+
 			if (f.bytesSent < f.data.size()) {
 				return false;
 			}

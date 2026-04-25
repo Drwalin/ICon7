@@ -21,8 +21,8 @@ public:
 
 	void Restart();
 	void PushData(uint8_t *data, uint32_t length,
-				  void (*onPacket)(ByteBufferReadable &buffer, uint32_t headerSize,
-								   void *userPtr),
+				  void (*onPacket)(ByteBufferReadable &buffer,
+								   uint32_t headerSize, void *userPtr),
 				  void *userPtr);
 
 private:

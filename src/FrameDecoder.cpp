@@ -63,7 +63,7 @@ void FrameDecoder::PushData(uint8_t *data, uint32_t _length,
 			if (bytes > length) {
 				bytes = length;
 			}
-			if (bytes < 0) {
+			if (bytes > frameSize) {
 				LOG_FATAL("This error should never happen - FrameDecoder "
 						  "algorithm broken:   length: %u    buffer.size: %u   "
 						  "  frameSize: %u     headerSize: %u ;    bytes < 0",
@@ -82,22 +82,20 @@ void FrameDecoder::PushData(uint8_t *data, uint32_t _length,
 
 		if (_writable_buffer.size() == frameSize) {
 			if (onPacket) {
-				// 				_writable_buffer
 				ByteBufferReadable buffer(std::move(_writable_buffer));
 				onPacket(buffer, headerSize, userPtr);
 				_writable_buffer = buffer.TryRecycle();
-				if (_writable_buffer.capacity() == 0) {
-					Restart();
-					if (_buffer.storage == nullptr) {
-						_buffer = std::move(buffer);
-					}
+				Restart();
+				if (_buffer.storage == nullptr) {
+					_buffer = std::move(buffer);
 				}
 			} else {
 				Restart();
 			}
 		} else if (_writable_buffer.size() > frameSize) {
 			LOG_FATAL("FrameDecoder::PushData push to frame more than frame "
-					  "size was: %i > %i, h:%i: 0x%2.2X",
+					  "size was: %i > %i, h:%i: 0x%2.2X  --  FrameDecoder "
+					  "algorithm broken",
 					  _writable_buffer.size(), frameSize, headerSize,
 					  (uint32_t)(uint8_t)_writable_buffer.data()[0]);
 			throw;

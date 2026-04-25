@@ -23,13 +23,15 @@ public:
 							uint32_t dataSize, Flags flags);
 	static uint32_t GetPacketHeaderSize(uint8_t headerFirstByte);
 	static Flags GetPacketFlags(const uint8_t *header, Flags otherFlags);
-	static uint32_t GetPacketBodySize(uint8_t *header, uint8_t headerSize);
+	static uint32_t GetPacketBodySize(const uint8_t *header,
+									  uint8_t headerSize);
 
 	/*
 	 * returns false for invalid ByteBufferWritable object
 	 */
 	[[nodiscard]] static bool WriteHeaderIntoBuffer(ByteBufferWritable &buffer,
 													Flags flags);
+	static void PrintDetailsAboutFrame(ByteBufferReadable &frame);
 };
 } // namespace icon7
 

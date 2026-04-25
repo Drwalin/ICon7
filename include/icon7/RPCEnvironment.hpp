@@ -62,7 +62,7 @@ public:
 		assert(buffer.buffer);
 		const uint32_t rcbId = peer->_InternalGetNextValidReturnCallbackId();
 		const uint32_t rcbId_v = bitscpp::HostToNetworkUint(rcbId);
-		memcpy((void*)buffer.data(), &rcbId_v, sizeof(rcbId_v));
+		memcpy((void *)buffer.data(), &rcbId_v, sizeof(rcbId_v));
 		peer->returningCallbacks.InsertOrSet(rcbId, std::move(callback));
 		flags |= FLAGS_CALL;
 		if (FramingProtocol::WriteHeaderIntoBuffer(buffer, flags)) {
@@ -81,8 +81,8 @@ public:
 	RPCEnvironment();
 	~RPCEnvironment();
 
-	void OnReceive(Peer *peer, ByteBufferReadable &frameData, uint32_t headerSize,
-				   Flags flags) const;
+	void OnReceive(Peer *peer, ByteBufferReadable &frameData,
+				   uint32_t headerSize, Flags flags) const;
 	/*
 	 * expects that reader already filled flags fully and reader is at body
 	 * offset
@@ -151,13 +151,16 @@ public:
 		peer->Send(std::move(buffer));
 	}
 
-	static void InitializeSerializeSend(bitscpp::v2::ByteWriter_ByteBuffer &writer,
-										const std::string &name)
+	static void
+	InitializeSerializeSend(bitscpp::v2::ByteWriter_ByteBuffer &writer,
+							const std::string &name)
 	{
 		writer.op(name);
 	}
 
-	static void FinalizeSerializeSend(bitscpp::v2::ByteWriter_ByteBuffer &writer, Flags &flags)
+	static void
+	FinalizeSerializeSend(bitscpp::v2::ByteWriter_ByteBuffer &writer,
+						  Flags &flags)
 	{
 		flags |= FLAGS_CALL_NO_FEEDBACK;
 		if (FramingProtocol::WriteHeaderIntoBuffer(*writer._buffer, flags) ==
@@ -177,8 +180,8 @@ public:
 	}
 
 	template <typename... Targs>
-	static ByteBufferReadable SerializeSend(Flags flags, const std::string &name,
-									const Targs &...args)
+	static ByteBufferReadable
+	SerializeSend(Flags flags, const std::string &name, const Targs &...args)
 	{
 		ByteBufferWritable buffer(100);
 		SerializeSend(buffer, flags, name, args...);
@@ -192,7 +195,7 @@ public:
 	{
 		ByteWriter writer(100);
 		writer.op_untyped_uint32(0);
-		writer.op(name);
+		InitializeSerializeSend(writer, name);
 		(writer.op(args), ...);
 
 		commandsBuffer->EnqueueCommand<commands::internal::CommandCallSend>(

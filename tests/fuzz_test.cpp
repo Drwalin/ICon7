@@ -10,6 +10,7 @@
 #include "../include/icon7/PeerUStcp.hpp"
 #include "../include/icon7/HostUStcp.hpp"
 #include "../include/icon7/LoopUS.hpp"
+#include "icon7/Forward.hpp"
 
 std::atomic<int64_t> sent = 0, received = 0, returned = 0;
 
@@ -208,12 +209,12 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 
 				for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
 					if (l % serializeSendsModulo < serializeSendsFract) {
-						icon7::ByteBuffer buffer(100);
+						icon7::ByteBufferWritable buffer(100);
 						rpc2.SerializeSend(buffer, icon7::FLAG_RELIABLE, "sum",
 										   3, 23, additionalPayload.data());
 						for (auto p : validPeers) {
 							auto peer = p.get();
-							peer->Send(buffer);
+							peer->Send(std::move(buffer));
 							sent++;
 						}
 					} else {
