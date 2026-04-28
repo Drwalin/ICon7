@@ -34,6 +34,7 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteBufferReadable &frameData,
 void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 							   Flags flags) const
 {
+	assert(reader.get_errors() == 0);
 	switch (flags & 6) {
 	case FLAGS_CALL:
 	case FLAGS_CALL_NO_FEEDBACK:
