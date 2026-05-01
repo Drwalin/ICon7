@@ -20,6 +20,8 @@
 namespace icon7
 {
 class Host;
+class Peer;
+class PeerData;
 
 class RPCEnvironment;
 namespace commands
@@ -30,10 +32,17 @@ class CommandCallSend;
 }
 } // namespace commands
 
+enum PeerStatusBits : uint32_t {
+	BIT_READY = 1,
+	BIT_DISCONNECTING = 2,
+	BIT_CLOSED = 4,
+	BIT_ERROR_CONNECT = 8,
+};
+
 class Peer : public std::enable_shared_from_this<Peer>
 {
 public:
-	virtual ~Peer();
+	~Peer() = default;
 
 	Peer(Peer &&) = delete;
 	Peer(Peer &) = delete;
@@ -42,11 +51,12 @@ public:
 	Peer &operator=(Peer &) = delete;
 	Peer &operator=(const Peer &) = delete;
 
-	virtual void Send(ByteBufferReadable &frame);
-	virtual void SendLocalThread(ByteBufferReadable &frame);
-	virtual void Send(ByteBufferReadable &&frame);
-	virtual void SendLocalThread(ByteBufferReadable &&frame);
+	static void Send(PeerHandle peer, ByteBufferReadable &frame);
+	static void Send(PeerHandle peer, ByteBufferReadable &&frame);
+	void Send(ByteBufferReadable &frame);
+	void Send(ByteBufferReadable &&frame);
 	void Disconnect();
+	static void Disconnect(PeerHandle peer);
 
 	inline bool IsReadyToUse() const { return peerFlags & BIT_READY; }
 	inline bool IsDisconnecting() const
@@ -59,7 +69,69 @@ public:
 		return peerFlags & BIT_ERROR_CONNECT;
 	}
 
-	void SetOnDisconnect(void (*callback)(Peer *)) { onDisconnect = callback; }
+	void SetOnDisconnect(void (*callback)(PeerHandle));
+
+public:
+	uint64_t userData;
+	void *userPointer;
+
+public:
+	Host *const host;
+	Loop *const loop;
+	bool isClient;
+	PeerHandle peerHandle;
+
+	inline uint32_t GetPeerStateFlags() const { return peerFlags.load(); }
+
+protected:
+	void _InternalErrorSendOnDisconnecting();
+
+protected:
+	Peer(Host *host);
+
+	inline const static uint32_t BIT_READY = 1;
+	inline const static uint32_t BIT_DISCONNECTING = 2;
+	inline const static uint32_t BIT_CLOSED = 4;
+	inline const static uint32_t BIT_ERROR_CONNECT = 8;
+
+	friend class PeerData;
+	friend class Host;
+	friend class uS::tcp::Peer;
+protected:
+	std::atomic<uint32_t> peerFlags;
+
+public:
+	icon7::PeerStats stats;
+};
+
+// Thead unsafe structure, only for internal in-loop operations
+class PeerData : public std::enable_shared_from_this<PeerData>
+{
+public:
+	virtual ~PeerData();
+
+	PeerData(PeerData &&) = delete;
+	PeerData(PeerData &) = delete;
+	PeerData(const PeerData &) = delete;
+	PeerData &operator=(PeerData &&) = delete;
+	PeerData &operator=(PeerData &) = delete;
+	PeerData &operator=(const PeerData &) = delete;
+
+	virtual void Send(ByteBufferReadable &frame);
+	virtual void Send(ByteBufferReadable &&frame);
+
+	inline bool IsReadyToUse() const { return sharedPeer->peerFlags & BIT_READY; }
+	inline bool IsDisconnecting() const
+	{
+		return sharedPeer->peerFlags & BIT_DISCONNECTING;
+	}
+	inline bool IsClosed() const { return sharedPeer->peerFlags & BIT_CLOSED; }
+	inline bool HadConnectError() const
+	{
+		return sharedPeer->peerFlags & BIT_ERROR_CONNECT;
+	}
+
+	void SetOnDisconnect(void (*callback)(PeerHandle)) { onDisconnect = callback; }
 
 public: // thread unsafe, safe only in hosts loop thread
 	void _InternalOnData(uint8_t *data, uint32_t length);
@@ -75,16 +147,15 @@ public: // thread unsafe, safe only in hosts loop thread
 	virtual bool _InternalFlushBufferedSends(bool hasMore) = 0;
 
 public:
-	uint64_t userData;
-	void *userPointer;
+	std::shared_ptr<Peer> sharedPeer;
+	PeerHandle peerHandle;
+	Host *host;
+	Loop *loop;
 
 public:
-	Host *const host;
-	bool isClient;
-
 	void SetReadyToUse();
 
-	inline uint32_t GetPeerStateFlags() const { return peerFlags.load(); }
+	inline uint32_t GetPeerStateFlags() const { return sharedPeer->peerFlags; }
 
 protected:
 	// returns false for cork/error
@@ -110,27 +181,19 @@ protected:
 
 	uint32_t _InternalGetNextValidReturnCallbackId();
 
-	void _InternalErrorSendOnDisconnecting();
-
 	void CheckForTimeoutFunctionCalls(time::Point now);
 
 	friend class Host;
 	friend class commands::internal::ExecuteDisconnect;
 	friend class RPCEnvironment;
 	friend class commands::internal::CommandCallSend;
+	friend class uS::tcp::Peer;
 
 protected:
-	Peer(Host *host);
-
-	inline const static uint32_t BIT_READY = 1;
-	inline const static uint32_t BIT_DISCONNECTING = 2;
-	inline const static uint32_t BIT_CLOSED = 4;
-	inline const static uint32_t BIT_ERROR_CONNECT = 8;
+	PeerData(Host *host);
 
 protected:
-	std::atomic<uint32_t> peerFlags;
-
-	alignas(64) void (*onDisconnect)(Peer *);
+	void (*onDisconnect)(PeerHandle);
 	uint32_t returnIdGen = 0;
 
 	std::vector<SendFrameStruct> globalQueue;
@@ -141,9 +204,6 @@ protected:
 	const static inline uint32_t MAX_LOCAL_QUEUE_SIZE = 128;
 
 	FlatHashMap<uint32_t, OnReturnCallback, Hash<uint32_t>> returningCallbacks;
-
-public:
-	icon7::PeerStats stats;
 };
 } // namespace icon7
 

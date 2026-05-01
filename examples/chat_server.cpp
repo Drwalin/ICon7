@@ -10,7 +10,7 @@
 #include <icon7/HostUStcp.hpp>
 #include "../include/icon7/LoopUS.hpp"
 
-std::unordered_map<std::string, icon7::Peer *> peers;
+std::unordered_map<std::string, icon7::PeerHandle> peers;
 icon7::RPCEnvironment rpc;
 
 int main(int argc, char **argv)
@@ -26,34 +26,34 @@ int main(int argc, char **argv)
 
 	rpc.RegisterMessage(
 		"SetNickname",
-		[](icon7::Peer *peer, const std::string &nickname) -> bool {
-			if (peer->userPointer != nullptr) {
-				std::string *oldName = (std::string *)(peer->userPointer);
+		[](icon7::PeerHandle peer, const std::string &nickname) -> bool {
+			if (peer.GetSharedPeer()->userPointer != nullptr) {
+				std::string *oldName = (std::string *)(peer.GetSharedPeer()->userPointer);
 				peers.erase(*oldName);
 				delete oldName;
-				peer->userPointer = nullptr;
+				peer.GetSharedPeer()->userPointer = nullptr;
 			}
 			if (nickname != "") {
 				if (peers.find(nickname) != peers.end()) {
 					return false;
 				}
-				peer->userPointer = new std::string(nickname);
+				peer.GetSharedPeer()->userPointer = new std::string(nickname);
 				peers[nickname] = peer;
 			}
 			return true;
 		});
 	rpc.RegisterMessage("Broadcast",
-						[](icon7::Peer *peer, std::string_view message) {
+						[](icon7::PeerHandle peer, std::string_view message) {
 							std::string nickname = "";
-							if (peer->userPointer != nullptr) {
-								nickname = *(std::string *)(peer->userPointer);
+							if (peer.GetSharedPeer()->userPointer != nullptr) {
+								nickname = *(std::string *)(peer.GetSharedPeer()->userPointer);
 							}
 
 							printf("Received broadcasting call: `%s`\n", (std::string(message)).c_str());
 
-							peer->host->ForEachPeer([&](icon7::Peer *p2) {
+							peer.GetHost()->ForEachPeer([&](icon7::PeerHandle p2) {
 								if (p2 != peer) {
-									auto on = (std::string*)(p2->userPointer);
+									auto on = (std::string*)(p2.GetSharedPeer()->userPointer);
 									printf("Sending broadcast from %s to %s\n",
 											nickname.c_str(),
 											on ? on->c_str() : "<anonymus>");
@@ -63,12 +63,12 @@ int main(int argc, char **argv)
 							});
 						});
 	rpc.RegisterMessage("Msg",
-						[](icon7::Peer *peer, const std::string nickname,
+						[](icon7::PeerHandle peer, const std::string nickname,
 						   std::string_view message) -> bool {
 							std::string srcNickname = "";
-							if (peer->userPointer != nullptr) {
+							if (peer.GetSharedPeer()->userPointer != nullptr) {
 								srcNickname =
-									*(std::string *)(peer->userPointer);
+									*(std::string *)(peer.GetSharedPeer()->userPointer);
 							}
 							auto it = peers.find(nickname);
 							if (it != peers.end()) {
@@ -88,12 +88,12 @@ int main(int argc, char **argv)
 		loop->CreateHost(&rpc, "host_server", false);
 
 	icon7::Host *host = _host.get();
-	host->SetOnDisconnect([](icon7::Peer *peer) {
-		if (peer->userPointer != nullptr) {
-			std::string *oldName = (std::string *)(peer->userPointer);
+	host->SetOnDisconnect([](icon7::PeerHandle peer) {
+		if (peer.GetSharedPeer()->userPointer != nullptr) {
+			std::string *oldName = (std::string *)(peer.GetSharedPeer()->userPointer);
 			peers.erase(*oldName);
 			delete oldName;
-			peer->userPointer = nullptr;
+			peer.GetSharedPeer()->userPointer = nullptr;
 		}
 	});
 	loop->RunAsync();

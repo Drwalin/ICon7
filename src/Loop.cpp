@@ -24,6 +24,22 @@ Loop::Loop(std::string objectName) : objectName(objectName)
 
 Loop::~Loop() { WaitStopRunning(); }
 
+PeerData *Loop::GetLocalPeerData(PeerHandle handle)
+{
+	// TODO: this is temporary, may lead to race condition
+	return handle.ptr.get();
+}
+std::shared_ptr<Peer> Loop::GetSharedPeer(PeerHandle handle)
+{
+	// TODO: this is temporary, may lead to race condition
+	return handle.ptr->sharedPeer;
+}
+Host *Loop::GetSharedHost(PeerHandle handle)
+{
+	// TODO: this is temporary, may lead to race condition
+	return handle.ptr->host;
+}
+
 void Loop::WaitStopRunning()
 {
 	QueueStopRunning();
@@ -133,11 +149,11 @@ void Loop::SetSleepBetweenUnlockedIterations(int32_t microseconds)
 	microsecondsOfSleepBetweenIterations = microseconds;
 }
 
-Peer *Loop::_InternalGetRandomPeer()
+PeerHandle Loop::_InternalGetRandomPeer()
 {
 	// TODO: optimize
 	if (hosts.size() == 0) {
-		return nullptr;
+		return {};
 	}
 	int r = rand() % hosts.size(), i = 0;
 	for (auto &h : hosts) {
@@ -147,6 +163,6 @@ Peer *Loop::_InternalGetRandomPeer()
 			++i;
 		}
 	}
-	return nullptr;
+	return {};
 }
 } // namespace icon7

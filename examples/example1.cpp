@@ -72,7 +72,7 @@ int main()
 		public:
 			CommandDisconnectOnConnect() {}
 			virtual ~CommandDisconnectOnConnect() {}
-			virtual void Execute() override { peer->Disconnect(); }
+			virtual void Execute() override { icon7::Peer::Disconnect(peer); }
 		};
 		auto com = icon7::CommandHandle<CommandDisconnectOnConnect>::Create();
 		hostb->Connect("127.0.0.1", port, std::move(com), nullptr);
@@ -82,8 +82,7 @@ int main()
 		[](icon7::RPCEnvironment *rpc, auto hostb, auto port) {
 			auto f = hostb->ConnectPromise("127.0.0.1", port);
 			f.wait();
-			auto _peer = f.get();
-			icon7::Peer *peer = _peer.get();
+			auto peer = f.get();
 
 			rpc->Send(peer, icon7::FLAG_RELIABLE, "sum", 3, 23);
 
@@ -91,13 +90,13 @@ int main()
 
 			rpc->Call(peer, icon7::FLAG_RELIABLE,
 					  icon7::OnReturnCallback::Make<uint32_t>(
-						  [](icon7::Peer *peer, icon7::Flags flags,
+						  [](icon7::PeerHandle peer, icon7::Flags flags,
 							 uint32_t result) -> void {
 							  printf(" Multiplication result returned = %i\n",
 									 result);
 							  returned++;
 						  },
-						  [](icon7::Peer *peer) -> void {
+						  [](icon7::PeerHandle peer) -> void {
 							  printf(" Multiplication timeout\n");
 						  },
 						  10000, peer),

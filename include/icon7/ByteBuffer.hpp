@@ -12,8 +12,12 @@
 
 #include <atomic>
 
+#include "../../bitscpp/include/bitscpp/ByteReader_v2.hpp"
+
 #include "Flags.hpp"
 #include "MemoryPool.hpp"
+
+#include "FramingProtocol.hpp"
 
 namespace bitscpp
 {
@@ -46,6 +50,8 @@ struct ByteBufferStorageHeader {
 
 	inline uint8_t *data() { return ((uint8_t *)this) + offset; }
 };
+
+void PrintBufferMetadata(ByteBufferStorageHeader *buffer);
 
 class ByteBufferWritable
 {
@@ -160,6 +166,38 @@ public:
 		_size += bytes;
 	}
 
+	inline void prepend(const uint8_t *src, const uint32_t bytes)
+	{
+		assert((buffer && _capacity) || ((!buffer) && (!_capacity)));
+		if (_offset < sizeof(ByteBufferStorageHeader) + bytes) {
+			ByteBufferWritable buf(bytes + _capacity);
+			if (src) {
+				buf.append(src, bytes);
+			} else {
+				buf._size += bytes;
+			}
+			if (_size) {
+				buf.append(buffer, _size);
+			}
+			*this = std::move(buf);
+			return;
+		} else if (buffer == nullptr) {
+			if (src) {
+				append(src, bytes);
+			} else {
+				resize(bytes);
+			}
+			return;
+		}
+		buffer -= bytes;
+		_offset -= bytes;
+		_size += bytes;
+		_capacity += bytes;
+		if (src) {
+			memcpy(buffer, src, bytes);
+		}
+	}
+
 	inline void push_back(uint8_t byte)
 	{
 		reserve(_size + 1);
@@ -183,39 +221,55 @@ public:
 		_size = newSize;
 	}
 	inline size_t capacity() const { return _capacity; }
-	void reserve(size_t newCapacity)
+
+	void reserve(const size_t newCapacity)
 	{
+		assert(_size <= _capacity);
 		if (newCapacity > _capacity) {
-			uint32_t nc = ((_capacity - 1) | 63) + 1;
-			if (nc < 64) {
-				nc = 64;
-			}
-			while (nc < newCapacity) {
-				nc = (nc + (nc << 1)) >> 1;
-			}
-			newCapacity = ((nc - 1) | 0x3F) + 1;
-			auto buf = MemoryPool::Allocate(newCapacity + _offset);
-			assert(buf.object);
 			if (buffer == nullptr) {
 				_offset = ByteBufferStorageHeader::INITIAL_DATA_OFFSET;
+				uint32_t nc = ((_offset + newCapacity - 1) | 0x3F) + 1;
+				if (nc < 64) {
+					nc = 64;
+				}
+				assert(nc >= newCapacity + _offset);
+				auto buf = MemoryPool::Allocate(nc);
+				assert(buf.object);
+				assert(buf.capacity >= newCapacity + _offset);
 				_size = 0;
 				buffer = ((uint8_t *)buf.object) + _offset;
+				_capacity = buf.capacity - _offset;
 			} else {
-				uint8_t *newBuffer = ((uint8_t *)buf.object) + _offset;
-				memcpy(newBuffer, buffer, _size);
-				MemoryPool::Release(buffer - _offset, _capacity + _offset);
-				buffer = newBuffer;
+				uint32_t nc = ((_offset + _capacity - 1) | 0x3F) + 1;
+				if (nc < 64) {
+					nc = 64;
+				}
+				while (nc < newCapacity + _offset) {
+					nc = (nc + (nc << 1)) >> 1;
+				}
+				nc = ((nc - 1) | 0x3F) + 1;
+				assert(nc >= newCapacity + _offset);
+
+				ByteBufferWritable buf(nc - _offset);
+				buf.append(buffer, _size);
+				buf._flags = _flags;
+				*this = std::move(buf);
 			}
-			_capacity = buf.capacity - _offset;
+			assert(buffer);
+		} else {
+			assert(buffer);
+			assert(_capacity >= newCapacity);
 		}
-		assert(buffer);
 	}
 
-public:
+	friend class ByteBufferReadable;
+protected:
 	uint8_t *buffer = nullptr;
 	uint32_t _size = 0;
 	uint32_t _capacity = 0;
 	uint32_t _offset = 0;
+
+public:
 	uint32_t _flags = 0;
 };
 
@@ -242,6 +296,8 @@ public:
 		buffer._capacity = 0;
 		buffer._flags = 0;
 		buffer.buffer = nullptr;
+		
+		PrintBufferMetadata(storage);
 	}
 
 	ByteBufferReadable(ByteBufferReadable &&o)
@@ -334,12 +390,14 @@ public:
 	{
 		if (storage) {
 			if (storage->refCounter.load() == 1) {
+				const uint32_t cap = storage->offset + storage->capacity;
+				uint8_t *const ptr = (uint8_t *)storage;
 				ByteBufferWritable ret;
 				ret._size = 0;
 				ret._flags = 0;
 				ret._offset = ByteBufferStorageHeader::INITIAL_DATA_OFFSET;
-				ret._capacity = storage->offset + storage->capacity - ret._offset;
-				ret.buffer = ((uint8_t *)storage) + ret._offset;
+				ret._capacity = cap - ret._offset;
+				ret.buffer = ptr + ret._offset;
 				storage = nullptr;
 				return ret;
 			}

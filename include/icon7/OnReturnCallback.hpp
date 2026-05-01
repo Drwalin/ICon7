@@ -6,15 +6,13 @@
 #ifndef ICON7_ON_RETURN_CALLBACK_HPP
 #define ICON7_ON_RETURN_CALLBACK_HPP
 
+#include <functional>
+
 #include "Time.hpp"
 #include "Command.hpp"
-#include "Host.hpp"
-// #include "Peer.hpp"
 
 namespace icon7
 {
-class Peer;
-
 class ExecuteReturnCallbackBase : public commands::ExecuteOnPeer
 {
 public:
@@ -73,18 +71,21 @@ public:
 	ExecuteReturnCallbackStdfunction() {}
 	virtual ~ExecuteReturnCallbackStdfunction() {}
 
-	std::function<void(Peer *, Flags, Tret &)> onReturned;
-	std::function<void(Peer *)> onTimeout;
+	std::function<void(PeerHandle, Flags, Tret &)> onReturned;
+	std::function<void(PeerHandle)> onTimeout;
 
 	virtual void ExecuteOnReturn(Tret &v) override
 	{
-		onReturned(this->peer.get(), this->flags, v);
+		if (onReturned) {
+			onReturned(this->peer, this->flags, v);
+		}
 	}
 
 	virtual void ExecuteTimeout() override
 	{
-		if (onTimeout)
-			onTimeout(this->peer.get());
+		if (onTimeout) {
+			onTimeout(this->peer);
+		}
 	}
 };
 
@@ -96,19 +97,21 @@ public:
 	ExecuteReturnCallbackStdfunction() {}
 	virtual ~ExecuteReturnCallbackStdfunction() {}
 
-	std::function<void(Peer *, Flags)> onReturned;
-	std::function<void(Peer *)> onTimeout;
+	std::function<void(PeerHandle, Flags)> onReturned;
+	std::function<void(PeerHandle)> onTimeout;
 
 	virtual void ExecuteOnReturn() override
 	{
-		if (onReturned)
-			onReturned(this->peer.get(), this->flags);
+		if (onReturned) {
+			onReturned(this->peer, this->flags);
+		}
 	}
 
 	virtual void ExecuteTimeout() override
 	{
-		if (onTimeout)
-			onTimeout(this->peer.get());
+		if (onTimeout) {
+			onTimeout(this->peer);
+		}
 	}
 };
 
@@ -144,21 +147,21 @@ public:
 	OnReturnCallback &operator=(const OnReturnCallback &) = delete;
 
 	bool IsExpired(time::Point t = time::GetTemporaryTimestamp()) const;
-	void Execute(Peer *peer, Flags flags, ByteReader &reader);
+	void Execute(PeerData *peer, Flags flags, ByteReader &reader);
 	void ExecuteTimeout();
 
 private:
 public:
-	template <typename Tret, typename Tfunc, typename Ttimeout, typename TPeer>
+	template <typename Tret, typename Tfunc, typename Ttimeout>
 	static OnReturnCallback
 	Make(Tfunc &&onReturned, Ttimeout &&onTimeout, uint32_t timeoutMilliseconds,
-		 TPeer *peer, CommandExecutionQueue *executionQueue = nullptr,
+		 PeerHandle peer, CommandExecutionQueue *executionQueue = nullptr,
 		 std::shared_ptr<void> pointerHolder = nullptr)
 	{
 		OnReturnCallback ret;
 		auto cb =
 			CommandHandle<ExecuteReturnCallbackStdfunction<Tret>>::Create();
-		cb->peer = peer->shared_from_this();
+		cb->peer = peer;
 		cb->onReturned = std::move(onReturned);
 		cb->onTimeout = std::move(onTimeout);
 		ret.callback = std::move(cb);
@@ -169,16 +172,16 @@ public:
 		return ret;
 	}
 
-	template <typename Tfunc, typename Ttimeout, typename TPeer>
+	template <typename Tfunc, typename Ttimeout>
 	static OnReturnCallback
 	Make(Tfunc &&onReturned, Ttimeout &&onTimeout, uint32_t timeoutMilliseconds,
-		 TPeer *peer, CommandExecutionQueue *executionQueue = nullptr,
+		 PeerHandle peer, CommandExecutionQueue *executionQueue = nullptr,
 		 std::shared_ptr<void> pointerHolder = nullptr)
 	{
 		OnReturnCallback ret;
 		auto cb =
 			CommandHandle<ExecuteReturnCallbackStdfunction<void>>::Create();
-		cb->peer = peer->shared_from_this();
+		cb->peer = peer;
 		cb->onReturned = std::move(onReturned);
 		cb->onTimeout = std::move(onTimeout);
 		ret.callback = std::move(cb);

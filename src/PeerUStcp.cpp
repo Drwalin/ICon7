@@ -19,12 +19,9 @@ namespace uS
 {
 namespace tcp
 {
-Peer::Peer(uS::tcp::Host *host, us_socket_t *socket) : icon7::Peer(host)
+Peer::Peer(uS::tcp::Host *host, us_socket_t *socket) : icon7::PeerData(host)
 {
 	writeBuffer.reserve(4096-32);
-	writeBuffer.buffer -= writeBuffer._offset - 1;
-	writeBuffer._capacity += writeBuffer._offset - 1;
-	writeBuffer._offset = 1;
 	this->socket = socket;
 	SSL = host->SSL;
 }
@@ -34,7 +31,6 @@ Peer::~Peer()
 	if (socket != nullptr) {
 		socket = nullptr;
 		LOG_FATAL("on ~Peer(): socket != nullptr");
-		stats.errorsCount += 1;
 		host->stats.errorsCount += 1;
 		host->loop->stats.errorsCount += 1;
 	}
@@ -42,6 +38,8 @@ Peer::~Peer()
 
 bool Peer::_InternalSend(SendFrameStruct &f, bool hasMore)
 {
+// 	printf("Trying to send frame:\n");
+// 	FramingProtocol::PrintDetailsAboutFrame(f.data);
 	if (socket == nullptr) {
 		return false;
 	}
@@ -65,7 +63,7 @@ bool Peer::_InternalSend(SendFrameStruct &f, bool hasMore)
 									f.data.size() - f.bytesSent, hasMore);
 			if (b < 0) {
 				LOG_ERROR("us_socket_write returned: %i", b);
-				stats.errorsCount += 1;
+				sharedPeer->stats.errorsCount += 1;
 				host->stats.errorsCount += 1;
 				host->loop->stats.errorsCount += 1;
 			} else if (b > 0) {
@@ -109,17 +107,17 @@ bool Peer::_InternalSend(SendFrameStruct &f, bool hasMore)
 
 void Peer::_InternalDisconnect()
 {
-	peerFlags |= BIT_DISCONNECTING;
+	sharedPeer->peerFlags |= BIT_DISCONNECTING;
 	if (socket) {
 		us_socket_close(SSL, socket, 0, nullptr);
 	} else {
-		peerFlags |= BIT_CLOSED;
+		sharedPeer->peerFlags |= BIT_CLOSED;
 	}
 }
 
 void Peer::_InternalClearInternalDataOnClose()
 {
-	icon7::Peer::_InternalClearInternalDataOnClose();
+	icon7::PeerData::_InternalClearInternalDataOnClose();
 	*(icon7::Peer **)us_socket_ext(SSL, socket) = nullptr;
 	socket = nullptr;
 	SSL = 0;
@@ -139,16 +137,16 @@ bool Peer::_InternalFlushBufferedSends(bool hasMore)
 		if (b < 0) {
 			// TODO: check, maybe some ot this means cork?
 			LOG_ERROR("us_socket_write returned: %i", b);
-			stats.errorsCount += 1;
+			sharedPeer->stats.errorsCount += 1;
 			host->stats.errorsCount += 1;
 			host->loop->stats.errorsCount += 1;
 		} else if (b > 0) {
 
-			stats.bytesSent += b;
+			sharedPeer->stats.bytesSent += b;
 			host->stats.bytesSent += b;
 			host->loop->stats.bytesSent += b;
 
-			stats.packetsSent += 1;
+			sharedPeer->stats.packetsSent += 1;
 			host->stats.packetsSent += 1;
 			host->loop->stats.packetsSent += 1;
 

@@ -10,6 +10,7 @@
 #include <thread>
 #include <unordered_set>
 #include <string>
+#include <shared_mutex>
 
 #include "Stats.hpp"
 #include "CommandExecutionQueue.hpp"
@@ -52,11 +53,15 @@ public: // multithreaded safe functions
 
 	virtual void WakeUp() = 0;
 
+	PeerData *GetLocalPeerData(PeerHandle handle);
+	std::shared_ptr<Peer> GetSharedPeer(PeerHandle handle);
+	Host *GetSharedHost(PeerHandle handle);
+
 public: // thread unsafe, safe only in hosts loop thread
 	virtual void SingleLoopIteration();
 	virtual void _InternalSingleLoopIteration();
 	void _InternalSyncLoop();
-	Peer *_InternalGetRandomPeer();
+	PeerHandle _InternalGetRandomPeer();
 
 public:
 	uint64_t userData;
@@ -78,6 +83,9 @@ protected:
 public:
 	LoopStats stats;
 	const std::string objectName;
+	
+private:
+	std::shared_mutex sharedMutex;
 };
 } // namespace icon7
 

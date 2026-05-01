@@ -20,7 +20,7 @@ namespace tcp
 {
 class Host;
 
-class Peer : public icon7::Peer
+class Peer : public icon7::PeerData
 {
 public:
 	Peer(uS::tcp::Host *host, us_socket_t *socket);

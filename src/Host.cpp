@@ -49,19 +49,19 @@ void Host::DisconnectAllAsync()
 
 void Host::DisconnectAll()
 {
-	std::vector<std::shared_ptr<Peer>> copy(peers.begin(), peers.end());
+	std::vector<std::shared_ptr<PeerData>> copy(peers.begin(), peers.end());
 	for (auto &p : copy) {
 		p->_InternalDisconnect();
 	}
 }
 
-void Host::SetOnConnect(void (*callback)(Peer *)) { onConnect = callback; }
-void Host::SetOnDisconnect(void (*callback)(Peer *))
+void Host::SetOnConnect(void (*callback)(PeerHandle)) { onConnect = callback; }
+void Host::SetOnDisconnect(void (*callback)(PeerHandle))
 {
 	onDisconnect = callback;
 }
 
-concurrent::future<std::shared_ptr<Peer>>
+concurrent::future<PeerHandle>
 Host::ConnectPromise(std::string address, uint16_t port)
 {
 	class CommandConnectPromise final : public commands::ExecuteOnPeer
@@ -70,20 +70,20 @@ Host::ConnectPromise(std::string address, uint16_t port)
 		CommandConnectPromise() {}
 		virtual ~CommandConnectPromise() {}
 
-		concurrent::promise<std::shared_ptr<Peer>> promise;
+		concurrent::promise<PeerHandle> promise;
 
 		virtual void Execute() override
 		{
-			if (peer != nullptr) {
-				promise.set_value(peer->shared_from_this());
+			if (peer.ptr != nullptr) {
+				promise.set_value(peer);
 			} else {
-				promise.set_value(nullptr);
+				promise.set_value({});
 			}
 		}
 	};
 
 	auto onConnected = CommandHandle<CommandConnectPromise>::Create();
-	concurrent::future<std::shared_ptr<Peer>> future =
+	concurrent::future<PeerHandle> future =
 		onConnected->promise.get_future();
 	Connect(address, port, std::move(onConnected), nullptr);
 	return future;
@@ -91,8 +91,8 @@ Host::ConnectPromise(std::string address, uint16_t port)
 
 void Host::_InternalConnect_Finish(commands::internal::ExecuteConnect &com)
 {
-	if (com.onConnected->peer.get() != nullptr) {
-		peers.insert(com.onConnected->peer);
+	if (com.onConnected->peer.ptr.get() != nullptr) {
+		peers.insert(com.onConnected->peer.ptr);
 	}
 
 	if (com.executionQueue) {
@@ -102,22 +102,23 @@ void Host::_InternalConnect_Finish(commands::internal::ExecuteConnect &com)
 	}
 }
 
-void Host::_Internal_on_open_Finish(std::shared_ptr<Peer> peer)
+void Host::_Internal_on_open_Finish(PeerHandle peer)
 {
-	peers.insert(peer);
+	peers.insert(peer.ptr);
 
 	if (onConnect) {
-		onConnect(peer.get());
+		onConnect(peer);
 	}
-	peer->SetReadyToUse();
+	peer.GetLocalPeerData()->SetReadyToUse();
 }
 
-void Host::_Internal_on_close_Finish(std::shared_ptr<Peer> peer)
+void Host::_Internal_on_close_Finish(PeerHandle peer)
 {
-	peer->peerFlags |= Peer::BIT_DISCONNECTING;
-	peer->_InternalOnDisconnect();
-	peer->_InternalClearInternalDataOnClose();
-	peers.erase(peer);
+	auto p = peer.GetLocalPeerData();
+	p->sharedPeer->peerFlags |= PeerStatusBits::BIT_DISCONNECTING;
+	p->_InternalOnDisconnect();
+	p->_InternalClearInternalDataOnClose();
+	peers.erase(p->shared_from_this());
 }
 
 concurrent::future<bool> Host::ListenOnPort(const std::string &address,
@@ -208,44 +209,45 @@ void Host::FlushPendingPeers()
 
 const RPCEnvironment *Host::GetRpcEnvironment() { return rpcEnvironment; }
 
-void Host::_InternalInsertPeerToFlush(Peer *peer)
+void Host::_InternalInsertPeerToFlush(PeerHandle peer)
 {
-	if (peer->_InternalHasQueuedSends() == false &&
-		peer->_InternalHasBufferedSends() == false) {
+	auto p = peer.GetLocalPeerData();
+	if (p->_InternalHasQueuedSends() == false &&
+		p->_InternalHasBufferedSends() == false) {
 		// TODO: implement
 		// 		assert(!"Unimplemented");
 		// 	peersToFlush.insert(peer->shared_from_this());
 	}
 }
 
-void Host::ForEachPeer(void(func)(icon7::Peer *))
+void Host::ForEachPeer(void(func)(icon7::PeerHandle))
 {
 	for (auto &p : peers) {
-		func(p.get());
+		func(p->peerHandle);
 	}
 }
 
-void Host::ForEachPeer(std::function<void(icon7::Peer *)> func)
+void Host::ForEachPeer(std::function<void(icon7::PeerHandle)> func)
 {
 	for (auto &p : peers) {
-		func(p.get());
+		func(p->peerHandle);
 	}
 }
 
-Peer *Host::_InternalGetRandomPeer()
+PeerHandle Host::_InternalGetRandomPeer()
 {
 	if (peers.size() == 0) {
-		return nullptr;
+		return {};
 	}
 	int r = rand() % peers.size(), i = 0;
 	for (auto &p : peers) {
 		if (i == r) {
-			return p.get();
+			return p->peerHandle;
 		} else {
 			++i;
 		}
 	}
-	return nullptr;
+	return {};
 }
 
 void Initialize() {}

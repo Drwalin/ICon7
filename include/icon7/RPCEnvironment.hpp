@@ -18,6 +18,7 @@
 #include "Flags.hpp"
 #include "Peer.hpp"
 #include "Host.hpp"
+#include "Loop.hpp"
 #include "CommandsBufferHandler.hpp"
 #include "OnReturnCallback.hpp"
 #include "MessageConverter.hpp"
@@ -38,18 +39,18 @@ public:
 		: callback(std::move(o.callback)), buffer(std::move(o.buffer))
 	{
 		assert(_commandSize == sizeof(CommandCallSend));
-		assert(buffer.buffer);
+		assert(buffer.data());
 		peer = std::move(o.peer);
 		flags = o.flags;
 		o.flags = 0;
 	}
 
-	CommandCallSend(std::shared_ptr<Peer> &&peer, OnReturnCallback &&callback,
+	CommandCallSend(PeerHandle peer, OnReturnCallback &&callback,
 					Flags flags, ByteBufferWritable &&buffer)
 		: ExecuteOnPeer(peer), callback(std::move(callback)),
 		  buffer(std::move(buffer)), flags(flags)
 	{
-		assert(this->buffer.buffer);
+		assert(this->buffer.data());
 	}
 	virtual ~CommandCallSend() {}
 
@@ -59,14 +60,15 @@ public:
 
 	virtual void Execute() override
 	{
-		assert(buffer.buffer);
+		assert(buffer.data());
+		PeerData *peer = this->peer.GetLocalPeerData();
 		const uint32_t rcbId = peer->_InternalGetNextValidReturnCallbackId();
 		const uint32_t rcbId_v = bitscpp::HostToNetworkUint(rcbId);
 		memcpy((void *)buffer.data(), &rcbId_v, sizeof(rcbId_v));
 		peer->returningCallbacks.InsertOrSet(rcbId, std::move(callback));
 		flags |= FLAGS_CALL;
 		if (FramingProtocol::WriteHeaderIntoBuffer(buffer, flags)) {
-			peer->SendLocalThread(std::move(buffer));
+			peer->Send(std::move(buffer));
 		} else {
 			LOG_FATAL("Trying to write header into invalid ByteBuffer.");
 		}
@@ -81,22 +83,22 @@ public:
 	RPCEnvironment();
 	~RPCEnvironment();
 
-	void OnReceive(Peer *peer, ByteBufferReadable &frameData,
+	void OnReceive(PeerData *peer, ByteBufferReadable &frameData,
 				   uint32_t headerSize, Flags flags) const;
 	/*
 	 * expects that reader already filled flags fully and reader is at body
 	 * offset
 	 */
-	void OnReceive(Peer *peer, ByteReader &reader, Flags flags) const;
-	void OnReceiveCall(Peer *peer, ByteReader &reader, Flags flags) const;
-	void OnReceiveReturn(Peer *peer, ByteReader &reader, Flags flags) const;
+	void OnReceive(PeerData *peer, ByteReader &reader, Flags flags) const;
+	void OnReceiveCall(PeerData *peer, ByteReader &reader, Flags flags) const;
+	void OnReceiveReturn(PeerData *peer, ByteReader &reader, Flags flags) const;
 
 	template <typename Fun>
 	MessageConverter *
 	RegisterMessage(const std::string &name, std::function<Fun> fun,
 					CommandExecutionQueue *executionQueue = nullptr,
 					CommandExecutionQueue *(*getExecutionQueue)(
-						MessageConverter *messageConverter, Peer *peer,
+						MessageConverter *messageConverter, PeerHandle peer,
 						ByteReader &reader, Flags flags) = nullptr)
 	{
 		auto func = new MessageConverterSpecStdFunction(fun);
@@ -110,7 +112,7 @@ public:
 	RegisterMessage(const std::string &name, Fun &&fun,
 					CommandExecutionQueue *executionQueue = nullptr,
 					CommandExecutionQueue *(*getExecutionQueue)(
-						MessageConverter *messageConverter, Peer *peer,
+						MessageConverter *messageConverter, PeerHandle peer,
 						ByteReader &reader, Flags flags) = nullptr)
 	{
 		auto f = ConvertLambdaToFunctionPtr(fun);
@@ -125,7 +127,7 @@ public:
 	RegisterObjectMessage(const std::string &name, T *object, Fun &&fun,
 						  CommandExecutionQueue *executionQueue = nullptr,
 						  CommandExecutionQueue *(*getExecutionQueue)(
-							  MessageConverter *messageConverter, Peer *peer,
+							  MessageConverter *messageConverter, PeerHandle peer,
 							  ByteReader &reader, Flags flags) = nullptr)
 	{
 		auto func = new MessageConverterSpecMethodOfObject(object, fun);
@@ -143,12 +145,16 @@ public:
 	}
 
 	template <typename... Targs>
-	static void Send(Peer *peer, Flags flags, const std::string &name,
+	static void Send(PeerHandle peer, Flags flags, const std::string &name,
 					 const Targs &...args)
 	{
 		ByteBufferWritable buffer(100);
 		SerializeSend(buffer, flags, name, args...);
-		peer->Send(std::move(buffer));
+		auto *p = peer.GetLocalPeerData();
+		if (p == nullptr) {
+			return;
+		}
+		p->Send(std::move(buffer));
 	}
 
 	static void
@@ -189,7 +195,7 @@ public:
 	}
 
 	template <typename... Targs>
-	static void Call(CommandsBufferHandler *commandsBuffer, Peer *peer,
+	static void Call(CommandsBufferHandler *commandsBuffer, PeerHandle peer,
 					 Flags flags, OnReturnCallback &&callback,
 					 const std::string &name, const Targs &...args)
 	{
@@ -199,12 +205,12 @@ public:
 		(writer.op(args), ...);
 
 		commandsBuffer->EnqueueCommand<commands::internal::CommandCallSend>(
-			peer->shared_from_this(), std::move(callback), flags,
+			peer, std::move(callback), flags,
 			std::move(writer._data));
 	}
 
 	template <typename... Targs>
-	static void Call(Peer *peer, Flags flags, OnReturnCallback &&callback,
+	static void Call(PeerHandle peer, Flags flags, OnReturnCallback &&callback,
 					 const std::string &name, const Targs &...args)
 	{
 		ByteWriter writer(100);
@@ -213,9 +219,9 @@ public:
 		(writer.op(args), ...);
 
 		auto cb = CommandHandle<commands::internal::CommandCallSend>::Create(
-			peer->shared_from_this(), std::move(callback), flags,
+			peer, std::move(callback), flags,
 			std::move(writer._data));
-		peer->host->EnqueueCommand(std::move(cb));
+		peer.GetLoop()->EnqueueCommand(std::move(cb));
 	}
 
 	void RemoveRegisteredMessage(const std::string &name);

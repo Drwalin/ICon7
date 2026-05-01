@@ -53,9 +53,19 @@ Flags FramingProtocol::GetPacketFlags(const uint8_t *header, Flags otherFlags)
 uint32_t FramingProtocol::GetPacketBodySize(const uint8_t *header,
 											uint8_t headerSize)
 {
+	assert(headerSize >= 1);
+	assert(headerSize <= 4);
 	uint32_t h = 0;
-	for (int i = 0; i < headerSize; ++i) {
-		h |= ((uint32_t)header[i]) << (i << 3);
+	switch(headerSize) {
+		case 4:
+			h |= ((uint32_t)header[3]) << 24;
+		case 3:
+			h |= ((uint32_t)header[2]) << 16;
+		case 2:
+			h |= ((uint32_t)header[1]) << 8;
+		case 1:
+			h |= ((uint32_t)header[0]);
+			break;
 	}
 	return (h >> 4) + 1;
 }
@@ -63,26 +73,18 @@ uint32_t FramingProtocol::GetPacketBodySize(const uint8_t *header,
 [[nodiscard]] bool
 FramingProtocol::WriteHeaderIntoBuffer(ByteBufferWritable &buffer, Flags flags)
 {
-	if (buffer._offset < sizeof(ByteBufferStorageHeader) + 4 ||
-		buffer.size() == 0) {
-		LOG_FATAL("Error; invalid buffer: size=%u  offset: %u  cap: %u",
-				  buffer._size, buffer._offset, buffer._capacity);
-		return false;
-	}
-
+	uint32_t size = buffer.size();
 	buffer._flags = flags;
-	uint32_t headerSize = FramingProtocol::GetHeaderSize(buffer.size());
-	uint8_t *header = buffer.data() - headerSize;
-	FramingProtocol::WriteHeader(header, headerSize, buffer.size(), flags);
-	buffer._capacity += headerSize;
-	buffer._size += headerSize;
-	buffer._offset -= headerSize;
-	buffer.buffer -= headerSize;
+	const uint32_t headerSize = FramingProtocol::GetHeaderSize(buffer.size());
+	buffer.prepend(nullptr, headerSize);
+	uint8_t *header = buffer.data();
+	FramingProtocol::WriteHeader(header, headerSize, size, flags);
 	return true;
 }
 
-void FramingProtocol::PrintDetailsAboutFrame(ByteBufferReadable &frame)
+void FramingProtocol::PrintDetailsAboutFrame(const ByteBufferReadable &frame)
 {
+	return;
 	const uint32_t totalSize = frame.size();
 	const uint32_t headerSize = GetPacketHeaderSize(frame.data()[0]);
 	uint32_t header;
@@ -99,8 +101,8 @@ void FramingProtocol::PrintDetailsAboutFrame(ByteBufferReadable &frame)
 	char *ptr = str;
 	const char *end = str+1023;
 
-	assert(storedInFrameBodySize == calculatedBodySize);
-	assert(flagsStored == flagsRead);
+// 	assert(storedInFrameBodySize == calculatedBodySize);
+// 	assert(flagsStored == flagsRead);
 
 	ptr += snprintf(ptr, end - ptr,
 			"totalSize: %i   "
@@ -154,8 +156,9 @@ void FramingProtocol::PrintDetailsAboutFrame(ByteBufferReadable &frame)
 		break;
 	}
 
-	assert(reader.get_errors() == 0);
+// 	assert(reader.get_errors() == 0);
 
-	LOG_TRACE("%s", str);
+	printf("%s", str);
+	fflush(stdout);
 }
 } // namespace icon7

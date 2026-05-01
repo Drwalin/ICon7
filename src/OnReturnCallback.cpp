@@ -4,6 +4,8 @@
 // You should have received a copy of the MIT License along with this program.
 
 #include "../include/icon7/Debug.hpp"
+#include "../include/icon7/Peer.hpp"
+#include "../include/icon7/CommandExecutionQueue.hpp"
 
 #include "../include/icon7/OnReturnCallback.hpp"
 
@@ -14,9 +16,9 @@ bool OnReturnCallback::IsExpired(time::Point t) const
 	return t > timeoutTimePoint;
 }
 
-void OnReturnCallback::Execute(Peer *peer, Flags flags, ByteReader &reader)
+void OnReturnCallback::Execute(PeerData *peer, Flags flags, ByteReader &reader)
 {
-	if (peer != callback->peer.get()) {
+	if (peer->peerHandle != callback->peer) {
 		LOG_WARN(
 			"OnReturnedCallback executed by different peer than the request "
 			"was sent to");

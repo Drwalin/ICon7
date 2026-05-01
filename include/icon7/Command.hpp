@@ -6,7 +6,6 @@
 #ifndef ICON7_COMMAND_HPP
 #define ICON7_COMMAND_HPP
 
-#include <memory>
 #include <coroutine>
 #include <type_traits>
 
@@ -18,7 +17,7 @@
 namespace icon7
 {
 class Host;
-class Peer;
+class PeerData;
 class MessageConverter;
 
 class CommandExecutionQueue;
@@ -190,9 +189,9 @@ class ExecuteOnPeer : public Command
 public:
 	virtual ~ExecuteOnPeer() {}
 	ExecuteOnPeer() {}
-	ExecuteOnPeer(std::shared_ptr<Peer> &peer) : peer(peer) {}
+	ExecuteOnPeer(PeerHandle peer) : peer(peer) {}
 
-	std::shared_ptr<Peer> peer;
+	PeerHandle peer;
 };
 
 class ExecuteOnHost : public Command
@@ -224,10 +223,13 @@ class ExecuteRPC : public Command
 {
 public:
 	virtual ~ExecuteRPC() {}
-	ExecuteRPC(ByteReader &&reader) : reader(std::move(reader)) {}
+	ExecuteRPC(ByteReader &&reader, PeerHandle peer)
+		: reader(std::move(reader)), peer(peer)
+	{
+	}
 
-	std::shared_ptr<Peer> peer;
 	ByteReader reader;
+	PeerHandle peer;
 	MessageConverter *messageConverter = nullptr;
 	Flags flags = 0;
 	uint32_t returnId = 0;
@@ -240,13 +242,11 @@ class ExecuteAddPeerToFlush : public Command
 public:
 	virtual ~ExecuteAddPeerToFlush() {}
 	ExecuteAddPeerToFlush() {}
-	ExecuteAddPeerToFlush(std::shared_ptr<Peer> peer, Host *host)
-		: peer(peer), host(host)
+	ExecuteAddPeerToFlush(PeerHandle peer) : peer(peer)
 	{
 	}
 
-	std::shared_ptr<Peer> peer;
-	Host *host = nullptr;
+	PeerHandle peer;
 
 	virtual void Execute() override;
 };
@@ -289,9 +289,9 @@ class ExecuteDisconnect : public Command
 {
 public:
 	virtual ~ExecuteDisconnect() {}
-	ExecuteDisconnect() {}
+	ExecuteDisconnect(PeerHandle peer) : peer(peer) {}
 
-	std::shared_ptr<Peer> peer;
+	PeerHandle peer;
 
 	virtual void Execute() override;
 };
@@ -300,9 +300,11 @@ class ExecutePeerSendFrame : public Command
 {
 public:
 	virtual ~ExecutePeerSendFrame() {}
-	ExecutePeerSendFrame() {}
+	ExecutePeerSendFrame(PeerHandle peer) : peer(peer)
+	{
+	}
 
-	std::weak_ptr<Peer> peer;
+	PeerHandle peer;
 	ByteBufferReadable frame;
 
 	virtual void Execute() override;

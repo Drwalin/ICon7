@@ -31,7 +31,7 @@ public:
 	 */
 	[[nodiscard]] static bool WriteHeaderIntoBuffer(ByteBufferWritable &buffer,
 													Flags flags);
-	static void PrintDetailsAboutFrame(ByteBufferReadable &frame);
+	static void PrintDetailsAboutFrame(const ByteBufferReadable &frame);
 };
 } // namespace icon7
 

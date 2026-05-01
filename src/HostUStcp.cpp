@@ -45,11 +45,12 @@ bool Host::Init(std::shared_ptr<uS::Loop> loop, bool useSSL,
 	SSL = useSSL;
 	us_socket_context_options_t options{key_file_name, cert_file_name,
 										passphrase,	   dh_params_file_name,
-										ca_file_name,  ssl_ciphers};
+										ca_file_name,  ssl_ciphers, 0};
 
 	uSloop = loop->loop;
+	assert(uSloop != nullptr);
 	socketContext =
-		us_create_socket_context(SSL, loop->loop, sizeof(Host *), options);
+		us_create_socket_context(SSL, uSloop, sizeof(Host *), options);
 	if (socketContext == nullptr) {
 		LOG_ERROR("FAILED TO CREATE HOST");
 		uSloop = nullptr;
@@ -121,16 +122,16 @@ void Host::_InternalConnect(commands::internal::ExecuteConnect &com)
 {
 	us_socket_t *socket =
 		us_socket_context_connect(SSL, socketContext, com.address.c_str(),
-								  com.port, nullptr, 0, sizeof(icon7::Peer *));
+								  com.port, nullptr, 0, sizeof(icon7::PeerData *));
 
-	std::shared_ptr<icon7::Peer> peer;
+	std::shared_ptr<icon7::PeerData> peer;
 	if (socket) {
 		peer = MakePeer(socket);
-		(*(icon7::Peer **)us_socket_ext(SSL, socket)) = peer.get();
-		com.onConnected->peer = peer;
-		peer->isClient = true;
+		(*(icon7::PeerData **)us_socket_ext(SSL, socket)) = peer.get();
+		com.onConnected->peer = peer->peerHandle;
+		peer->sharedPeer->isClient = true;
 	} else {
-		com.onConnected->peer = nullptr;
+		com.onConnected->peer = {};
 	}
 
 	_InternalConnect_Finish(com);
@@ -145,22 +146,21 @@ us_socket_t *Host::_Internal_on_open(struct us_socket_t *socket, int isClient,
 
 	host->stats.connectionsLocalTotal += 1;
 
-	std::shared_ptr<icon7::Peer> peer;
+	std::shared_ptr<icon7::PeerData> peer;
 
 	if (isClient == false) {
 		peer = host->MakePeer(socket);
-		(*(icon7::Peer **)us_socket_ext(SSL, socket)) = peer.get();
-		peer->isClient = false;
+		(*(icon7::PeerData **)us_socket_ext(SSL, socket)) = peer.get();
+		peer->sharedPeer->isClient = false;
 		host->loop->stats.connectionsLocalTotal += 1;
 	} else {
-		peer =
-			(*(icon7::Peer **)us_socket_ext(SSL, socket))->shared_from_this();
+		peer = (*(icon7::PeerData **)us_socket_ext(SSL, socket))->shared_from_this();
 		host->loop->stats.connectionsRemoteTotal += 1;
 	}
 
-	peer->isClient = isClient;
+	peer->sharedPeer->isClient = isClient;
 
-	host->_Internal_on_open_Finish(peer);
+	host->_Internal_on_open_Finish(peer->peerHandle);
 
 	return socket;
 }
@@ -176,14 +176,14 @@ us_socket_t *Host::_Internal_on_close(struct us_socket_t *socket, int code,
 	host->loop->stats.disconnectedLocal += 1;
 
 	// closed locally
-	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
+	icon7::PeerData *peer = *(icon7::PeerData **)us_socket_ext(SSL, socket);
 
 	if (peer == nullptr) {
 		return socket;
 	}
 
-	std::shared_ptr<icon7::Peer> _peer = peer->shared_from_this();
-	host->_Internal_on_close_Finish(_peer);
+	std::shared_ptr<icon7::PeerData> _peer = peer->shared_from_this();
+	host->_Internal_on_close_Finish(_peer->peerHandle);
 
 	return socket;
 }
@@ -192,7 +192,7 @@ template <bool SSL>
 us_socket_t *Host::_Internal_on_data(struct us_socket_t *socket, char *data,
 									 int length)
 {
-	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
+	icon7::PeerData *peer = *(icon7::PeerData **)us_socket_ext(SSL, socket);
 
 	if (peer == nullptr) {
 		return socket;
@@ -205,7 +205,7 @@ us_socket_t *Host::_Internal_on_data(struct us_socket_t *socket, char *data,
 template <bool SSL>
 us_socket_t *Host::_Internal_on_writable(struct us_socket_t *socket)
 {
-	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
+	icon7::PeerData *peer = *(icon7::PeerData **)us_socket_ext(SSL, socket);
 
 	if (peer == nullptr) {
 		Host *host =
@@ -215,7 +215,7 @@ us_socket_t *Host::_Internal_on_writable(struct us_socket_t *socket)
 		return socket;
 	}
 
-	peer->stats.onWriteable += 1;
+	peer->sharedPeer->stats.onWriteable += 1;
 	peer->host->stats.onWriteable += 1;
 	peer->host->loop->stats.onWriteable += 1;
 
@@ -230,7 +230,7 @@ us_socket_t *Host::_Internal_on_timeout(struct us_socket_t *socket)
 	host->stats.timeouts += 1;
 	host->loop->stats.timeouts += 1;
 
-	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
+	icon7::PeerData *peer = *(icon7::PeerData **)us_socket_ext(SSL, socket);
 
 	if (peer) {
 		peer->_InternalOnTimeout();
@@ -255,7 +255,7 @@ us_socket_t *Host::_Internal_on_long_timeout(struct us_socket_t *socket)
 	host->stats.longTimeouts += 1;
 	host->loop->stats.longTimeouts += 1;
 
-	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
+	icon7::PeerData *peer = *(icon7::PeerData **)us_socket_ext(SSL, socket);
 
 	if (peer == nullptr) {
 		return socket;
@@ -296,14 +296,14 @@ us_socket_t *Host::_Internal_on_end(struct us_socket_t *socket)
 	host->loop->stats.disconnectedRemote += 1;
 
 	// closed by the other side
-	icon7::Peer *peer = *(icon7::Peer **)us_socket_ext(SSL, socket);
+	icon7::PeerData *peer = *(icon7::PeerData **)us_socket_ext(SSL, socket);
 
 	if (peer == nullptr) {
 		return socket;
 	}
 
-	std::shared_ptr<icon7::Peer> _peer = peer->shared_from_this();
-	host->_Internal_on_close_Finish(_peer);
+	std::shared_ptr<icon7::PeerData> _peer = peer->shared_from_this();
+	host->_Internal_on_close_Finish(_peer->peerHandle);
 
 	us_socket_shutdown(SSL, socket);
 	return us_socket_close(SSL, socket, 0, nullptr);
@@ -331,9 +331,13 @@ void Host::_InternalStopListening()
 	listenSockets.clear();
 }
 
-std::shared_ptr<Peer> Host::MakePeer(us_socket_t *socket)
+std::shared_ptr<uS::tcp::Peer> Host::MakePeer(us_socket_t *socket)
 {
-	return std::make_shared<uS::tcp::Peer>(this, socket);
+	auto ret = std::make_shared<uS::tcp::Peer>(this, socket);
+	PeerHandle peer = PeerHandle{ret, loop.get()};
+	ret->peerHandle = peer;
+	ret->sharedPeer->peerHandle = peer;
+	return ret;
 }
 
 template <bool SSL>

@@ -25,11 +25,15 @@ void FrameDecoder::PushData(uint8_t *data, uint32_t _length,
 	int length = _length;
 	while (length > 0) {
 		if (headerSize == 0) {
+			assert(_writable_buffer.size() == 0);
 			headerSize = FramingProtocol::GetPacketHeaderSize(data[0]);
 			_writable_buffer.append(data, 1);
 			length--;
 			data++;
+		} else {
+			assert(_writable_buffer.size() != 0);
 		}
+
 		if (_writable_buffer.size() < headerSize) {
 			uint32_t bytes = std::min<uint32_t>(
 				length, headerSize - _writable_buffer.size());
@@ -37,6 +41,7 @@ void FrameDecoder::PushData(uint8_t *data, uint32_t _length,
 			length -= bytes;
 			data += bytes;
 		}
+
 		if (_writable_buffer.size() < headerSize) {
 			if (length != 0) {
 				LOG_FATAL("This error should never happen, FrameDecoder "
@@ -47,10 +52,14 @@ void FrameDecoder::PushData(uint8_t *data, uint32_t _length,
 			}
 			break;
 		}
+
 		if (_writable_buffer.size() == headerSize) {
 			frameSize = headerSize + FramingProtocol::GetPacketBodySize(
 										 _writable_buffer.data(), headerSize);
 			_writable_buffer.reserve(frameSize);
+// 			printf("Receiving buffer: headerSize=%u  bodySize=%u  frameSize=%u\n",
+// 					headerSize, frameSize-headerSize, frameSize);
+// 			fflush(stdout);
 		} else if (frameSize == 0) {
 			LOG_FATAL("This error should never happen - FrameDecoder algorithm "
 					  "broken:   length: %u    buffer.size: %u     frameSize: "
@@ -83,6 +92,7 @@ void FrameDecoder::PushData(uint8_t *data, uint32_t _length,
 		if (_writable_buffer.size() == frameSize) {
 			if (onPacket) {
 				ByteBufferReadable buffer(std::move(_writable_buffer));
+				FramingProtocol::PrintDetailsAboutFrame(buffer);
 				onPacket(buffer, headerSize, userPtr);
 				_writable_buffer = buffer.TryRecycle();
 				Restart();

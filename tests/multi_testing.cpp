@@ -93,7 +93,7 @@ struct ProcPidStatm {
 
 ProcPidStatm proc_pid_statm(int64_t pid)
 {
-	ProcPidStatm ret;
+	ProcPidStatm ret = {};
 	std::stringstream ss = ReadProcFile(pid, "statm");
 	int64_t v;
 	ss >> ret.VmSize >> ret.VmRSS >> ret.shared >> ret.text >> v >> ret.data >>
@@ -102,64 +102,64 @@ ProcPidStatm proc_pid_statm(int64_t pid)
 }
 
 struct ProcPidStat {
-	int64_t pid;
-	std::string comm;
-	char state;
-	int64_t ppid;
-	int64_t pgrp;
-	int64_t session;
-	int64_t tty_nr;
-	int64_t tpgid;
-	uint64_t flags;
-	uint64_t minflt;
-	uint64_t cminflt;
-	uint64_t majflt;
-	uint64_t cmajflt;
-	uint64_t utim;
-	uint64_t stime;
-	int64_t cutim;
-	int64_t cstime;
-	int64_t priority;
-	int64_t nice;
-	int64_t num_threads;
-	int64_t itrealvalue;
-	uint64_t starttime;
+	int64_t pid = 0;
+	std::string comm = "";
+	char state = 0;
+	int64_t ppid = 0;
+	int64_t pgrp = 0;
+	int64_t session = 0;
+	int64_t tty_nr = 0;
+	int64_t tpgid = 0;
+	uint64_t flags = 0;
+	uint64_t minflt = 0;
+	uint64_t cminflt = 0;
+	uint64_t majflt = 0;
+	uint64_t cmajflt = 0;
+	uint64_t utim = 0;
+	uint64_t stime = 0;
+	int64_t cutim = 0;
+	int64_t cstime = 0;
+	int64_t priority = 0;
+	int64_t nice = 0;
+	int64_t num_threads = 0;
+	int64_t itrealvalue = 0;
+	uint64_t starttime = 0;
 	union {
-		uint64_t vsize;
+		uint64_t vsize = 0;
 		uint64_t VmSize;
 	};
 	union {
-		int64_t rss;
+		int64_t rss = 0;
 		int64_t VmRSS;
 	};
-	uint64_t rsslim;
-	uint64_t startcode;
-	uint64_t endcode;
-	uint64_t startstack;
-	uint64_t kstkesp;
-	uint64_t kstkeip;
-	uint64_t signal;
-	uint64_t blocked;
-	uint64_t sigignore;
-	uint64_t sigcatch;
-	uint64_t wchan;
-	uint64_t nswap;
-	uint64_t cnswap;
-	int64_t exit_signal;
-	int64_t processor;
-	uint64_t rt_priority;
-	uint64_t policy;
-	uint64_t delayacct_blkio_ticks;
-	uint64_t guest_time;
-	int64_t cguest_time;
-	uint64_t start_data;
-	uint64_t end_data;
-	uint64_t start_brk;
-	uint64_t arg_start;
-	uint64_t arg_end;
-	uint64_t env_start;
-	uint64_t env_end;
-	int64_t exit_code;
+	uint64_t rsslim = 0;
+	uint64_t startcode = 0;
+	uint64_t endcode = 0;
+	uint64_t startstack = 0;
+	uint64_t kstkesp = 0;
+	uint64_t kstkeip = 0;
+	uint64_t signal = 0;
+	uint64_t blocked = 0;
+	uint64_t sigignore = 0;
+	uint64_t sigcatch = 0;
+	uint64_t wchan = 0;
+	uint64_t nswap = 0;
+	uint64_t cnswap = 0;
+	int64_t exit_signal = 0;
+	int64_t processor = 0;
+	uint64_t rt_priority = 0;
+	uint64_t policy = 0;
+	uint64_t delayacct_blkio_ticks = 0;
+	uint64_t guest_time = 0;
+	int64_t cguest_time = 0;
+	uint64_t start_data = 0;
+	uint64_t end_data = 0;
+	uint64_t start_brk = 0;
+	uint64_t arg_start = 0;
+	uint64_t arg_end = 0;
+	uint64_t env_start = 0;
+	uint64_t env_end = 0;
+	int64_t exit_code = 0;
 };
 
 ProcPidStat proc_pid_stat(int64_t pid)
@@ -197,6 +197,7 @@ void AsyncThreadMemoryAmountMetrics(std::string fileName)
 #if ICON7_USE_RPMALLOC
 	std::thread([=]() {
 		FILE *file = fopen(fileName.c_str(), "w");
+		assert(file != nullptr);
 		fprintf(file, "# time[s] - "
 					  "totalAllocation - "
 					  "totalAllocated[MiB] - "
@@ -232,7 +233,7 @@ void AsyncThreadMemoryAmountMetrics(std::string fileName)
 			ProcPidStatm statm = proc_pid_statm(procId);
 			const int64_t VmSize = statm.VmSize;
 			const int64_t VmRSS = statm.VmRSS;
-			VmPeak = std::max(VmPeak, statm.VmSize);
+			VmPeak = std::max<int64_t>(VmPeak, statm.VmSize);
 			VmHWM = std::max(VmHWM, statm.VmRSS);
 
 			fprintf(file, "%.4f %ld %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n",
@@ -385,7 +386,7 @@ int main(int argc, char **argv)
 				printf("\n\n");
 			}
 
-			std::vector<concurrent::future<std::shared_ptr<icon7::Peer>>> peers;
+			std::vector<concurrent::future<icon7::PeerHandle>> peers;
 			for (int i = 0; i < connectionsCount; ++i) {
 				peers.push_back(hostb->ConnectPromise("127.0.0.1", port));
 			}
@@ -401,9 +402,10 @@ int main(int argc, char **argv)
 			for (auto &f : peers) {
 				++II;
 				f.wait();
-				icon7::Peer *peer = f.get().get();
+				icon7::PeerHandle peerHandle = f.get();
+				std::shared_ptr<icon7::Peer> peer = loopb->GetSharedPeer(peerHandle);
 
-				if (peer == nullptr) {
+				if (peerHandle == icon7::PeerHandle{}) {
 					LOG_WARN("Failed to etablish connection: %i of tested %i "
 							 "of total %lu, due to nullptr value of future",
 							 JJ, II, peers.size());
@@ -437,7 +439,7 @@ int main(int argc, char **argv)
 					LOG_DEBUG("Peer state: %u", peer->GetPeerStateFlags());
 				}
 
-				validPeers.emplace_back(f.get());
+				validPeers.emplace_back(peer);
 			}
 
 			LOG_INFO("Hosts pair %i | failed %i | connected peers: %lu / %lu",
@@ -459,10 +461,10 @@ int main(int argc, char **argv)
 						icon7::time::Sleep(delayBetweeEachTotalSend);
 					}
 					for (auto p : validPeers) {
-						auto peer = p.get();
+						icon7::PeerHandle peer = p->peerHandle;
 						auto curTim = icon7::time::GetTemporaryTimestamp();
 						auto onReturned = [curTim, &sumTim, &arrayOfLatency](
-											  icon7::Peer *peer,
+											  icon7::PeerHandle peer,
 											  icon7::Flags flags,
 											  uint32_t result) -> void {
 							auto n = icon7::time::GetTemporaryTimestamp();
@@ -475,7 +477,7 @@ int main(int argc, char **argv)
 						rpc2.Call(&commandsBuffer, peer, icon7::FLAG_RELIABLE,
 								  icon7::OnReturnCallback::Make<uint32_t>(
 									  std::move(onReturned),
-									  [](icon7::Peer *peer) -> void {
+									  [](icon7::PeerHandle peer) -> void {
 										  printf(" Multiplication timeout\n");
 									  },
 									  24 * 3600 * 1000, peer),
@@ -495,13 +497,13 @@ int main(int argc, char **argv)
 							icon7::ByteBufferReadable constBuffer(std::move(buffer));
 							for (auto p : validPeers) {
 								auto peer = p.get();
-								peer->Send(constBuffer);
+								icon7::Peer::Send(peer->peerHandle, constBuffer);
 								sent++;
 							}
 						} else {
 							for (auto p : validPeers) {
 								auto peer = p.get();
-								rpc2.Send(peer, icon7::FLAG_RELIABLE, "sum", 3,
+								rpc2.Send(peer->peerHandle, icon7::FLAG_RELIABLE, "sum", 3,
 										  23, additionalPayload);
 								sent++;
 							}

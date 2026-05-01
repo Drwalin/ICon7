@@ -18,14 +18,14 @@ class Host;
 class PeerFlagsArgumentsReader
 {
 public:
-	static void ReadType(Peer *peer, Flags flags, ByteReader &reader, Flags &v);
-	static void ReadType(Peer *peer, Flags flags, ByteReader &reader, Host *&v);
-	static void ReadType(Peer *peer, Flags flags, ByteReader &reader, Peer *&v);
-	static void ReadType(Peer *peer, Flags flags, ByteReader &reader,
+	static void ReadType(PeerHandle peer, Flags flags, ByteReader &reader, Flags &v);
+	static void ReadType(PeerHandle peer, Flags flags, ByteReader &reader, Host *&v);
+	static void ReadType(PeerHandle peer, Flags flags, ByteReader &reader, PeerHandle &v);
+	static void ReadType(PeerHandle peer, Flags flags, ByteReader &reader,
 						 ByteReader *&v);
 
 	template <typename T>
-	inline static void ReadType(Peer *peer, Flags flags, ByteReader &reader,
+	inline static void ReadType(PeerHandle peer, Flags flags, ByteReader &reader,
 								T &value)
 	{
 		reader.op(value);

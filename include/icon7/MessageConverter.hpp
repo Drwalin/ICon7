@@ -13,7 +13,6 @@
 #include "Debug.hpp"
 #include "ByteReader.hpp"
 #include "PeerFlagsArgumentsReader.hpp"
-#include "Host.hpp"
 #include "Peer.hpp"
 #include "FramingProtocol.hpp"
 
@@ -33,11 +32,11 @@ public:
 	}
 	virtual ~MessageConverter() {}
 
-	virtual void Call(Peer *peer, ByteReader &reader, Flags flags,
+	virtual void Call(PeerHandle peer, ByteReader &reader, Flags flags,
 					  uint32_t returnId) = 0;
 
 	inline CommandExecutionQueue *
-	ExecuteGetQueue(Peer *peer, ByteReader &reader, Flags flags)
+	ExecuteGetQueue(PeerHandle peer, ByteReader &reader, Flags flags)
 	{
 		if (_executionQueue) {
 			return _executionQueue;
@@ -49,7 +48,7 @@ public:
 	}
 
 	CommandExecutionQueue *(*getExecutionQueue)(
-		MessageConverter *messageConverter, Peer *peer, ByteReader &reader,
+		MessageConverter *messageConverter, PeerHandle peer, ByteReader &reader,
 		Flags flags);
 
 	CommandExecutionQueue *_executionQueue;
@@ -59,7 +58,7 @@ template <typename Tret> class MessageReturnExecutor
 {
 public:
 	template <typename TF, typename Tuple, size_t... SeqArgs>
-	static void Execute(TF &&onReceive, Tuple &args, Peer *peer, Flags flags,
+	static void Execute(TF &&onReceive, Tuple &args, PeerHandle peer, Flags flags,
 						uint32_t returnId, std::index_sequence<SeqArgs...>)
 	{
 		Tret ret = onReceive(std::get<SeqArgs>(args)...);
@@ -70,7 +69,7 @@ public:
 			if (FramingProtocol::WriteHeaderIntoBuffer(
 					writer._data, ((flags | Flags(6)) ^ Flags(6)) |
 									  FLAGS_CALL_RETURN_FEEDBACK)) {
-				peer->Send(ByteBufferReadable(std::move(writer._data)));
+				peer.GetLocalPeerData()->Send(ByteBufferReadable(std::move(writer._data)));
 			} else {
 				LOG_FATAL("Trying to write header into invalid ByteBuffer.");
 			}
@@ -86,7 +85,7 @@ template <> class MessageReturnExecutor<void>
 {
 public:
 	template <typename TF, typename Tuple, size_t... SeqArgs>
-	static void Execute(TF &&onReceive, Tuple &args, Peer *peer, Flags flags,
+	static void Execute(TF &&onReceive, Tuple &args, PeerHandle peer, Flags flags,
 						uint32_t returnId, std::index_sequence<SeqArgs...>)
 	{
 		onReceive(std::get<SeqArgs>(args)...);
@@ -96,7 +95,7 @@ public:
 			if (FramingProtocol::WriteHeaderIntoBuffer(
 					writer._data, ((flags | Flags(6)) ^ Flags(6)) |
 									  FLAGS_CALL_RETURN_FEEDBACK)) {
-				peer->Send(ByteBufferReadable(std::move(writer._data)));
+				peer.GetLocalPeerData()->Send(ByteBufferReadable(std::move(writer._data)));
 			} else {
 				LOG_FATAL("Trying to write header into invalid ByteBuffer.");
 			}
@@ -122,7 +121,7 @@ public:
 
 	virtual ~MessageConverterSpec() {}
 
-	virtual void Call(Peer *peer, ByteReader &reader, Flags flags,
+	virtual void Call(PeerHandle peer, ByteReader &reader, Flags flags,
 					  uint32_t returnId) override
 	{
 		auto seq = std::index_sequence_for<Targs...>{};
@@ -131,7 +130,7 @@ public:
 
 private:
 	template <size_t... SeqArgs>
-	void _InternalCall(Peer *peer, Flags flags, ByteReader &reader,
+	void _InternalCall(PeerHandle peer, Flags flags, ByteReader &reader,
 					   uint32_t returnId, std::index_sequence<SeqArgs...> seq)
 	{
 		TupleType args;
@@ -165,7 +164,7 @@ public:
 
 	virtual ~MessageConverterSpecStdFunction() {}
 
-	virtual void Call(Peer *peer, ByteReader &reader, Flags flags,
+	virtual void Call(PeerHandle peer, ByteReader &reader, Flags flags,
 					  uint32_t returnId) override
 	{
 		auto seq = std::index_sequence_for<Targs...>{};
@@ -174,7 +173,7 @@ public:
 
 private:
 	template <size_t... SeqArgs>
-	void _InternalCall(Peer *peer, Flags flags, ByteReader &reader,
+	void _InternalCall(PeerHandle peer, Flags flags, ByteReader &reader,
 					   uint32_t returnId, std::index_sequence<SeqArgs...> seq)
 	{
 		TupleType args;
@@ -208,7 +207,7 @@ public:
 
 	virtual ~MessageConverterSpecMethodOfObject() {}
 
-	virtual void Call(Peer *peer, ByteReader &reader, Flags flags,
+	virtual void Call(PeerHandle peer, ByteReader &reader, Flags flags,
 					  uint32_t returnId) override
 	{
 		auto seq = std::index_sequence_for<Targs...>{};
@@ -217,7 +216,7 @@ public:
 
 private:
 	template <size_t... SeqArgs>
-	void _InternalCall(Peer *peer, Flags flags, ByteReader &reader,
+	void _InternalCall(PeerHandle peer, Flags flags, ByteReader &reader,
 					   uint32_t returnId, std::index_sequence<SeqArgs...> seq)
 	{
 		TupleType args;

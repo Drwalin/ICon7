@@ -16,18 +16,29 @@
 
 namespace icon7
 {
-Peer::Peer(Host *host) : host(host)
+Peer::Peer(Host *host) : host(host), loop(host->loop.get())
 {
 	userData = 0;
 	userPointer = nullptr;
-	onDisconnect = nullptr;
 	peerFlags = 0;
+}
+
+PeerData::PeerData(Host *host) : host(host), loop(host->loop.get())
+{
+	struct PeerPublic : public Peer {
+		PeerPublic(Host *host) : Peer(host) {}
+		virtual ~PeerPublic() {}
+	};
+	sharedPeer = std::make_shared<PeerPublic>(host);
+// 	peerHandle = {shared_from_this()};
+// 	sharedPeer->peerHandle = peerHandle;
+	onDisconnect = nullptr;
 	localQueue.reserve(32);
 	globalQueue.reserve(32);
 	localQueueOffset = 0;
 }
 
-Peer::~Peer()
+PeerData::~PeerData()
 {
 	for (int i = localQueueOffset; i < localQueue.size(); ++i) {
 		if (localQueue[i].data.storage) {
@@ -49,12 +60,6 @@ void Peer::Send(ByteBufferReadable &frame)
 	Send(std::move(frameLocal));
 }
 
-void Peer::SendLocalThread(ByteBufferReadable &frame)
-{
-	ByteBufferReadable frameLocal = frame;
-	SendLocalThread(std::move(frameLocal));
-}
-
 void Peer::Send(ByteBufferReadable &&frame)
 {
 	if (IsDisconnecting()) {
@@ -62,24 +67,46 @@ void Peer::Send(ByteBufferReadable &&frame)
 		return;
 	}
 	auto com =
-		CommandHandle<commands::internal::ExecutePeerSendFrame>::Create();
-	com->peer = weak_from_this();
+		CommandHandle<commands::internal::ExecutePeerSendFrame>::Create(peerHandle);
 	com->frame = std::move(frame);
 	host->EnqueueCommand(std::move(com));
-	frame.storage = nullptr;
+	assert(frame.storage == nullptr);
 }
 
-void Peer::SendLocalThread(ByteBufferReadable &&frame)
+void Peer::Send(PeerHandle peer, ByteBufferReadable &frame)
 {
+	ByteBufferReadable frameLocal = frame;
+	Send(peer, std::move(frameLocal));
+}
+
+void Peer::Send(PeerHandle peer, ByteBufferReadable &&frame)
+{
+	auto com =
+		CommandHandle<commands::internal::ExecutePeerSendFrame>::Create(peer);
+	com->frame = std::move(frame);
+	peer.GetLoop()->EnqueueCommand(std::move(com));
+	assert(frame.storage == nullptr);
+}
+
+void PeerData::Send(ByteBufferReadable &frame)
+{
+	ByteBufferReadable frameLocal = frame;
+	Send(std::move(frameLocal));
+}
+
+void PeerData::Send(ByteBufferReadable &&frame)
+{
+	FramingProtocol::PrintDetailsAboutFrame(frame);
 	if (IsDisconnecting()) {
-		_InternalErrorSendOnDisconnecting();
+		sharedPeer->_InternalErrorSendOnDisconnecting();
 		return;
 	}
 	if (_InternalHasQueuedSends() == false &&
 		_InternalHasBufferedSends() == false) {
-		host->_InternalInsertPeerToFlush(this);
+		host->_InternalInsertPeerToFlush(peerHandle);
 	}
 	globalQueue.emplace_back(std::move(frame));
+	assert(frame.storage == nullptr);
 }
 
 void Peer::_InternalErrorSendOnDisconnecting()
@@ -98,38 +125,42 @@ void Peer::_InternalErrorSendOnDisconnecting()
 void Peer::Disconnect()
 {
 	peerFlags |= BIT_DISCONNECTING;
-	auto com = CommandHandle<commands::internal::ExecuteDisconnect>::Create();
-	com->peer = shared_from_this();
-	host->EnqueueCommand(std::move(com));
+	Disconnect(peerHandle);
 }
 
-void Peer::_InternalOnData(uint8_t *data, uint32_t length)
+void Peer::Disconnect(PeerHandle peer)
 {
-	stats.bytesReceived += length;
+	auto com = CommandHandle<commands::internal::ExecuteDisconnect>::Create(peer);
+	peer.GetLoop()->EnqueueCommand(std::move(com));
+}
+
+void PeerData::_InternalOnData(uint8_t *data, uint32_t length)
+{
+	sharedPeer->stats.bytesReceived += length;
 	host->stats.bytesReceived += length;
 	host->loop->stats.bytesReceived += length;
 
-	stats.packetsReceived += 1;
+	sharedPeer->stats.packetsReceived += 1;
 	host->stats.packetsReceived += 1;
 	host->loop->stats.packetsReceived += 1;
 
 	frameDecoder.PushData(data, length, _Internal_static_OnPacket, this);
 }
 
-void Peer::_Internal_static_OnPacket(ByteBufferReadable &buffer, uint32_t headerSize,
+void PeerData::_Internal_static_OnPacket(ByteBufferReadable &buffer, uint32_t headerSize,
 									 void *peer)
 {
-	((Peer *)peer)->_InternalOnPacket(buffer, headerSize);
+	((PeerData *)peer)->_InternalOnPacket(buffer, headerSize);
 }
 
-void Peer::_InternalOnPacket(ByteBufferReadable &buffer, uint32_t headerSize)
+void PeerData::_InternalOnPacket(ByteBufferReadable &buffer, uint32_t headerSize)
 {
-	stats.framesReceived += 1;
+	sharedPeer->stats.framesReceived += 1;
 	host->stats.framesReceived += 1;
 	host->loop->stats.framesReceived += 1;
 
 	if (buffer.size() == headerSize) {
-		stats.errorsCount += 1;
+		sharedPeer->stats.errorsCount += 1;
 		host->stats.errorsCount += 1;
 		host->loop->stats.errorsCount += 1;
 		LOG_ERROR("Protocol doesn't allow for 0 sized packets.");
@@ -145,14 +176,14 @@ void Peer::_InternalOnPacket(ByteBufferReadable &buffer, uint32_t headerSize)
 	}
 }
 
-void Peer::_InternalOnPacketWithControllSequence(ByteBufferReadable &buffer,
+void PeerData::_InternalOnPacketWithControllSequence(ByteBufferReadable &buffer,
 												 uint32_t headerSize)
 {
 	uint8_t vectorCall = buffer.data()[headerSize];
 	if (vectorCall <= 0x7F) {
 		// TODO: decode here future controll sequences
 		uint32_t vectorCall = buffer.data()[headerSize];
-		stats.errorsCount += 1;
+		sharedPeer->stats.errorsCount += 1;
 		host->stats.errorsCount += 1;
 		host->loop->stats.errorsCount += 1;
 		LOG_WARN("Received packet with undefined controll sequence: 0x%X",
@@ -162,11 +193,11 @@ void Peer::_InternalOnPacketWithControllSequence(ByteBufferReadable &buffer,
 	}
 }
 
-void Peer::_InternalOnPacketWithControllSequenceBackend(ByteBufferReadable &buffer,
+void PeerData::_InternalOnPacketWithControllSequenceBackend(ByteBufferReadable &buffer,
 														uint32_t headerSize)
 {
 	uint32_t vectorCall = buffer.data()[headerSize];
-	stats.errorsCount += 1;
+	sharedPeer->stats.errorsCount += 1;
 	host->stats.errorsCount += 1;
 	host->loop->stats.errorsCount += 1;
 	LOG_WARN("Unhandled packet with controll sequence by backend. Vector call "
@@ -174,7 +205,7 @@ void Peer::_InternalOnPacketWithControllSequenceBackend(ByteBufferReadable &buff
 			 vectorCall);
 }
 
-bool Peer::_InternalOnWritable()
+bool PeerData::_InternalOnWritable()
 {
 	if (!IsReadyToUse() || IsDisconnecting() || IsClosed()) {
 		return false;
@@ -189,27 +220,27 @@ bool Peer::_InternalOnWritable()
 	return ret;
 }
 
-void Peer::_InternalOnDisconnect()
+void PeerData::_InternalOnDisconnect()
 {
 	if (onDisconnect) {
-		onDisconnect(this);
+		onDisconnect(peerHandle);
 	} else if (host->onDisconnect) {
-		host->onDisconnect(this);
+		host->onDisconnect(peerHandle);
 	}
 }
 
-void Peer::_InternalOnTimeout() { _InternalDisconnect(); }
+void PeerData::_InternalOnTimeout() { _InternalDisconnect(); }
 
-void Peer::_InternalOnLongTimeout() { _InternalDisconnect(); }
+void PeerData::_InternalOnLongTimeout() { _InternalDisconnect(); }
 
-bool Peer::_InternalHasQueuedSends() const
+bool PeerData::_InternalHasQueuedSends() const
 {
 	return localQueueOffset != localQueue.size() || globalQueue.size() != 0;
 }
 
-void Peer::SetReadyToUse() { peerFlags |= BIT_READY; }
+void PeerData::SetReadyToUse() { sharedPeer->peerFlags |= BIT_READY; }
 
-void Peer::DequeueToLocalQueue()
+void PeerData::DequeueToLocalQueue()
 {
 	if (localQueue.size() != localQueueOffset) {
 		return;
@@ -224,16 +255,22 @@ void Peer::DequeueToLocalQueue()
 	std::swap(localQueue, globalQueue);
 }
 
-bool Peer::_InternalFlushQueuedSends()
+bool PeerData::_InternalFlushQueuedSends()
 {
 	bool ret = true;
 	const uint32_t queuedFrames =
 		globalQueue.size() + localQueue.size() - localQueueOffset;
 	uint32_t sentFrames = 0;
 	uint32_t i = 0;
+	assert(localQueue.size() >= 0);
+	assert(globalQueue.size() >= 0);
 	for (int I = 0; I < 2; ++I) {
+		assert(localQueue.size() >= 0);
+		assert(globalQueue.size() >= 0);
 		DequeueToLocalQueue();
 		for (; i < 300; ++i) {
+			assert(localQueue.size() >= 0);
+			assert(globalQueue.size() >= 0);
 			if (localQueue.size() == localQueueOffset) {
 				ret = true;
 				break;
@@ -252,14 +289,14 @@ bool Peer::_InternalFlushQueuedSends()
 		}
 	}
 
-	stats.framesSent += sentFrames;
+	sharedPeer->stats.framesSent += sentFrames;
 	host->stats.framesSent += sentFrames;
 	host->loop->stats.framesSent += sentFrames;
 
 	return ret;
 }
 
-uint32_t Peer::_InternalGetNextValidReturnCallbackId()
+uint32_t PeerData::_InternalGetNextValidReturnCallbackId()
 {
 	uint32_t id;
 	do {
@@ -268,9 +305,9 @@ uint32_t Peer::_InternalGetNextValidReturnCallbackId()
 	return id;
 }
 
-void Peer::_InternalClearInternalDataOnClose() { peerFlags |= BIT_CLOSED; }
+void PeerData::_InternalClearInternalDataOnClose() { sharedPeer->peerFlags |= BIT_CLOSED; }
 
-void Peer::CheckForTimeoutFunctionCalls(time::Point now)
+void PeerData::CheckForTimeoutFunctionCalls(time::Point now)
 {
 	auto *it = returningCallbacks.GetRandom();
 	if (it == nullptr) {

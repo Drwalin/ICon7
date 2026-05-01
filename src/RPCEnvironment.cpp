@@ -21,7 +21,7 @@ RPCEnvironment::~RPCEnvironment()
 	registeredMessages.clear();
 }
 
-void RPCEnvironment::OnReceive(Peer *peer, ByteBufferReadable &frameData,
+void RPCEnvironment::OnReceive(PeerData *peer, ByteBufferReadable &frameData,
 							   uint32_t headerSize, Flags flags) const
 {
 	flags = FramingProtocol::GetPacketFlags(frameData.data(), flags);
@@ -31,7 +31,7 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteBufferReadable &frameData,
 	std::swap(frameData, reader._data);
 }
 
-void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader,
+void RPCEnvironment::OnReceive(PeerData *peer, ByteReader &reader,
 							   Flags flags) const
 {
 	assert(reader.get_errors() == 0);
@@ -48,7 +48,7 @@ void RPCEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 	}
 }
 
-void RPCEnvironment::OnReceiveCall(Peer *peer, ByteReader &reader,
+void RPCEnvironment::OnReceiveCall(PeerData *peer, ByteReader &reader,
 								   Flags flags) const
 {
 	uint32_t returnId = 0;
@@ -60,24 +60,23 @@ void RPCEnvironment::OnReceiveCall(Peer *peer, ByteReader &reader,
 	auto it = registeredMessages.find(name);
 	if (registeredMessages.end() != it) {
 		auto mtd = it->second;
-		auto queue = mtd->ExecuteGetQueue(peer, reader, flags);
+		auto queue = mtd->ExecuteGetQueue(peer->peerHandle, reader, flags);
 		if (queue) {
 			auto com = CommandHandle<commands::internal::ExecuteRPC>::Create(
-				std::move(reader));
-			com->peer = peer->shared_from_this();
+				std::move(reader), peer->peerHandle);
 			com->flags = flags;
 			com->returnId = returnId;
 			com->messageConverter = mtd;
 			queue->EnqueueCommand(std::move(com));
 		} else {
-			mtd->Call(peer, reader, flags, returnId);
+			mtd->Call(peer->peerHandle, reader, flags, returnId);
 		}
 	} else {
 		LOG_WARN("function not found: `%s`", name.c_str());
 	}
 }
 
-void RPCEnvironment::OnReceiveReturn(Peer *peer, ByteReader &reader,
+void RPCEnvironment::OnReceiveReturn(PeerData *peer, ByteReader &reader,
 									 Flags flags) const
 {
 	uint32_t returnId = 0;
@@ -100,9 +99,9 @@ void RPCEnvironment::CheckForTimeoutFunctionCalls(Loop *loop,
 {
 	auto now = time::GetTemporaryTimestamp();
 	for (uint32_t i = 0; i < maxChecks; ++i) {
-		Peer *peer = loop->_InternalGetRandomPeer();
+		PeerHandle peer = loop->_InternalGetRandomPeer();
 		if (peer) {
-			peer->CheckForTimeoutFunctionCalls(now);
+			peer.GetLocalPeerData()->CheckForTimeoutFunctionCalls(now);
 		} else {
 			return;
 		}

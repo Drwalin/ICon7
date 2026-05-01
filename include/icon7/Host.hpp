@@ -19,7 +19,6 @@
 
 namespace icon7
 {
-class Peer;
 class RPCEnvironment;
 class Loop;
 
@@ -45,10 +44,10 @@ public:
 					  CommandHandle<commands::ExecuteBooleanOnHost> &&callback,
 					  CommandExecutionQueue *queue = nullptr);
 
-	void SetOnConnect(void (*callback)(Peer *));
-	void SetOnDisconnect(void (*callback)(Peer *));
+	void SetOnConnect(void (*callback)(PeerHandle));
+	void SetOnDisconnect(void (*callback)(PeerHandle));
 
-	concurrent::future<std::shared_ptr<Peer>>
+	concurrent::future<PeerHandle>
 	ConnectPromise(std::string address, uint16_t port);
 	void Connect(std::string address, uint16_t port);
 	void Connect(std::string address, uint16_t port,
@@ -65,13 +64,13 @@ public:
 	Loop *GetLoop();
 
 public: // thread unsafe, safe only in hosts loop thread
-	void ForEachPeer(void(func)(icon7::Peer *));
-	void ForEachPeer(std::function<void(icon7::Peer *)> func);
+	void ForEachPeer(void(func)(PeerHandle));
+	void ForEachPeer(std::function<void(PeerHandle)> func);
 	void DisconnectAll();
 
 	virtual void _InternalSingleLoopIteration();
 
-	void _InternalInsertPeerToFlush(Peer *peer);
+	void _InternalInsertPeerToFlush(PeerHandle);
 	virtual void
 	_InternalConnect(commands::internal::ExecuteConnect &connectCommand) = 0;
 	virtual void
@@ -79,12 +78,12 @@ public: // thread unsafe, safe only in hosts loop thread
 					CommandHandle<commands::ExecuteBooleanOnHost> &com) = 0;
 	void
 	_InternalConnect_Finish(commands::internal::ExecuteConnect &connectCommand);
-	virtual void _Internal_on_open_Finish(std::shared_ptr<Peer> peer);
-	void _Internal_on_close_Finish(std::shared_ptr<Peer> peer);
+	virtual void _Internal_on_open_Finish(PeerHandle peer);
+	void _Internal_on_close_Finish(PeerHandle peer);
 
 	virtual void _InternalStopListening() = 0;
 
-	Peer *_InternalGetRandomPeer();
+	PeerHandle _InternalGetRandomPeer();
 
 public:
 	uint64_t userData;
@@ -95,18 +94,19 @@ protected:
 	Host(std::string objectName, RPCEnvironment *rpcEnvironment);
 
 	friend class Peer;
+	friend class PeerData;
 
 private:
 	void FlushPendingPeers();
 
 protected:
-	void (*onConnect)(Peer *);
-	void (*onDisconnect)(Peer *);
+	void (*onConnect)(PeerHandle);
+	void (*onDisconnect)(PeerHandle);
 
 	const RPCEnvironment *rpcEnvironment;
 
-	std::unordered_set<std::shared_ptr<Peer>> peers;
-	std::vector<Peer *> peersToSend;
+	std::unordered_set<std::shared_ptr<PeerData>> peers;
+	std::vector<PeerHandle> peersToSend;
 
 	CommandExecutionQueue *commandQueue;
 

@@ -4,31 +4,30 @@
 // You should have received a copy of the MIT License along with this program.
 
 #include "../include/icon7/Flags.hpp"
-#include "../include/icon7/Host.hpp"
 
 #include "../include/icon7/PeerFlagsArgumentsReader.hpp"
 
 namespace icon7
 {
-void PeerFlagsArgumentsReader::ReadType(Peer *peer, Flags flags,
+void PeerFlagsArgumentsReader::ReadType(PeerHandle peer, Flags flags,
 										ByteReader &reader, Flags &value)
 {
 	value = flags;
 }
 
-void PeerFlagsArgumentsReader::ReadType(Peer *peer, Flags flags,
+void PeerFlagsArgumentsReader::ReadType(PeerHandle peer, Flags flags,
 										ByteReader &reader, Host *&value)
 {
-	value = peer->host;
+	value = peer.GetHost();
 }
 
-void PeerFlagsArgumentsReader::ReadType(Peer *peer, Flags flags,
-										ByteReader &reader, Peer *&value)
+void PeerFlagsArgumentsReader::ReadType(PeerHandle peer, Flags flags,
+										ByteReader &reader, PeerHandle &value)
 {
 	value = peer;
 }
 
-void PeerFlagsArgumentsReader::ReadType(Peer *peer, Flags flags,
+void PeerFlagsArgumentsReader::ReadType(PeerHandle peer, Flags flags,
 										ByteReader &reader, ByteReader *&value)
 {
 	value = &reader;
