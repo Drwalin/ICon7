@@ -1,7 +1,6 @@
 #include <cstdio>
 
 #include "../include/icon7/Time.hpp"
-#include "../include/icon7/Command.hpp"
 #include "../include/icon7/Debug.hpp"
 #include "../include/icon7/Peer.hpp"
 #include "../include/icon7/Flags.hpp"
@@ -10,7 +9,7 @@
 #include "../include/icon7/PeerUStcp.hpp"
 #include "../include/icon7/HostUStcp.hpp"
 #include "../include/icon7/LoopUS.hpp"
-#include "icon7/Forward.hpp"
+#include "../include/icon7/Forward.hpp"
 
 std::atomic<int64_t> sent = 0, received = 0, returned = 0;
 
@@ -111,7 +110,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 			v = 0.0;
 		}
 
-		std::vector<concurrent::future<std::shared_ptr<icon7::Peer>>> peers;
+		std::vector<concurrent::future<icon7::PeerHandle>> peers;
 		for (int i = 0; i < connectionsCount; ++i) {
 			peers.push_back(hostb->ConnectPromise("127.0.0.1", port));
 		}
@@ -122,14 +121,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 			f.wait();
 		}
 
-		std::vector<std::shared_ptr<icon7::Peer>> validPeers;
+		std::vector<icon7::PeerHandle> validPeers;
 		II = 0;
 		for (auto &f : peers) {
 			++II;
 			f.wait();
-			icon7::Peer *peer = f.get().get();
+			icon7::PeerHandle peer = f.get();
 
-			if (peer == nullptr) {
+			if (peer == icon7::PeerHandle{}) {
 				LOG_WARN("Failed to etablish connection: %i of tested %i "
 						 "of total %lu, due to nullptr value of future",
 						 JJ, II, peers.size());
@@ -138,8 +137,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 			}
 
 			for (int j = 0; j < 1000; ++j) {
-				if (peer->IsReadyToUse() == false && !peer->IsDisconnecting() &&
-					!peer->IsClosed() && !peer->HadConnectError()) {
+				if (peer.GetSharedPeer()->IsReadyToUse() == false && !peer.GetSharedPeer()->IsDisconnecting() &&
+					!peer.GetSharedPeer()->IsClosed() && !peer.GetSharedPeer()->HadConnectError()) {
 					if (j == 999) {
 						LOG_WARN("Failed to etablish connection");
 					}
@@ -149,7 +148,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 				}
 			}
 
-			if (peer->HadConnectError() || peer->IsClosed()) {
+			if (peer.GetSharedPeer()->HadConnectError() || peer.GetSharedPeer()->IsClosed()) {
 				++JJ;
 				LOG_WARN("Failed to etablish connection: %i of tested %i "
 						 "of total %lu",
@@ -158,8 +157,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 				continue;
 			}
 
-			if (peer->GetPeerStateFlags() != 1) {
-				LOG_DEBUG("Peer state: %u", peer->GetPeerStateFlags());
+			if (peer.GetSharedPeer()->GetPeerStateFlags() != 1) {
+				LOG_DEBUG("Peer state: %u", peer.GetSharedPeer()->GetPeerStateFlags());
 			}
 
 			validPeers.emplace_back(f.get());
@@ -171,20 +170,17 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 
 		std::atomic<double> sumTim = 0;
 		{
-			icon7::CommandsBufferHandler *commandsBuffer =
-				new icon7::CommandsBufferHandler(
-					hostb->GetCommandExecutionQueue());
+			icon7::CommandsBufferHandler commandsBuffer(hostb->GetCommandExecutionQueue());
 
 			for (int k = 0; k < totalSends; ++k) {
 				if (k > 0) {
 					icon7::time::Sleep(icon7::time::milliseconds(1));
 				}
-				for (auto p : validPeers) {
-					auto peer = p.get();
+				for (auto peer : validPeers) {
 					icon7::time::Point curTim =
 						icon7::time::GetTemporaryTimestamp();
 					auto onReturned = [curTim, &sumTim, &arrayOfLatency](
-										  icon7::Peer *peer, icon7::Flags flags,
+										  icon7::PeerHandle peer, icon7::Flags flags,
 										  uint32_t result) -> void {
 						auto n = icon7::time::GetTemporaryTimestamp();
 						auto dt =
@@ -193,17 +189,17 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 						uint32_t i = returned++;
 						arrayOfLatency[i] = dt;
 					};
-					rpc2.Call(commandsBuffer, peer, icon7::FLAG_RELIABLE,
+					rpc2.Call(&commandsBuffer, peer, icon7::FLAG_RELIABLE,
 							  icon7::OnReturnCallback::Make<uint32_t>(
 								  std::move(onReturned),
-								  [](icon7::Peer *peer) -> void {
+								  [](icon7::PeerHandle peer) -> void {
 									  printf(" Multiplication timeout\n");
 								  },
 								  24 * 3600 * 1000, peer),
 							  "mul", 5, 13, additionalPayload.data());
 					sent++;
 				}
-				commandsBuffer->FlushBuffer();
+				commandsBuffer.FlushBuffer();
 				icon7::time::Sleep(icon7::time::microseconds(
 					delayBetweeEachTotalSendMilliseconds * 500));
 
@@ -212,21 +208,20 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 						icon7::ByteBufferWritable buffer(100);
 						rpc2.SerializeSend(buffer, icon7::FLAG_RELIABLE, "sum",
 										   3, 23, additionalPayload.data());
-						for (auto p : validPeers) {
-							auto peer = p.get();
-							peer->Send(std::move(buffer));
+						icon7::ByteBufferReadable br(std::move(buffer));
+						for (auto peer : validPeers) {
+							icon7::Peer::Send(peer, br);
 							sent++;
 						}
 					} else {
-						for (auto p : validPeers) {
-							auto peer = p.get();
+						for (auto peer : validPeers) {
 							rpc2.Send(peer, icon7::FLAG_RELIABLE, "sum", 3, 23,
 									  additionalPayload.data());
 							sent++;
 						}
 					}
 				}
-				commandsBuffer->FlushBuffer();
+				commandsBuffer.FlushBuffer();
 			}
 		}
 
@@ -251,7 +246,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 		}
 
 		for (auto &p : validPeers) {
-			p->Disconnect();
+			icon7::Peer::Disconnect(p);
 		}
 
 		validPeers.clear();

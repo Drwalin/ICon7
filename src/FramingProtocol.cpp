@@ -7,7 +7,6 @@
 
 #include "../include/icon7/Flags.hpp"
 #include "../include/icon7/ByteBuffer.hpp"
-#include "../include/icon7/Debug.hpp"
 #include "../bitscpp/include/bitscpp/ByteReader_v2.hpp"
 
 #include "../include/icon7/FramingProtocol.hpp"

@@ -2,7 +2,6 @@
 
 #include <cstdio>
 
-#include "../include/icon7/Command.hpp"
 #include "../include/icon7/Debug.hpp"
 #include "../include/icon7/Peer.hpp"
 #include "../include/icon7/Flags.hpp"
@@ -12,6 +11,7 @@
 #include "../include/icon7/HostUStcp.hpp"
 #include "../include/icon7/LoopUS.hpp"
 #include "../include/icon7/CoroutineHelper.hpp"
+#include "../include/icon7/ByteBuffer.hpp"
 
 thread_local int64_t received = 0;
 
@@ -62,15 +62,15 @@ icon7::CoroutineSchedulable Test(icon7::uS::Loop *loop, const uint8_t *data,
 	auto manualPeer = host->ConnectPromise("127.0.0.1", port);
 	co_await loop->Schedule();
 
-	std::shared_ptr<icon7::Peer> peer = manualPeer.get();
+	icon7::PeerHandle peer = manualPeer.get();
 
-	if (peer.get() == nullptr) {
+	if (!peer) {
 		loop->QueueStopRunning();
 	}
 
-	icon7::ByteBuffer buffer(size + 256);
+	icon7::ByteBufferWritable buffer(size + 256);
 	buffer.append(data + 1, size - 1);
-	peer->SendLocalThread(buffer);
+	icon7::Peer::Send(peer, std::move(buffer));
 
 	for (int i = 0; i < 15; ++i) {
 		co_await loop->Schedule();

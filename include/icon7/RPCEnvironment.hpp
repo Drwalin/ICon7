@@ -150,11 +150,7 @@ public:
 	{
 		ByteBufferWritable buffer(100);
 		SerializeSend(buffer, flags, name, args...);
-		auto *p = peer.GetLocalPeerData();
-		if (p == nullptr) {
-			return;
-		}
-		p->Send(std::move(buffer));
+		Peer::Send(peer, std::move(buffer));
 	}
 
 	static void

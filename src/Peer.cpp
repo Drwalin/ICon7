@@ -56,12 +56,14 @@ PeerData::~PeerData()
 
 void Peer::Send(ByteBufferReadable &frame)
 {
+	assert(frame.data());
 	ByteBufferReadable frameLocal = frame;
 	Send(std::move(frameLocal));
 }
 
 void Peer::Send(ByteBufferReadable &&frame)
 {
+	assert(frame.data());
 	if (IsDisconnecting()) {
 		_InternalErrorSendOnDisconnecting();
 		return;
@@ -75,12 +77,14 @@ void Peer::Send(ByteBufferReadable &&frame)
 
 void Peer::Send(PeerHandle peer, ByteBufferReadable &frame)
 {
+	assert(frame.data());
 	ByteBufferReadable frameLocal = frame;
 	Send(peer, std::move(frameLocal));
 }
 
 void Peer::Send(PeerHandle peer, ByteBufferReadable &&frame)
 {
+	assert(frame.data());
 	auto com =
 		CommandHandle<commands::internal::ExecutePeerSendFrame>::Create(peer);
 	com->frame = std::move(frame);
@@ -90,12 +94,14 @@ void Peer::Send(PeerHandle peer, ByteBufferReadable &&frame)
 
 void PeerData::Send(ByteBufferReadable &frame)
 {
+	assert(frame.data());
 	ByteBufferReadable frameLocal = frame;
 	Send(std::move(frameLocal));
 }
 
 void PeerData::Send(ByteBufferReadable &&frame)
 {
+	assert(frame.data());
 	FramingProtocol::PrintDetailsAboutFrame(frame);
 	if (IsDisconnecting()) {
 		sharedPeer->_InternalErrorSendOnDisconnecting();
@@ -262,15 +268,9 @@ bool PeerData::_InternalFlushQueuedSends()
 		globalQueue.size() + localQueue.size() - localQueueOffset;
 	uint32_t sentFrames = 0;
 	uint32_t i = 0;
-	assert(localQueue.size() >= 0);
-	assert(globalQueue.size() >= 0);
 	for (int I = 0; I < 2; ++I) {
-		assert(localQueue.size() >= 0);
-		assert(globalQueue.size() >= 0);
 		DequeueToLocalQueue();
 		for (; i < 300; ++i) {
-			assert(localQueue.size() >= 0);
-			assert(globalQueue.size() >= 0);
 			if (localQueue.size() == localQueueOffset) {
 				ret = true;
 				break;
@@ -305,7 +305,11 @@ uint32_t PeerData::_InternalGetNextValidReturnCallbackId()
 	return id;
 }
 
-void PeerData::_InternalClearInternalDataOnClose() { sharedPeer->peerFlags |= BIT_CLOSED; }
+void PeerData::_InternalClearInternalDataOnClose() {
+	sharedPeer->peerFlags |= BIT_CLOSED;
+	sharedPeer = {};
+	peerHandle = {};
+}
 
 void PeerData::CheckForTimeoutFunctionCalls(time::Point now)
 {

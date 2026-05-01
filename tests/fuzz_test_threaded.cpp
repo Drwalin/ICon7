@@ -6,7 +6,6 @@
 #include <cstdio>
 #include <thread>
 
-#include "../include/icon7/Command.hpp"
 #include "../include/icon7/Debug.hpp"
 #include "../include/icon7/Peer.hpp"
 #include "../include/icon7/Flags.hpp"
@@ -15,6 +14,7 @@
 #include "../include/icon7/PeerUStcp.hpp"
 #include "../include/icon7/HostUStcp.hpp"
 #include "../include/icon7/LoopUS.hpp"
+#include "../include/icon7/ByteBuffer.hpp"
 
 thread_local int64_t received = 0;
 
@@ -64,12 +64,12 @@ void Test(icon7::uS::Loop *loop, const uint8_t *data, size_t size,
 
 	auto manualPeer = host->ConnectPromise("127.0.0.1", port);
 
-	std::shared_ptr<icon7::Peer> peer = manualPeer.get();
+	icon7::PeerHandle peer = manualPeer.get();
 
-	if (peer.get()) {
-		icon7::ByteBuffer buffer(size + 256);
+	if (peer) {
+		icon7::ByteBufferWritable buffer(size + 256);
 		buffer.append(data + 1, size - 1);
-		peer->Send(buffer);
+		icon7::Peer::Send(peer, std::move(buffer));
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(3));
 
