@@ -83,7 +83,7 @@ icon7::CoroutineSchedulable Test(icon7::uS::Loop *loop, const uint8_t *data,
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
-	if (size < 10) {
+	if (size < 7) {
 		return -1;
 		LOG_FATAL("");
 	}
