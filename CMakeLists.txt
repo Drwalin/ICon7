@@ -68,7 +68,7 @@ if(UNIX)
 else()
 	add_subdirectory(libuv)
 	target_link_libraries(uSockets uv_a ws2_32)
-	# target_compile_definitions(uSockets PRIVATE LIBUS_USE_LIBUV)
+	target_compile_definitions(uSockets PRIVATE LIBUS_USE_LIBUV)
 endif()
 
 if(USOCKETS_USE_OPENSSL)

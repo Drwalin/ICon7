@@ -30,8 +30,6 @@ PeerData::PeerData(Host *host) : host(host), loop(host->loop.get())
 		virtual ~PeerPublic() {}
 	};
 	sharedPeer = std::make_shared<PeerPublic>(host);
-// 	peerHandle = {shared_from_this()};
-// 	sharedPeer->peerHandle = peerHandle;
 	onDisconnect = nullptr;
 	localQueue.reserve(32);
 	globalQueue.reserve(32);
@@ -218,7 +216,7 @@ bool PeerData::_InternalOnWritable()
 	}
 	bool ret = true;
 	if (_InternalHasQueuedSends()) {
-		ret = _InternalFlushQueuedSends();
+		ret = _InternalFlushQueuedSends(384);
 	}
 	if (_InternalHasBufferedSends()) {
 		ret &= _InternalFlushBufferedSends(false);
@@ -261,7 +259,7 @@ void PeerData::DequeueToLocalQueue()
 	std::swap(localQueue, globalQueue);
 }
 
-bool PeerData::_InternalFlushQueuedSends()
+bool PeerData::_InternalFlushQueuedSends(int maxPacketsToSend)
 {
 	bool ret = true;
 	const uint32_t queuedFrames =
@@ -270,7 +268,7 @@ bool PeerData::_InternalFlushQueuedSends()
 	uint32_t i = 0;
 	for (int I = 0; I < 2; ++I) {
 		DequeueToLocalQueue();
-		for (; i < 300; ++i) {
+		for (; i < maxPacketsToSend; ++i) {
 			if (localQueue.size() == localQueueOffset) {
 				ret = true;
 				break;

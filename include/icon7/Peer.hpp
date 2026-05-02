@@ -159,7 +159,7 @@ public:
 
 protected:
 	// returns false for cork/error
-	virtual bool _InternalFlushQueuedSends();
+	virtual bool _InternalFlushQueuedSends(int maxPacketsToSend);
 	void DequeueToLocalQueue();
 	/*
 	 * return true if successfully whole dataFrame has been sent.

@@ -15,10 +15,14 @@ RPCEnvironment::RPCEnvironment() {}
 
 RPCEnvironment::~RPCEnvironment()
 {
-	for (auto it : registeredMessages) {
+	for (auto it : registeredMessagesString) {
 		delete it.second;
 	}
-	registeredMessages.clear();
+	for (auto it : registeredMessagesUint) {
+		delete it;
+	}
+	registeredMessagesString.clear();
+	registeredMessagesUint.clear();
 }
 
 void RPCEnvironment::OnReceive(PeerData *peer, ByteBufferReadable &frameData,
@@ -55,24 +59,37 @@ void RPCEnvironment::OnReceiveCall(PeerData *peer, ByteReader &reader,
 	if ((flags & 6) == FLAGS_CALL) {
 		reader.op_untyped_uint32(returnId);
 	}
-	std::string name;
+	RpcName name;
 	reader.op(name);
-	auto it = registeredMessages.find(name);
-	if (registeredMessages.end() != it) {
-		auto mtd = it->second;
-		auto queue = mtd->ExecuteGetQueue(peer->peerHandle, reader, flags);
+	MessageConverter *msgConv = nullptr;
+
+	if (name.IsString()) {
+		auto it = registeredMessagesString.find(name.str);
+		if (registeredMessagesString.end() != it) {
+			msgConv = it->second;
+		}
+	} else if (name.IsUint()) {
+		if (registeredMessagesUint.size() > name.uint) {
+			msgConv = registeredMessagesUint[name.uint];
+		}
+	} else {
+		LOG_WARN("Received RPC call without function name. Ignoring.");
+	}
+
+	if (msgConv) {
+		auto queue = msgConv->ExecuteGetQueue(peer->peerHandle, reader, flags);
 		if (queue) {
 			auto com = CommandHandle<commands::internal::ExecuteRPC>::Create(
 				std::move(reader), peer->peerHandle);
 			com->flags = flags;
 			com->returnId = returnId;
-			com->messageConverter = mtd;
+			com->messageConverter = msgConv;
 			queue->EnqueueCommand(std::move(com));
 		} else {
-			mtd->Call(peer->peerHandle, reader, flags, returnId);
+			msgConv->Call(peer->peerHandle, reader, flags, returnId);
 		}
 	} else {
-		LOG_WARN("function not found: `%s`", name.c_str());
+		LOG_WARN("Function %s not registered.", name.ToString().c_str());
 	}
 }
 
@@ -108,13 +125,56 @@ void RPCEnvironment::CheckForTimeoutFunctionCalls(Loop *loop,
 	}
 }
 
-void RPCEnvironment::RemoveRegisteredMessage(const std::string &name)
+void RPCEnvironment::RemoveRegisteredMessage(const RpcName &name)
 {
-	auto it = registeredMessages.find(name);
-	if (it == registeredMessages.end()) {
-		return;
+	MessageConverter *msgConv = nullptr;
+
+	if (name.IsString()) {
+		auto it = registeredMessagesString.find(name.str);
+		if (registeredMessagesString.end() != it) {
+			msgConv = it->second;
+			registeredMessagesString.erase(it);
+		}
+	} else if (name.IsUint()) {
+		if (registeredMessagesUint.size() > name.uint) {
+			registeredMessagesUint[name.uint] = nullptr;
+			msgConv = registeredMessagesUint[name.uint];
+		}
+		while (!registeredMessagesUint.empty()) {
+			if (registeredMessagesUint.back() == nullptr) {
+				registeredMessagesUint.pop_back();
+			} else {
+				break;
+			}
+		}
 	}
-	delete it->second;
-	registeredMessages.erase(it);
+	delete msgConv;
 }
+
+MessageConverter *
+RPCEnvironment::RegisterAnyMessage(RpcName name,
+								   MessageConverter *messageConverter)
+{
+	assert(name);
+	messageConverter->name = name;
+	if (name.IsString()) {
+		if (registeredMessagesString.contains(name.str) == true) {
+			LOG_FATAL("Message %s already registered!",
+					  name.ToString().c_str());
+		} else {
+			registeredMessagesString[name.str] = messageConverter;
+		}
+	} else if (name.IsUint()) {
+		if (registeredMessagesUint.size() <= name.uint) {
+			registeredMessagesUint.resize(name.uint + 1, nullptr);
+		}
+		if (registeredMessagesUint[name.uint] != nullptr) {
+			LOG_FATAL("Message %s already registered!",
+					  name.ToString().c_str());
+		}
+		registeredMessagesUint[name.uint] = messageConverter;
+	}
+	return messageConverter;
+}
+
 } // namespace icon7

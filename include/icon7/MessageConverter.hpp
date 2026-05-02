@@ -9,7 +9,7 @@
 #include <tuple>
 
 #include "ByteWriter.hpp"
-
+#include "RpcName.hpp"
 #include "Debug.hpp"
 #include "ByteReader.hpp"
 #include "PeerFlagsArgumentsReader.hpp"
@@ -38,6 +38,7 @@ public:
 	inline CommandExecutionQueue *
 	ExecuteGetQueue(PeerHandle peer, ByteReader &reader, Flags flags)
 	{
+		assert(name);
 		if (_executionQueue) {
 			return _executionQueue;
 		}
@@ -49,17 +50,19 @@ public:
 
 	CommandExecutionQueue *(*getExecutionQueue)(
 		MessageConverter *messageConverter, PeerHandle peer, ByteReader &reader,
-		Flags flags);
+		Flags flags) = nullptr;
 
-	CommandExecutionQueue *_executionQueue;
+	CommandExecutionQueue *_executionQueue = nullptr;
+	RpcName name;
 };
 
 template <typename Tret> class MessageReturnExecutor
 {
 public:
 	template <typename TF, typename Tuple, size_t... SeqArgs>
-	static void Execute(TF &&onReceive, Tuple &args, PeerHandle peer, Flags flags,
-						uint32_t returnId, std::index_sequence<SeqArgs...>)
+	static void Execute(TF &&onReceive, Tuple &args, PeerHandle peer,
+						Flags flags, uint32_t returnId,
+						std::index_sequence<SeqArgs...>)
 	{
 		Tret ret = onReceive(std::get<SeqArgs>(args)...);
 		if (returnId && ((flags & 6) == FLAGS_CALL)) {
@@ -69,7 +72,8 @@ public:
 			if (FramingProtocol::WriteHeaderIntoBuffer(
 					writer._data, ((flags | Flags(6)) ^ Flags(6)) |
 									  FLAGS_CALL_RETURN_FEEDBACK)) {
-				peer.GetLocalPeerData()->Send(ByteBufferReadable(std::move(writer._data)));
+				peer.GetLocalPeerData()->Send(
+					ByteBufferReadable(std::move(writer._data)));
 			} else {
 				LOG_FATAL("Trying to write header into invalid ByteBuffer.");
 			}
@@ -85,8 +89,9 @@ template <> class MessageReturnExecutor<void>
 {
 public:
 	template <typename TF, typename Tuple, size_t... SeqArgs>
-	static void Execute(TF &&onReceive, Tuple &args, PeerHandle peer, Flags flags,
-						uint32_t returnId, std::index_sequence<SeqArgs...>)
+	static void Execute(TF &&onReceive, Tuple &args, PeerHandle peer,
+						Flags flags, uint32_t returnId,
+						std::index_sequence<SeqArgs...>)
 	{
 		onReceive(std::get<SeqArgs>(args)...);
 		if (returnId && ((flags & 6) == FLAGS_CALL)) {
@@ -95,7 +100,8 @@ public:
 			if (FramingProtocol::WriteHeaderIntoBuffer(
 					writer._data, ((flags | Flags(6)) ^ Flags(6)) |
 									  FLAGS_CALL_RETURN_FEEDBACK)) {
-				peer.GetLocalPeerData()->Send(ByteBufferReadable(std::move(writer._data)));
+				peer.GetLocalPeerData()->Send(
+					ByteBufferReadable(std::move(writer._data)));
 			} else {
 				LOG_FATAL("Trying to write header into invalid ByteBuffer.");
 			}
@@ -106,6 +112,20 @@ public:
 		}
 	}
 };
+
+#define ICON7_MESSAGE_CONVERTER_HPP_PRINT_ERROR()                              \
+	{                                                                          \
+		const auto err = reader.get_errors();                                  \
+		char const *errStr = "BUFFER_TOO_SMALL | TYPE_MISMATCH";               \
+		if (err == bitscpp::v2::ERROR_BUFFER_TOO_SMALL) {                      \
+			errStr = "BUFFER_TOO_SMALL";                                       \
+		} else if (err == bitscpp::v2::ERROR_TYPE_MISMATCH) {                  \
+			errStr = "TYPE_MISMATCH";                                          \
+		}                                                                      \
+		LOG_ERROR(                                                             \
+			"Failed to execute function call %s, error in ByteReader: %s.",    \
+			name.ToString().c_str(), errStr);                                  \
+	}
 
 template <typename Tret, typename... Targs>
 class MessageConverterSpec : public MessageConverter
@@ -124,6 +144,7 @@ public:
 	virtual void Call(PeerHandle peer, ByteReader &reader, Flags flags,
 					  uint32_t returnId) override
 	{
+		assert(name);
 		auto seq = std::index_sequence_for<Targs...>{};
 		_InternalCall(peer, flags, reader, returnId, seq);
 	}
@@ -138,7 +159,7 @@ private:
 											std::get<SeqArgs>(args)),
 		 ...);
 		if (reader.get_errors() != 0) {
-			LOG_ERROR("Failed to execute function call, error in ByteReader.");
+			ICON7_MESSAGE_CONVERTER_HPP_PRINT_ERROR();
 		} else {
 			MessageReturnExecutor<Tret>::Execute(onReceive, args, peer, flags,
 												 returnId, seq);
@@ -167,6 +188,7 @@ public:
 	virtual void Call(PeerHandle peer, ByteReader &reader, Flags flags,
 					  uint32_t returnId) override
 	{
+		assert(name);
 		auto seq = std::index_sequence_for<Targs...>{};
 		_InternalCall(peer, flags, reader, returnId, seq);
 	}
@@ -181,7 +203,7 @@ private:
 											std::get<SeqArgs>(args)),
 		 ...);
 		if (reader.get_errors() != 0) {
-			LOG_ERROR("Failed to execute function call, error in ByteReader.");
+			ICON7_MESSAGE_CONVERTER_HPP_PRINT_ERROR();
 		} else {
 			MessageReturnExecutor<Tret>::Execute(onReceive, args, peer, flags,
 												 returnId, seq);
@@ -210,6 +232,7 @@ public:
 	virtual void Call(PeerHandle peer, ByteReader &reader, Flags flags,
 					  uint32_t returnId) override
 	{
+		assert(name);
 		auto seq = std::index_sequence_for<Targs...>{};
 		_InternalCall(peer, flags, reader, returnId, seq);
 	}
@@ -224,7 +247,7 @@ private:
 											std::get<SeqArgs>(args)),
 		 ...);
 		if (reader.get_errors() != 0) {
-			LOG_ERROR("Failed to execute function call, error in ByteReader.");
+			ICON7_MESSAGE_CONVERTER_HPP_PRINT_ERROR();
 		} else {
 			MessageReturnExecutor<Tret>::Execute(
 				[this](Targs... args) -> Tret {

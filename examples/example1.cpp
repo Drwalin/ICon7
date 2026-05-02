@@ -33,11 +33,9 @@ int main()
 
 	icon7::Initialize();
 
-	icon7::RPCEnvironment rpc, rpc2;
-	rpc.RegisterMessage("sum", Sum);
+	icon7::RPCEnvironment rpc;
+	rpc.RegisterMessage({1}, Sum);
 	rpc.RegisterMessage("mul", Mul);
-	rpc2.RegisterMessage("sum", Sum);
-	rpc2.RegisterMessage("mul", Mul);
 
 	std::shared_ptr<icon7::uS::Loop> loopa =
 		std::make_shared<icon7::uS::Loop>("loop_server");
@@ -61,7 +59,7 @@ int main()
 		std::make_shared<icon7::uS::Loop>("loop_client");
 	loopb->Init(1);
 	std::shared_ptr<icon7::uS::tcp::Host> hostb =
-		loopb->CreateHost(&rpc2, "host_client", false);
+		loopb->CreateHost(&rpc, "host_client", false);
 	loopb->RunAsync();
 
 	{
@@ -83,7 +81,7 @@ int main()
 			f.wait();
 			auto peer = f.get();
 
-			rpc->Send(peer, icon7::FLAG_RELIABLE, "sum", 3, 23);
+			rpc->Send(peer, icon7::FLAG_RELIABLE, {1}, 3, 23);
 
 			icon7::time::Sleep(icon7::time::milliseconds(5));
 
@@ -101,7 +99,7 @@ int main()
 						  10000, peer),
 					  "mul", 5, 13);
 		},
-		&rpc2, hostb, port);
+		&rpc, hostb, port);
 
 	for (int i = 0; i < 300 && returned.load() < 3; ++i) {
 		icon7::time::Sleep(icon7::time::milliseconds(1));

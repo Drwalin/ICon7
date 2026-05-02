@@ -12,6 +12,7 @@
 #include "../../bitscpp/include/bitscpp/Endianness.hpp"
 
 #include "ByteWriter.hpp"
+#include "RpcName.hpp"
 #include "Debug.hpp"
 #include "ByteReader.hpp"
 #include "Util.hpp"
@@ -22,7 +23,6 @@
 #include "CommandsBufferHandler.hpp"
 #include "OnReturnCallback.hpp"
 #include "MessageConverter.hpp"
-#include "ByteWriter.hpp"
 
 namespace icon7
 {
@@ -95,7 +95,7 @@ public:
 
 	template <typename Fun>
 	MessageConverter *
-	RegisterMessage(const std::string &name, std::function<Fun> fun,
+	RegisterMessage(RpcName name, std::function<Fun> fun,
 					CommandExecutionQueue *executionQueue = nullptr,
 					CommandExecutionQueue *(*getExecutionQueue)(
 						MessageConverter *messageConverter, PeerHandle peer,
@@ -109,7 +109,7 @@ public:
 
 	template <typename Fun>
 	MessageConverter *
-	RegisterMessage(const std::string &name, Fun &&fun,
+	RegisterMessage(RpcName name, Fun &&fun,
 					CommandExecutionQueue *executionQueue = nullptr,
 					CommandExecutionQueue *(*getExecutionQueue)(
 						MessageConverter *messageConverter, PeerHandle peer,
@@ -124,7 +124,7 @@ public:
 
 	template <typename T, typename Fun>
 	MessageConverter *
-	RegisterObjectMessage(const std::string &name, T *object, Fun &&fun,
+	RegisterObjectMessage(RpcName name, T *object, Fun &&fun,
 						  CommandExecutionQueue *executionQueue = nullptr,
 						  CommandExecutionQueue *(*getExecutionQueue)(
 							  MessageConverter *messageConverter, PeerHandle peer,
@@ -136,16 +136,11 @@ public:
 		return RegisterAnyMessage(name, func);
 	}
 
-	inline MessageConverter *
-	RegisterAnyMessage(const std::string &name,
-					   MessageConverter *messageConverter)
-	{
-		registeredMessages[name] = messageConverter;
-		return messageConverter;
-	}
+	MessageConverter *
+	RegisterAnyMessage(RpcName name, MessageConverter *messageConverter);
 
 	template <typename... Targs>
-	static void Send(PeerHandle peer, Flags flags, const std::string &name,
+	static void Send(PeerHandle peer, Flags flags, const RpcName &name,
 					 const Targs &...args)
 	{
 		ByteBufferWritable buffer(100);
@@ -155,8 +150,9 @@ public:
 
 	static void
 	InitializeSerializeSend(bitscpp::v2::ByteWriter_ByteBuffer &writer,
-							const std::string &name)
+							const RpcName &name)
 	{
+		assert(name);
 		writer.op(name);
 	}
 
@@ -173,7 +169,7 @@ public:
 
 	template <typename... Targs>
 	static void SerializeSend(ByteBufferWritable &buffer, Flags flags,
-							  const std::string &name, const Targs &...args)
+							  const RpcName &name, const Targs &...args)
 	{
 		bitscpp::v2::ByteWriter_ByteBuffer writer(&buffer);
 		InitializeSerializeSend(writer, name);
@@ -183,7 +179,7 @@ public:
 
 	template <typename... Targs>
 	static ByteBufferReadable
-	SerializeSend(Flags flags, const std::string &name, const Targs &...args)
+	SerializeSend(Flags flags, const RpcName &name, const Targs &...args)
 	{
 		ByteBufferWritable buffer(100);
 		SerializeSend(buffer, flags, name, args...);
@@ -193,7 +189,7 @@ public:
 	template <typename... Targs>
 	static void Call(CommandsBufferHandler *commandsBuffer, PeerHandle peer,
 					 Flags flags, OnReturnCallback &&callback,
-					 const std::string &name, const Targs &...args)
+					 const RpcName &name, const Targs &...args)
 	{
 		ByteWriter writer(100);
 		writer.op_untyped_uint32(0);
@@ -207,11 +203,11 @@ public:
 
 	template <typename... Targs>
 	static void Call(PeerHandle peer, Flags flags, OnReturnCallback &&callback,
-					 const std::string &name, const Targs &...args)
+					 const RpcName &name, const Targs &...args)
 	{
 		ByteWriter writer(100);
 		writer.op_untyped_uint32(0);
-		writer.op(name);
+		InitializeSerializeSend(writer, name);
 		(writer.op(args), ...);
 
 		auto cb = CommandHandle<commands::internal::CommandCallSend>::Create(
@@ -220,14 +216,15 @@ public:
 		peer.GetLoop()->EnqueueCommand(std::move(cb));
 	}
 
-	void RemoveRegisteredMessage(const std::string &name);
+	void RemoveRegisteredMessage(const RpcName &name);
 
 	friend class Host;
 
 	static void CheckForTimeoutFunctionCalls(Loop *loop, uint32_t maxChecks);
 
 protected:
-	std::unordered_map<std::string, MessageConverter *> registeredMessages;
+	std::unordered_map<std::string, MessageConverter *> registeredMessagesString;
+	std::vector<MessageConverter *> registeredMessagesUint;
 };
 } // namespace icon7
 

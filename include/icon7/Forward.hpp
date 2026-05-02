@@ -46,6 +46,7 @@ class FrameDecoder;
 class MessageConverter;
 class RPCEnvironment;
 struct SendFrameStruct;
+struct RpcName;
 
 namespace commands
 {
