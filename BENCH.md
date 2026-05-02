@@ -66,7 +66,7 @@ Executed in  251.78 secs    fish           external
    sys time  158.56 secs  997.00 micros  158.55 secs
 ```
 
-## Benchmark  (Release)
+## Benchmark 4f14be4 (Release)
 
 ### OpenSSL
 
