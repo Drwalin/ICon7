@@ -109,7 +109,7 @@ void PeerData::Send(ByteBufferReadable &&frame)
 	}
 	if (_InternalHasQueuedSends() == false &&
 		_InternalHasBufferedSends() == false) {
-		host->_InternalInsertPeerToFlush(peerHandle);
+		loop->_InternalInsertPeerToFlush(peerHandle);
 	}
 	globalQueue.emplace_back(std::move(frame));
 	assert(frame.storage == nullptr);

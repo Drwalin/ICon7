@@ -10,13 +10,14 @@
 #include "../include/icon7/RPCEnvironment.hpp"
 #include "../include/icon7/Debug.hpp"
 #include "../include/icon7/Loop.hpp"
+#include "../include/icon7/PeerManager.hpp"
 
 #include "../include/icon7/Host.hpp"
 
 namespace icon7
 {
-Host::Host(std::string objectName, RPCEnvironment *rpcEnvironment)
-	: rpcEnvironment(rpcEnvironment), objectName(objectName)
+Host::Host(std::string objectName, RPCEnvironment *rpcEnvironment, std::shared_ptr<Loop> loop)
+	: rpcEnvironment(rpcEnvironment), peerReferences(this, loop.get()), objectName(objectName)
 {
 	userData = 0;
 	userPointer = nullptr;
@@ -49,7 +50,7 @@ void Host::DisconnectAllAsync()
 
 void Host::DisconnectAll()
 {
-	std::vector<std::shared_ptr<PeerData>> copy(peers.begin(), peers.end());
+	std::vector<std::shared_ptr<PeerData>> copy(peerReferences.peers.begin(), peerReferences.peers.end());
 	for (auto &p : copy) {
 		p->_InternalDisconnect();
 	}
@@ -74,7 +75,7 @@ Host::ConnectPromise(std::string address, uint16_t port)
 
 		virtual void Execute() override
 		{
-			if (peer.ptr != nullptr) {
+			if (peer) {
 				promise.set_value(peer);
 			} else {
 				promise.set_value({});
@@ -91,9 +92,9 @@ Host::ConnectPromise(std::string address, uint16_t port)
 
 void Host::_InternalConnect_Finish(commands::internal::ExecuteConnect &com)
 {
-	if (com.onConnected->peer.ptr.get() != nullptr) {
-		peers.insert(com.onConnected->peer.ptr);
-	}
+// 	if (com.onConnected->peer) {
+// 		peerReferences.peers.insert(com.onConnected->peer.ptr);
+// 	}
 
 	if (com.executionQueue) {
 		com.executionQueue->EnqueueCommand(std::move(com.onConnected));
@@ -104,7 +105,7 @@ void Host::_InternalConnect_Finish(commands::internal::ExecuteConnect &com)
 
 void Host::_Internal_on_open_Finish(PeerHandle peer)
 {
-	peers.insert(peer.ptr);
+// 	peers.insert(peer.ptr);
 
 	if (onConnect) {
 		onConnect(peer);
@@ -117,8 +118,10 @@ void Host::_Internal_on_close_Finish(PeerHandle peer)
 	auto p = peer.GetLocalPeerData();
 	p->sharedPeer->peerFlags |= PeerStatusBits::BIT_DISCONNECTING;
 	p->_InternalOnDisconnect();
+	auto peerDataHolder = this->peerReferences.Release(peer);
 	p->_InternalClearInternalDataOnClose();
-	peers.erase(p->shared_from_this());
+// 	assert(peerDataHolder.use_count() == 1);
+// 	peersRefe.erase(p->shared_from_this());
 }
 
 concurrent::future<bool> Host::ListenOnPort(const std::string &address,
@@ -194,60 +197,42 @@ void Host::EnqueueCommand(CommandHandle<Command> &&command)
 void Host::_InternalSingleLoopIteration()
 {
 	assert(rpcEnvironment);
-	FlushPendingPeers();
-	RPCEnvironment::CheckForTimeoutFunctionCalls(loop.get(), 16);
+// 	FlushPendingPeers();
+// 	RPCEnvironment::CheckForTimeoutFunctionCalls(loop.get(), 16);
 }
 
-void Host::FlushPendingPeers()
-{
-	for (auto &p : peers) {
-		if (p->_InternalHasBufferedSends() || p->_InternalHasQueuedSends()) {
-			p->_InternalOnWritable();
-		}
-	}
-}
+// void Host::FlushPendingPeers()
+// {
+// 	for (auto &p : peers) {
+// 		if (p->_InternalHasBufferedSends() || p->_InternalHasQueuedSends()) {
+// 			p->_InternalOnWritable();
+// 		}
+// 	}
+// }
 
 const RPCEnvironment *Host::GetRpcEnvironment() { return rpcEnvironment; }
 
-void Host::_InternalInsertPeerToFlush(PeerHandle peer)
-{
-	auto p = peer.GetLocalPeerData();
-	if (p->_InternalHasQueuedSends() == false &&
-		p->_InternalHasBufferedSends() == false) {
-		// TODO: implement
-		// 		assert(!"Unimplemented");
-		// 	peersToFlush.insert(peer->shared_from_this());
-	}
-}
-
 void Host::ForEachPeer(void(func)(icon7::PeerHandle))
 {
-	for (auto &p : peers) {
+	for (auto &p : peerReferences.peers) {
 		func(p->peerHandle);
 	}
 }
 
 void Host::ForEachPeer(std::function<void(icon7::PeerHandle)> func)
 {
-	for (auto &p : peers) {
+	for (auto &p : peerReferences.peers) {
 		func(p->peerHandle);
 	}
 }
 
 PeerHandle Host::_InternalGetRandomPeer()
 {
-	if (peers.size() == 0) {
+	if (peerReferences.peers.size() == 0) {
 		return {};
 	}
-	int r = rand() % peers.size(), i = 0;
-	for (auto &p : peers) {
-		if (i == r) {
-			return p->peerHandle;
-		} else {
-			++i;
-		}
-	}
-	return {};
+	int r = rand() % peerReferences.peers.size();
+	return peerReferences.peers[r]->peerHandle;
 }
 
 void Initialize() {}

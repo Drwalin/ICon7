@@ -19,7 +19,7 @@ namespace internal
 
 void ExecuteAddPeerToFlush::Execute()
 {
-	peer.GetHost()->_InternalInsertPeerToFlush(peer);
+	peer.GetLoop()->_InternalInsertPeerToFlush(peer);
 }
 
 void ExecuteRPC::Execute()
@@ -55,14 +55,19 @@ void ExecuteListen::Execute()
 }
 
 void ExecuteDisconnect::Execute() { 
-	if (peer.ptr.get()) {
-	peer.ptr->_InternalDisconnect(); 
-	}}
+	if (peer) {
+		assert(peer.GetLocalPeerData());
+		peer.GetLocalPeerData()->_InternalDisconnect(); 
+	}
+}
 
 void ExecutePeerSendFrame::Execute()
 {
-	if (peer.ptr.get()) {
-		peer.ptr->Send(std::move(frame));
+	if (peer) {
+		PeerData *data =peer.GetLocalPeerData();
+		if (data) {
+			data->Send(std::move(frame));
+		}
 	}
 }
 

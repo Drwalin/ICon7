@@ -15,7 +15,7 @@
 
 namespace icon7
 {
-Loop::Loop(std::string objectName) : objectName(objectName)
+Loop::Loop(std::string objectName) : peerManager(this), objectName(objectName)
 {
 	userData = 0;
 	userPointer = nullptr;
@@ -27,17 +27,17 @@ Loop::~Loop() { WaitStopRunning(); }
 PeerData *Loop::GetLocalPeerData(PeerHandle handle)
 {
 	// TODO: this is temporary, may lead to race condition
-	return handle.ptr.get();
+	return peerManager.GetLocalPeerData(handle);
 }
 std::shared_ptr<Peer> Loop::GetSharedPeer(PeerHandle handle)
 {
 	// TODO: this is temporary, may lead to race condition
-	return handle.ptr->sharedPeer;
+	return peerManager.GetSharedPeer(handle);
 }
 Host *Loop::GetSharedHost(PeerHandle handle)
 {
 	// TODO: this is temporary, may lead to race condition
-	return handle.ptr->host;
+	return peerManager.GetSharedHost(handle).get();
 }
 
 void Loop::WaitStopRunning()
@@ -142,11 +142,40 @@ void Loop::_InternalSingleLoopIteration()
 	for (auto &h : hosts) {
 		h->_InternalSingleLoopIteration();
 	}
+	FlushPendingPeers();
+	RPCEnvironment::CheckForTimeoutFunctionCalls(this, 16);
 }
 
 void Loop::SetSleepBetweenUnlockedIterations(int32_t microseconds)
 {
 	microsecondsOfSleepBetweenIterations = microseconds;
+}
+
+void Loop::FlushPendingPeers()
+{
+	for (int32_t i=peerManager.peersToFlush.peers.size()-1; i>=0; --i) {
+		uint32_t peerId = peerManager.peersToFlush.peers[i];
+		PeerData *peer = peerManager.GetLocalPeerDataValid(peerId);
+		if (peer) {
+			if (peer->_InternalHasBufferedSends() || peer->_InternalHasQueuedSends()) {
+				peer->_InternalOnWritable();
+			}
+			if ((!peer->_InternalHasBufferedSends()) && (!peer->_InternalHasQueuedSends())) {
+				peerManager.peersToFlush.RemovePeerToFlush(peerId);
+			}
+		} else {
+			peerManager.peersToFlush.RemovePeerToFlush(peerId);
+		}
+	}
+}
+
+void Loop::_InternalInsertPeerToFlush(PeerHandle peer)
+{
+	auto p = peer.GetLocalPeerData();
+	if (p->_InternalHasQueuedSends() == false &&
+		p->_InternalHasBufferedSends() == false) {
+		peerManager.peersToFlush.InsertPeerToFlush(peer.id);
+	}
 }
 
 PeerHandle Loop::_InternalGetRandomPeer()

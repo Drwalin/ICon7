@@ -1,15 +1,14 @@
-#include "icon7/Command.hpp"
 #include <cstdio>
 
 #include <thread>
 
-#include <icon7/Time.hpp>
-#include <icon7/Peer.hpp>
-#include <icon7/Flags.hpp>
-#include <icon7/RPCEnvironment.hpp>
-#include <icon7/Flags.hpp>
-#include <icon7/PeerUStcp.hpp>
-#include <icon7/HostUStcp.hpp>
+#include "../include/icon7/Time.hpp"
+#include "../include/icon7/Peer.hpp"
+#include "../include/icon7/Flags.hpp"
+#include "../include/icon7/RPCEnvironment.hpp"
+#include "../include/icon7/Flags.hpp"
+#include "../include/icon7/PeerUStcp.hpp"
+#include "../include/icon7/HostUStcp.hpp"
 #include "../include/icon7/LoopUS.hpp"
 
 std::atomic<int> returned = 0;

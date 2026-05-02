@@ -127,6 +127,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 			++II;
 			f.wait();
 			icon7::PeerHandle peer = f.get();
+			auto peerShared = peer.GetSharedPeer();
 
 			if (peer == icon7::PeerHandle{}) {
 				LOG_WARN("Failed to etablish connection: %i of tested %i "
@@ -137,8 +138,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 			}
 
 			for (int j = 0; j < 1000; ++j) {
-				if (peer.GetSharedPeer()->IsReadyToUse() == false && !peer.GetSharedPeer()->IsDisconnecting() &&
-					!peer.GetSharedPeer()->IsClosed() && !peer.GetSharedPeer()->HadConnectError()) {
+				if (peerShared->IsReadyToUse() == false && !peerShared->IsDisconnecting() &&
+					!peerShared->IsClosed() && !peerShared->HadConnectError()) {
 					if (j == 999) {
 						LOG_WARN("Failed to etablish connection");
 					}
@@ -148,7 +149,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 				}
 			}
 
-			if (peer.GetSharedPeer()->HadConnectError() || peer.GetSharedPeer()->IsClosed()) {
+			if (peerShared->HadConnectError() || peerShared->IsClosed()) {
 				++JJ;
 				LOG_WARN("Failed to etablish connection: %i of tested %i "
 						 "of total %lu",
@@ -157,8 +158,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 				continue;
 			}
 
-			if (peer.GetSharedPeer()->GetPeerStateFlags() != 1) {
-				LOG_DEBUG("Peer state: %u", peer.GetSharedPeer()->GetPeerStateFlags());
+			if (peerShared->GetPeerStateFlags() != 1) {
+				LOG_DEBUG("Peer state: %u", peerShared->GetPeerStateFlags());
 			}
 
 			validPeers.emplace_back(f.get());

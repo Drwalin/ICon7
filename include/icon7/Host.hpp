@@ -7,7 +7,6 @@
 #define ICON7_HOST_HPP
 
 #include <string>
-#include <unordered_set>
 #include <functional>
 
 #include "../../concurrent/future.hpp"
@@ -15,6 +14,7 @@
 #include "Stats.hpp"
 #include "Flags.hpp"
 #include "CommandExecutionQueue.hpp"
+#include "PeerManager.hpp"
 #include "Forward.hpp"
 
 namespace icon7
@@ -70,7 +70,6 @@ public: // thread unsafe, safe only in hosts loop thread
 
 	virtual void _InternalSingleLoopIteration();
 
-	void _InternalInsertPeerToFlush(PeerHandle);
 	virtual void
 	_InternalConnect(commands::internal::ExecuteConnect &connectCommand) = 0;
 	virtual void
@@ -91,13 +90,13 @@ public:
 	std::shared_ptr<void> userSmartPtr;
 
 protected:
-	Host(std::string objectName, RPCEnvironment *rpcEnvironment);
+	Host(std::string objectName, RPCEnvironment *rpcEnvironment, std::shared_ptr<Loop> loop);
 
 	friend class Peer;
 	friend class PeerData;
 
 private:
-	void FlushPendingPeers();
+// 	void FlushPendingPeers();
 
 protected:
 	void (*onConnect)(PeerHandle);
@@ -105,8 +104,7 @@ protected:
 
 	const RPCEnvironment *rpcEnvironment;
 
-	std::unordered_set<std::shared_ptr<PeerData>> peers;
-	std::vector<PeerHandle> peersToSend;
+	PeerReferences peerReferences;
 
 	CommandExecutionQueue *commandQueue;
 

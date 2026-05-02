@@ -29,6 +29,7 @@ public:
 	void WaitStopAsyncExecution();
 	bool IsRunningAsync() const;
 
+	size_t SizeApprox() const;
 	bool HasAny() const;
 
 	void RunAsyncExecution(uint32_t sleepMicrosecondsOnNoActions,

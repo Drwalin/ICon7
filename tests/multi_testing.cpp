@@ -403,7 +403,7 @@ int main(int argc, char **argv)
 				++II;
 				f.wait();
 				icon7::PeerHandle peerHandle = f.get();
-				std::shared_ptr<icon7::Peer> peer = loopb->GetSharedPeer(peerHandle);
+				std::shared_ptr<icon7::Peer> peer = peerHandle.GetSharedPeer();
 
 				if (peerHandle == icon7::PeerHandle{}) {
 					LOG_WARN("Failed to etablish connection: %i of tested %i "

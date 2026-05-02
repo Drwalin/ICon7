@@ -82,16 +82,17 @@ class Peer;
 namespace icon7
 {
 struct PeerHandle {
-	std::shared_ptr<PeerData> ptr;
+	uint32_t id = 0;
+	uint32_t version = 0;
 	Loop *loop = nullptr;
 	inline bool operator==(const PeerHandle &r) const {
-		return ptr == r.ptr && loop == r.loop;
+		return id == r.id && version == r.version && loop == r.loop;
 	}
 	inline bool operator!=(const PeerHandle &r) const {
-		return ptr != r.ptr || loop != r.loop;
+		return id != r.id || version != r.version || loop != r.loop;
 	}
 	inline operator bool() const {
-		return ptr != nullptr && loop != nullptr;
+		return version && loop;
 	}
 	
 	// Should be invoked very rarely

@@ -16,8 +16,8 @@ namespace uS
 {
 namespace tcp
 {
-Host::Host(std::string objectName, RPCEnvironment *rpcEnvironment)
-	: icon7::Host(objectName, rpcEnvironment)
+Host::Host(std::string objectName, RPCEnvironment *rpcEnvironment, std::shared_ptr<icon7::Loop> loop)
+	: icon7::Host(objectName, rpcEnvironment, loop)
 {
 	SSL = 0;
 	socketContext = nullptr;
@@ -154,6 +154,7 @@ us_socket_t *Host::_Internal_on_open(struct us_socket_t *socket, int isClient,
 		peer->sharedPeer->isClient = false;
 		host->loop->stats.connectionsLocalTotal += 1;
 	} else {
+// 		assert(!"Should it be called???");
 		peer = (*(icon7::PeerData **)us_socket_ext(SSL, socket))->shared_from_this();
 		host->loop->stats.connectionsRemoteTotal += 1;
 	}
@@ -280,8 +281,9 @@ us_socket_t *Host::_Internal_on_connect_error(struct us_socket_t *socket,
 		return socket;
 	}
 
+	assert(!peer->peerHandle);
+	auto peerDataHolder = host->peerReferences.Release(peer->peerHandle);
 	peer->_InternalClearInternalDataOnClose();
-	host->peers.erase(peer->shared_from_this());
 
 	return socket;
 }
@@ -333,10 +335,9 @@ void Host::_InternalStopListening()
 
 std::shared_ptr<uS::tcp::Peer> Host::MakePeer(us_socket_t *socket)
 {
-	auto ret = std::make_shared<uS::tcp::Peer>(this, socket);
-	PeerHandle peer = PeerHandle{ret, loop.get()};
-	ret->peerHandle = peer;
-	ret->sharedPeer->peerHandle = peer;
+	std::shared_ptr<uS::tcp::Peer> ret = std::make_shared<uS::tcp::Peer>(this, socket);
+	PeerHandle peer = peerReferences.Alloc(ret);
+	(void)peer;
 	return ret;
 }
 

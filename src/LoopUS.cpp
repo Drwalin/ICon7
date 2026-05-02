@@ -57,12 +57,11 @@ Loop::CreateHost(RPCEnvironment *rpcEnvironment, std::string hostObjectName,
 				 const char *dh_params_file_name, const char *ca_file_name,
 				 const char *ssl_ciphers)
 {
-	std::shared_ptr<uS::tcp::Host> host =
-		std::make_shared<uS::tcp::Host>(hostObjectName, rpcEnvironment);
-	if (host->Init(
-			std::dynamic_pointer_cast<uS::Loop>(this->shared_from_this()),
-			useSSL, key_file_name, cert_file_name, passphrase,
-			dh_params_file_name, ca_file_name, ssl_ciphers)) {
+	std::shared_ptr<uS::tcp::Host> host = std::make_shared<uS::tcp::Host>(
+		hostObjectName, rpcEnvironment, std::dynamic_pointer_cast<icon7::Loop>(shared_from_this()));
+	if (host->Init(std::dynamic_pointer_cast<uS::Loop>(shared_from_this()),
+				   useSSL, key_file_name, cert_file_name, passphrase,
+				   dh_params_file_name, ca_file_name, ssl_ciphers)) {
 		return host;
 	}
 	host = nullptr;

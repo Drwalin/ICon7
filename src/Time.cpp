@@ -21,7 +21,7 @@ namespace icon7
 namespace time
 {
 // using UtcClock = std::chrono::utc_clock;
-using UtcClock = std::chrono::steady_clock;
+using UtcClock = std::chrono::system_clock;
 struct DayTimeBegin {
 	DayTimeBegin()
 	{

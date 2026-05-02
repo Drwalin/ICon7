@@ -16,6 +16,8 @@
 #include "CommandExecutionQueue.hpp"
 #include "Forward.hpp"
 
+#include "PeerManager.hpp"
+
 namespace icon7
 {
 class Host;
@@ -62,14 +64,23 @@ public: // thread unsafe, safe only in hosts loop thread
 	virtual void _InternalSingleLoopIteration();
 	void _InternalSyncLoop();
 	PeerHandle _InternalGetRandomPeer();
+	void _InternalInsertPeerToFlush(PeerHandle peer);
+
+private:
+	void FlushPendingPeers();
 
 public:
 	uint64_t userData;
 	void *userPointer;
 	std::shared_ptr<void> userSmartPtr;
+	PeerManager peerManager;
 
 protected:
 	Loop(std::string objectName);
+
+	friend class Host;
+	friend class uS::tcp::Host;
+	friend class PeerReferences;
 
 protected:
 	std::unordered_set<std::shared_ptr<Host>> hosts;

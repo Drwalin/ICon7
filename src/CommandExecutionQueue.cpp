@@ -173,6 +173,12 @@ uint32_t CommandExecutionQueue::Execute(uint32_t maxToDequeue)
 	return total;
 }
 
-bool CommandExecutionQueue::HasAny() const { return queue->size_approx() != 0; }
+size_t CommandExecutionQueue::SizeApprox() const {
+	return queue->size_approx();
+}
+
+bool CommandExecutionQueue::HasAny() const {
+	return SizeApprox() != 0;
+}
 
 } // namespace icon7
