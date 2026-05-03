@@ -65,6 +65,9 @@ add_library(uSockets STATIC
 target_link_libraries(uSockets pthread ${ZLIB_LIBRARIES} m)
 
 if(UNIX)
+# 	add_subdirectory(libuv)
+# 	target_link_libraries(uSockets uv_a)
+# 	target_compile_definitions(uSockets PRIVATE LIBUS_USE_LIBUV)
 else()
 	add_subdirectory(libuv)
 	target_link_libraries(uSockets uv_a ws2_32)

@@ -143,7 +143,7 @@ public:
 	static void Send(PeerHandle peer, Flags flags, const RpcName &name,
 					 const Targs &...args)
 	{
-		ByteBufferWritable buffer(100);
+		ByteBufferWritable buffer(1300);
 		SerializeSend(buffer, flags, name, args...);
 		Peer::Send(peer, std::move(buffer));
 	}
@@ -181,7 +181,7 @@ public:
 	static ByteBufferReadable
 	SerializeSend(Flags flags, const RpcName &name, const Targs &...args)
 	{
-		ByteBufferWritable buffer(100);
+		ByteBufferWritable buffer(1300);
 		SerializeSend(buffer, flags, name, args...);
 		return buffer;
 	}
@@ -191,7 +191,7 @@ public:
 					 Flags flags, OnReturnCallback &&callback,
 					 const RpcName &name, const Targs &...args)
 	{
-		ByteWriter writer(100);
+		ByteWriter writer(1300);
 		writer.op_untyped_uint32(0);
 		InitializeSerializeSend(writer, name);
 		(writer.op(args), ...);
@@ -205,7 +205,7 @@ public:
 	static void Call(PeerHandle peer, Flags flags, OnReturnCallback &&callback,
 					 const RpcName &name, const Targs &...args)
 	{
-		ByteWriter writer(100);
+		ByteWriter writer(1300);
 		writer.op_untyped_uint32(0);
 		InitializeSerializeSend(writer, name);
 		(writer.op(args), ...);

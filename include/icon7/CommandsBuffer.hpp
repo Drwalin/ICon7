@@ -36,14 +36,13 @@ public:
 		return CanAllocate(sizeof(T), alignof(T));
 	}
 
-	template <typename T, typename... Args> bool EnqueueCommand(Args &&...args)
+	template <typename T, typename... Args> T *EnqueueCommand(Args &&...args)
 	{
 		void *ptr = Allocate(sizeof(T), alignof(T));
 		if (ptr == nullptr) {
-			return false;
+			return nullptr;
 		}
-		new (ptr) T(std::move(args)...);
-		return true;
+		return new (ptr) T(std::move(args)...);
 	}
 
 	void *Allocate(uint32_t size, uint32_t alignement);

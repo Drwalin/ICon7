@@ -20,6 +20,7 @@ void CommandsBufferHandler::FlushBuffer()
 	if (currentCommandsBuffer.IsValid() &&
 		currentCommandsBuffer.countCommands != 0) {
 		queue->EnqueueCommandsBuffer(std::move(currentCommandsBuffer));
+		currentCommandsBuffer.~CommandsBuffer();
 		new (&currentCommandsBuffer) CommandsBuffer();
 	}
 }
@@ -27,7 +28,11 @@ void CommandsBufferHandler::FlushBuffer()
 void CommandsBufferHandler::AllocateBuffer()
 {
 	FlushBuffer();
-	currentCommandsBuffer.~CommandsBuffer();
-	new (&currentCommandsBuffer) CommandsBuffer(bufferSize);
+	assert(currentCommandsBuffer.countCommands == 0);
+	if (!currentCommandsBuffer.IsValid()) {
+		currentCommandsBuffer.~CommandsBuffer();
+		new (&currentCommandsBuffer) CommandsBuffer(bufferSize);
+	}
+	assert(currentCommandsBuffer.countCommands == 0);
 }
 } // namespace icon7

@@ -22,7 +22,21 @@ Loop::Loop(std::string objectName) : peerManager(this), objectName(objectName)
 	asyncRunnerFlags = 0;
 }
 
-Loop::~Loop() { WaitStopRunning(); }
+Loop::~Loop() {
+	LOG_INFO("Loop (%s) iteration: iterations: small: %lu   big: %lu   wakeups: %lu   timer wakeups: %lu"
+			 "      errors: %lu"
+			 "      bytes: send: %lu   recv: %lu",
+			objectName.c_str(),
+			stats.loopSmallIterations,
+			stats.loopBigIterations,
+			stats.loopWakeups,
+			stats.loopTimerWakeups,
+			stats.errorsCount,
+			stats.bytesReceived,
+			stats.bytesSent
+			);
+	WaitStopRunning();
+}
 
 PeerData *Loop::GetLocalPeerData(PeerHandle handle)
 {
@@ -138,12 +152,21 @@ bool Loop::IsRunningAsync() { return asyncRunnerFlags & RUNNING; }
 void Loop::_InternalSingleLoopIteration()
 {
 	stats.loopSmallIterations += 1;
-	commandQueue.Execute(1024);
+// 	for (int i=0; i<32; ++i) {
+// 	auto a = icon7::time::now();
+		uint32_t executed = commandQueue.Execute(1024*1024);
+// 	auto b = icon7::time::now();
+// 	float ms = (b-a).msec();
+// 	if (ms > 1) {
+// 		printf("ms = %f -> %u\n", ms, executed);
+// 	}
+		
+// 	}
 	for (auto &h : hosts) {
 		h->_InternalSingleLoopIteration();
 	}
 	FlushPendingPeers();
-	RPCEnvironment::CheckForTimeoutFunctionCalls(this, 16);
+	RPCEnvironment::CheckForTimeoutFunctionCalls(this, 1);
 }
 
 void Loop::SetSleepBetweenUnlockedIterations(int32_t microseconds)
@@ -153,6 +176,7 @@ void Loop::SetSleepBetweenUnlockedIterations(int32_t microseconds)
 
 void Loop::FlushPendingPeers()
 {
+	// TODO: check if pending peers are needed, when PeerData::Send calls _InternalFlushQueuedSends
 	for (int32_t i=peerManager.peersToFlush.peers.size()-1; i>=0; --i) {
 		uint32_t peerId = peerManager.peersToFlush.peers[i];
 		PeerData *peer = peerManager.GetLocalPeerDataValid(peerId);

@@ -200,6 +200,8 @@ void AsyncThreadMemoryAmountMetrics(std::string fileName)
 		assert(file != nullptr);
 		fprintf(file, "# time[s] - "
 					  "totalAllocation - "
+					  "totalDeallocation - "
+					  "currentlyAllocatedObjects - "
 					  "totalAllocated[MiB] - "
 					  "inUsePeak[MiB] - "
 					  "currentlyInUse[MiB] - "
@@ -220,10 +222,21 @@ void AsyncThreadMemoryAmountMetrics(std::string fileName)
 			const double deltaSeconds =
 				icon7::time::NanosecondsToSeconds(delta);
 
+#if ICON7_USE_RPMALLOC
+			const int64_t deallocations =
+				icon7::MemoryPool::Stats().smallDeallocations +
+				icon7::MemoryPool::Stats().mediumDeallocations +
+				icon7::MemoryPool::Stats().largeDeallocations;
+#else
+			const int64_t deallocations =
+				icon7::MemoryPool::Stats().deallocations;
+#endif
+
 			const int64_t allocations =
 				icon7::MemoryPool::Stats().smallAllocations +
 				icon7::MemoryPool::Stats().mediumAllocations +
 				icon7::MemoryPool::Stats().largeAllocations;
+
 			const int64_t totalAllocated =
 				icon7::MemoryPool::Stats().allocatedBytes;
 			const int64_t currentlyInUse =
@@ -236,8 +249,11 @@ void AsyncThreadMemoryAmountMetrics(std::string fileName)
 			VmPeak = std::max<int64_t>(VmPeak, statm.VmSize);
 			VmHWM = std::max(VmHWM, statm.VmRSS);
 
-			fprintf(file, "%.4f %ld %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n",
-					deltaSeconds, allocations,
+			fprintf(file, "%.4f %ld %ld %ld %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n",
+					deltaSeconds,
+					allocations,
+					deallocations,
+					allocations - deallocations,
 					totalAllocated / (1024.0 * 1024.0),
 					inUsePeak / (1024.0 * 1024.0),
 					currentlyInUse / (1024.0 * 1024.0),
@@ -323,7 +339,7 @@ int main(int argc, char **argv)
 		rpc.RegisterMessage("sum", Sum);
 		rpc.RegisterMessage("mul", Mul);
 		std::shared_ptr<icon7::uS::Loop> loopa =
-			std::make_shared<icon7::uS::Loop>("loop_server");
+			std::make_shared<icon7::uS::Loop>("receiver");
 		loopa->Init(1);
 		std::shared_ptr<icon7::uS::tcp::Host> hosta = loopa->CreateHost(
 			&rpc, "host_server", useSSL, "../cert/user.key", "../cert/user.crt",
@@ -339,7 +355,7 @@ int main(int argc, char **argv)
 		rpc2.RegisterMessage("sum", Sum);
 		rpc2.RegisterMessage("mul", Mul);
 		std::shared_ptr<icon7::uS::Loop> loopb =
-			std::make_shared<icon7::uS::Loop>("loop_client");
+			std::make_shared<icon7::uS::Loop>("sender");
 		loopb->Init(1);
 		std::shared_ptr<icon7::uS::tcp::Host> hostb =
 			loopb->CreateHost(&rpc2, "host_client", useSSL, nullptr, nullptr,
@@ -489,7 +505,7 @@ int main(int argc, char **argv)
 
 					for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
 						if (l % serializeSendsModulo < serializeSendsFract) {
-							icon7::ByteBufferWritable buffer(100);
+							icon7::ByteBufferWritable buffer(1300);
 							rpc2.SerializeSend(buffer, icon7::FLAG_RELIABLE,
 											   "sum", 3, 23,
 											   additionalPayload);
@@ -498,16 +514,42 @@ int main(int argc, char **argv)
 							for (auto p : validPeers) {
 								auto peer = p.get();
 								icon7::Peer::Send(peer->peerHandle, constBuffer);
+
+								/*
+								auto com = icon7::CommandHandle<icon7::commands::internal::ExecutePeerSendFrame>::Create(peer->peerHandle);
+								com->frame = constBuffer;
+								peer->loop->EnqueueCommand(std::move(com));
+								*/
+
+// 								commandsBuffer.EnqueueCommand<
+// 									icon7::commands::internal::
+// 										ExecutePeerSendFrame>(
+// 									peer->peerHandle)->frame = constBuffer;
+
 								sent++;
 							}
 						} else {
 							for (auto p : validPeers) {
 								auto peer = p.get();
-								rpc2.Send(peer->peerHandle, icon7::FLAG_RELIABLE, "sum", 3,
-										  23, additionalPayload);
+
+								rpc2.Send(peer->peerHandle,
+										icon7::FLAG_RELIABLE,"sum", 3,
+										23, additionalPayload);
+
+// 								icon7::ByteBufferWritable buffer(1300);
+// 								rpc2.SerializeSend(buffer,
+// 										icon7::FLAG_RELIABLE, "sum", 3,
+// 										  23, additionalPayload);
+// 								icon7::ByteBufferReadable constBuffer(std::move(buffer));
+// 								commandsBuffer.EnqueueCommand<
+// 									icon7::commands::internal::
+// 										ExecutePeerSendFrame>(
+// 									peer->peerHandle)->frame = std::move(constBuffer);
+
 								sent++;
 							}
 						}
+						commandsBuffer.FlushBuffer();
 					}
 					commandsBuffer.FlushBuffer();
 				}

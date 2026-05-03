@@ -49,11 +49,7 @@ CommandsBuffer::CommandsBuffer(CommandsBuffer &&o)
 CommandsBuffer &CommandsBuffer::operator=(CommandsBuffer &&o)
 {
 	this->~CommandsBuffer();
-	commandsBufferData = o.commandsBufferData;
-	totalBytes = o.totalBytes;
-	countCommands = o.countCommands;
-	commandsExecuted = o.commandsExecuted;
-	offsetOfFree = o.offsetOfFree;
+	new (this) CommandsBuffer(std::move(o));
 	return *this;
 }
 
@@ -63,6 +59,10 @@ CommandsBuffer::~CommandsBuffer()
 		CallDestructors();
 		MemoryPool::Release(commandsBufferData, totalBytes);
 		commandsBufferData = nullptr;
+		totalBytes = 0;
+		countCommands = 0;
+		commandsExecuted = 0;
+		offsetOfFree = 0;
 	}
 }
 

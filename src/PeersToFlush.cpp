@@ -11,6 +11,7 @@ namespace icon7
 {
 void PeersToFlush::InsertPeerToFlush(uint32_t peer)
 {
+// 	return;
 	if (offsets.size() <= peer) {
 		offsets.resize(peer + 1, -1);
 	}

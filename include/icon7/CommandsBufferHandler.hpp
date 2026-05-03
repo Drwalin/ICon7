@@ -23,7 +23,7 @@ public:
 	void FlushBuffer();
 	void AllocateBuffer();
 
-	template <typename T, typename... Args> void EnqueueCommand(Args &&...args)
+	template <typename T, typename... Args> T *EnqueueCommand(Args &&...args)
 	{
 		if (currentCommandsBuffer.IsValid() == false ||
 			currentCommandsBuffer.CanAllocate(sizeof(T), alignof(T)) == false) {
@@ -36,10 +36,11 @@ public:
 			forceEnqueueTimepoint =
 				time::GetTemporaryTimestamp() + time::milliseconds(200);
 		}
-		if (currentCommandsBuffer.EnqueueCommand<T>(std::move(args)...) ==
-			false) {
+		T *ptr = currentCommandsBuffer.EnqueueCommand<T>(std::move(args)...);
+		if (ptr == nullptr) {
 			LOG_FATAL("Failed to enqueue command");
 		}
+		return ptr;
 	}
 
 	template <typename T, typename... Args>
@@ -51,7 +52,7 @@ public:
 
 private:
 public:
-	inline constexpr static uint32_t bufferSize = 1024 * 16;
+	inline constexpr static uint32_t bufferSize = 1024 * 4;
 	CommandExecutionQueue *queue;
 	CommandsBuffer currentCommandsBuffer;
 	time::Point forceEnqueueTimepoint;
