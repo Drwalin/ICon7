@@ -1,11 +1,12 @@
 #pragma once
 
 #include <cstring>
+#include <cmath>
 
 #include <string>
 #include <vector>
 #include <algorithm>
-#include <cmath>
+#include <set>
 
 template <typename T> struct _DataStats {
 	T mean;
@@ -63,6 +64,18 @@ template <typename T> _DataStats<T> CalcDataStats(T *ar, size_t count)
 	return stats;
 }
 
+std::string ParamsToString(const std::vector<std::string> &strs)
+{
+	std::string str;
+	for (const auto &s : strs) {
+		if (str != "") {
+			str += " , ";
+		}
+		str += s;
+	}
+	return str;
+}
+
 class ArgsParser
 {
 public:
@@ -87,8 +100,9 @@ public:
 	}
 
 	inline bool IsPresent(const std::vector<std::string> &params,
-						  bool *hasValue = nullptr) const
+						  bool *hasValue = nullptr)
 	{
+		AddParam(params);
 		for (int i = 0; i < args.size(); ++i) {
 			for (int j = 0; j < params.size(); ++j) {
 				if (args[i].key == params[j]) {
@@ -107,6 +121,7 @@ public:
 
 	inline bool HasValue(const std::vector<std::string> &params)
 	{
+		AddParam(params);
 		bool ret = false;
 		IsPresent(params, &ret);
 		return ret;
@@ -114,8 +129,9 @@ public:
 
 	inline std::string GetString(const std::vector<std::string> &params,
 								 std::string defaultValue,
-								 bool *exists = nullptr) const
+								 bool *exists = nullptr)
 	{
+		AddParam(params);
 		for (int i = 0; i < args.size(); ++i) {
 			for (int j = 0; j < params.size(); ++j) {
 				if (args[i].key == params[j]) {
@@ -132,8 +148,9 @@ public:
 		return defaultValue;
 	}
 
-	inline int64_t GetInt(const std::vector<std::string> &params) const
+	inline int64_t GetInt(const std::vector<std::string> &params)
 	{
+		AddParam(params);
 		bool exists = false;
 		auto v = GetString(params, "0", &exists);
 		if (exists) {
@@ -143,8 +160,9 @@ public:
 	}
 
 	inline int64_t GetInt(const std::vector<std::string> &params,
-						  int64_t defaultValue, int64_t min, int64_t max) const
+						  int64_t defaultValue, int64_t min, int64_t max)
 	{
+		AddParam(params);
 		bool exists = false;
 		auto v = GetString(params, "", &exists);
 		if (exists) {
@@ -156,8 +174,9 @@ public:
 		return defaultValue;
 	}
 
-	inline bool GetFlag(const std::vector<std::string> &params) const
+	inline bool GetFlag(const std::vector<std::string> &params)
 	{
+		AddParam(params);
 		bool ret = false;
 		if (IsPresent(params, &ret)) {
 			if (ret) {
@@ -169,6 +188,22 @@ public:
 		return false;
 	}
 
+	void AddParam(const std::vector<std::string> &params)
+	{
+		std::string str = ParamsToString(params);
+		availableOptions.insert(str);
+	}
+
+	void PrintAvailableOptions() const
+	{
+		printf(" available options:\n");
+		for (const auto &s : availableOptions) {
+			printf("    %s\n", s.c_str());
+		}
+		printf("\n");
+		fflush(stdout);
+	}
+
 public:
 	struct Entry {
 		std::string key, value;
@@ -176,4 +211,6 @@ public:
 	std::string progName;
 	std::vector<Entry> args;
 	std::vector<std::string> floatingArgs;
+	
+	std::set<std::string> availableOptions;
 };

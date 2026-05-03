@@ -277,11 +277,7 @@ void AsyncThreadMemoryAmountMetrics(std::string fileName)
 
 int main(int argc, char **argv)
 {
-	const ArgsParser args(argc, argv);
-
-	icon7::Initialize();
-
-	AsyncThreadMemoryAmountMetrics("memoryStats.mem");
+	ArgsParser args(argc, argv);
 
 	int notPassedTests = 0;
 	const int testsCount = args.GetInt({"-tests", "-t"}, 1, 1, 1000000000);
@@ -311,6 +307,15 @@ int main(int argc, char **argv)
 		args.GetInt({"-serialize-load"}, 4, 1, 1000000);
 
 	const bool alwaysReturn0 = args.GetFlag({"-return-zero"});
+
+	if (args.GetFlag({"-help", "-h", "-?"})) {
+		args.PrintAvailableOptions();
+		return 0;
+	}
+
+	icon7::Initialize();
+
+	AsyncThreadMemoryAmountMetrics("memoryStats.mem");
 
 	int64_t toReturnCount = 0;
 	int64_t totalToReturnCount = 0;
