@@ -325,6 +325,11 @@ int main(int argc, char **argv)
 	const int64_t maxInFlightPackets =
 		args.GetInt({"-max-in-flight-packets"}, 10000, 1, 10000000);
 
+	const bool useBatchedSends = args.GetFlag({"-batch-sends"});
+
+	const std::string listenIp =
+		args.GetString({"-ip"}, "127.0.0.1");
+
 	if (args.GetFlag({"-help", "-h", "-?"})) {
 		args.PrintAvailableOptions();
 		return 0;
@@ -336,7 +341,8 @@ int main(int argc, char **argv)
 
 	int64_t toReturnCount = 0;
 	int64_t totalToReturnCount = 0;
-std::vector<double> arrayOfLatency;
+
+	std::vector<double> arrayOfLatency;
 	arrayOfLatency.resize(totalSends * connectionsCount);
 
 	std::vector<char> additionalPayload;
@@ -370,7 +376,7 @@ std::vector<double> arrayOfLatency;
 			"ECDHE-ECDSA-CHACHA20-POLY1305:"
 			"DHE-RSA-AES256-GCM-SHA384:");
 		loopa->RunAsync();
-		auto listenFuture = hosta->ListenOnPort("127.0.0.1", port, icon7::IPv4);
+		auto listenFuture = hosta->ListenOnPort(listenIp, port, icon7::IPv4);
 
 		icon7::RPCEnvironment rpc2;
 		rpc2.RegisterMessage("sum", Sum);
@@ -425,7 +431,7 @@ std::vector<double> arrayOfLatency;
 
 			std::vector<concurrent::future<icon7::PeerHandle>> peers;
 			for (int i = 0; i < connectionsCount; ++i) {
-				peers.push_back(hostb->ConnectPromise("127.0.0.1", port));
+				peers.push_back(hostb->ConnectPromise(listenIp, port));
 			}
 
 			int II = 0, JJ = 0;
@@ -536,14 +542,17 @@ std::vector<double> arrayOfLatency;
 							icon7::ByteBufferReadable constBuffer(std::move(buffer));
 							for (auto p : validPeers) {
 								auto peer = p.get();
+
 								THROTTLE_SEND();
-
-// 								icon7::Peer::Send(peer->peerHandle, constBuffer);
-
-								commandsBuffer.EnqueueCommand<
-									icon7::commands::internal::
+								if (useBatchedSends) {
+									commandsBuffer.EnqueueCommand<
+										icon7::commands::internal::
 										ExecutePeerSendFrame>(
-									peer->peerHandle)->frame = constBuffer;
+												peer->peerHandle)->frame = constBuffer;
+								} else {
+									icon7::Peer::Send(peer->peerHandle, constBuffer);
+								}
+
 
 								sent++;
 							}
@@ -552,20 +561,21 @@ std::vector<double> arrayOfLatency;
 								auto peer = p.get();
 
 								THROTTLE_SEND();
-
-// 								rpc2.Send(peer->peerHandle,
-// 										icon7::FLAG_RELIABLE,"sum", 3,
-// 										23, additionalPayload);
-
-								icon7::ByteBufferWritable buffer(1300);
-								rpc2.SerializeSend(buffer,
-										icon7::FLAG_RELIABLE, "sum", 3,
-										  23, additionalPayload);
-								icon7::ByteBufferReadable constBuffer(std::move(buffer));
-								commandsBuffer.EnqueueCommand<
-									icon7::commands::internal::
+								if (useBatchedSends) {
+									icon7::ByteBufferWritable buffer(1300);
+									rpc2.SerializeSend(buffer,
+											icon7::FLAG_RELIABLE, "sum", 3,
+											23, additionalPayload);
+									icon7::ByteBufferReadable constBuffer(std::move(buffer));
+									commandsBuffer.EnqueueCommand<
+										icon7::commands::internal::
 										ExecutePeerSendFrame>(
-									peer->peerHandle)->frame = std::move(constBuffer);
+												peer->peerHandle)->frame = std::move(constBuffer);
+								} else {
+									rpc2.Send(peer->peerHandle,
+											icon7::FLAG_RELIABLE,"sum", 3,
+											23, additionalPayload);
+								}
 
 								sent++;
 							}
