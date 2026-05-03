@@ -275,6 +275,20 @@ void AsyncThreadMemoryAmountMetrics(std::string fileName)
 #endif
 }
 
+int64_t bufferedInFlightPacketsCount = 0;
+
+#define THROTTLE_SEND() \
+{\
+	bufferedInFlightPacketsCount++; \
+	if (bufferedInFlightPacketsCount > maxInFlightPackets) { \
+		if (sent.load() - received.load() >= maxInFlightPackets) { \
+			commandsBuffer.FlushBuffer(); \
+			icon7::time::sleep_for(icon7::time::milliseconds(1)); \
+		} \
+		bufferedInFlightPacketsCount = sent.load() - received.load(); \
+	} \
+}
+
 int main(int argc, char **argv)
 {
 	ArgsParser args(argc, argv);
@@ -308,6 +322,9 @@ int main(int argc, char **argv)
 
 	const bool alwaysReturn0 = args.GetFlag({"-return-zero"});
 
+	const int64_t maxInFlightPackets =
+		args.GetInt({"-max-in-flight-packets"}, 10000, 1, 10000000);
+
 	if (args.GetFlag({"-help", "-h", "-?"})) {
 		args.PrintAvailableOptions();
 		return 0;
@@ -319,8 +336,7 @@ int main(int argc, char **argv)
 
 	int64_t toReturnCount = 0;
 	int64_t totalToReturnCount = 0;
-
-	std::vector<double> arrayOfLatency;
+std::vector<double> arrayOfLatency;
 	arrayOfLatency.resize(totalSends * connectionsCount);
 
 	std::vector<char> additionalPayload;
@@ -495,14 +511,16 @@ int main(int argc, char **argv)
 							uint32_t i = returned++;
 							arrayOfLatency[i] = dt;
 						};
+						THROTTLE_SEND();
+
 						rpc2.Call(&commandsBuffer, peer, icon7::FLAG_RELIABLE,
-								  icon7::OnReturnCallback::Make<uint32_t>(
-									  std::move(onReturned),
-									  [](icon7::PeerHandle peer) -> void {
-										  printf(" Multiplication timeout\n");
-									  },
-									  24 * 3600 * 1000, peer),
-								  "mul", 5, 13, additionalPayload);
+								icon7::OnReturnCallback::Make<uint32_t>(
+									std::move(onReturned),
+									[](icon7::PeerHandle peer) -> void {
+									printf(" Multiplication timeout\n");
+									},
+									24 * 3600 * 1000, peer),
+								"mul", 5, 13, additionalPayload);
 						sent++;
 					}
 					commandsBuffer.FlushBuffer();
@@ -518,18 +536,14 @@ int main(int argc, char **argv)
 							icon7::ByteBufferReadable constBuffer(std::move(buffer));
 							for (auto p : validPeers) {
 								auto peer = p.get();
-								icon7::Peer::Send(peer->peerHandle, constBuffer);
+								THROTTLE_SEND();
 
-								/*
-								auto com = icon7::CommandHandle<icon7::commands::internal::ExecutePeerSendFrame>::Create(peer->peerHandle);
-								com->frame = constBuffer;
-								peer->loop->EnqueueCommand(std::move(com));
-								*/
+// 								icon7::Peer::Send(peer->peerHandle, constBuffer);
 
-// 								commandsBuffer.EnqueueCommand<
-// 									icon7::commands::internal::
-// 										ExecutePeerSendFrame>(
-// 									peer->peerHandle)->frame = constBuffer;
+								commandsBuffer.EnqueueCommand<
+									icon7::commands::internal::
+										ExecutePeerSendFrame>(
+									peer->peerHandle)->frame = constBuffer;
 
 								sent++;
 							}
@@ -537,19 +551,21 @@ int main(int argc, char **argv)
 							for (auto p : validPeers) {
 								auto peer = p.get();
 
-								rpc2.Send(peer->peerHandle,
-										icon7::FLAG_RELIABLE,"sum", 3,
-										23, additionalPayload);
+								THROTTLE_SEND();
 
-// 								icon7::ByteBufferWritable buffer(1300);
-// 								rpc2.SerializeSend(buffer,
-// 										icon7::FLAG_RELIABLE, "sum", 3,
-// 										  23, additionalPayload);
-// 								icon7::ByteBufferReadable constBuffer(std::move(buffer));
-// 								commandsBuffer.EnqueueCommand<
-// 									icon7::commands::internal::
-// 										ExecutePeerSendFrame>(
-// 									peer->peerHandle)->frame = std::move(constBuffer);
+// 								rpc2.Send(peer->peerHandle,
+// 										icon7::FLAG_RELIABLE,"sum", 3,
+// 										23, additionalPayload);
+
+								icon7::ByteBufferWritable buffer(1300);
+								rpc2.SerializeSend(buffer,
+										icon7::FLAG_RELIABLE, "sum", 3,
+										  23, additionalPayload);
+								icon7::ByteBufferReadable constBuffer(std::move(buffer));
+								commandsBuffer.EnqueueCommand<
+									icon7::commands::internal::
+										ExecutePeerSendFrame>(
+									peer->peerHandle)->frame = std::move(constBuffer);
 
 								sent++;
 							}
