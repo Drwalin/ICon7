@@ -365,6 +365,7 @@ int main(int argc, char **argv)
 		icon7::RPCEnvironment rpc;
 		rpc.RegisterMessage("sum", Sum);
 		rpc.RegisterMessage("mul", Mul);
+
 		std::shared_ptr<icon7::uS::Loop> loopa =
 			std::make_shared<icon7::uS::Loop>("receiver");
 		loopa->Init(1);
@@ -378,14 +379,11 @@ int main(int argc, char **argv)
 		loopa->RunAsync();
 		auto listenFuture = hosta->ListenOnPort(listenIp, port, icon7::IPv4);
 
-		icon7::RPCEnvironment rpc2;
-		rpc2.RegisterMessage("sum", Sum);
-		rpc2.RegisterMessage("mul", Mul);
 		std::shared_ptr<icon7::uS::Loop> loopb =
 			std::make_shared<icon7::uS::Loop>("sender");
 		loopb->Init(1);
 		std::shared_ptr<icon7::uS::tcp::Host> hostb =
-			loopb->CreateHost(&rpc2, "host_client", useSSL, nullptr, nullptr,
+			loopb->CreateHost(&rpc, "host_client", useSSL, nullptr, nullptr,
 							  nullptr, nullptr, nullptr, nullptr);
 		loopb->RunAsync();
 
@@ -519,7 +517,7 @@ int main(int argc, char **argv)
 						};
 						THROTTLE_SEND();
 
-						rpc2.Call(&commandsBuffer, peer, icon7::FLAG_RELIABLE,
+						icon7::RPCEnvironment::Call(&commandsBuffer, peer, icon7::FLAG_RELIABLE,
 								icon7::OnReturnCallback::Make<uint32_t>(
 									std::move(onReturned),
 									[](icon7::PeerHandle peer) -> void {
@@ -535,7 +533,7 @@ int main(int argc, char **argv)
 					for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
 						if (l % serializeSendsModulo < serializeSendsFract) {
 							icon7::ByteBufferWritable buffer(1300);
-							rpc2.SerializeSend(buffer, icon7::FLAG_RELIABLE,
+							icon7::RPCEnvironment::SerializeSend(buffer, icon7::FLAG_RELIABLE,
 											   "sum", 3, 23,
 											   additionalPayload);
 							sendFrameSize = buffer.size();
@@ -563,7 +561,7 @@ int main(int argc, char **argv)
 								THROTTLE_SEND();
 								if (useBatchedSends) {
 									icon7::ByteBufferWritable buffer(1300);
-									rpc2.SerializeSend(buffer,
+									icon7::RPCEnvironment::SerializeSend(buffer,
 											icon7::FLAG_RELIABLE, "sum", 3,
 											23, additionalPayload);
 									icon7::ByteBufferReadable constBuffer(std::move(buffer));
@@ -572,7 +570,7 @@ int main(int argc, char **argv)
 										ExecutePeerSendFrame>(
 												peer->peerHandle)->frame = std::move(constBuffer);
 								} else {
-									rpc2.Send(peer->peerHandle,
+									icon7::RPCEnvironment::Send(peer->peerHandle,
 											icon7::FLAG_RELIABLE,"sum", 3,
 											23, additionalPayload);
 								}
