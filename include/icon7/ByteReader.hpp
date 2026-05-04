@@ -6,7 +6,7 @@
 #ifndef ICON7_BYTE_READER_HPP
 #define ICON7_BYTE_READER_HPP
 
-#include "../../bitscpp/include/bitscpp/ByteReader_v2.hpp"
+#include "../../bitscpp/include/bitscpp/ByteReader_v2.hpp" // IWYU pragma: export
 
 #include "ByteBuffer.hpp"
 

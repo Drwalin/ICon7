@@ -14,7 +14,7 @@
 #undef BITSCPP_BYTE_WRITER_V2_NAME_SUFFIX
 #define BITSCPP_BYTE_WRITER_V2_NAME_SUFFIX _ByteBuffer
 
-#include "../../bitscpp/include/bitscpp/ByteWriter_v2.hpp"
+#include "../../bitscpp/include/bitscpp/ByteWriter_v2.hpp" // IWYU pragma: export
 
 namespace icon7
 {
