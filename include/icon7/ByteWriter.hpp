@@ -27,14 +27,20 @@ public:
 	using Base = bitscpp::v2::ByteWriter_ByteBuffer;
 
 public:
-	~ByteWriter() {};
+	~ByteWriter() {}
+
+	ByteWriter() {
+		Init(&_data);
+	}
 
 	ByteWriter(ByteBufferWritable &&buf) : _data(std::move(buf))
 	{
+		Init(&_data);
 	}
 
 	ByteWriter(ByteWriter &&o) : _data(std::move(o._data))
 	{
+		Init(&_data);
 	}
 
 	inline ByteBufferWritable &Buffer() { return _data; }

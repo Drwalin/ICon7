@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2025 Marek Zalewski aka Drwalin
+// Copyright (C) 2023-2026 Marek Zalewski aka Drwalin
 //
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
@@ -12,10 +12,9 @@
 
 #include <atomic>
 
-#include "../../bitscpp/include/bitscpp/ByteReader_v2.hpp"
+#include "../../bitscpp/include/bitscpp/ByteReader_v2.hpp" // IWYU pragma: export
 
 #include "Flags.hpp"
-#include "MemoryPool.hpp"
 
 #include "FramingProtocol.hpp"
 
@@ -44,9 +43,11 @@ struct ByteBufferStorageHeader {
 	{
 		uint32_t n = --refCounter;
 		if (n == 0) {
-			MemoryPool::Release(this, capacity + offset);
+			this->free(this);
 		}
 	}
+
+	static void free(ByteBufferStorageHeader *header);
 
 	inline uint8_t *data() { return ((uint8_t *)this) + offset; }
 };
@@ -56,6 +57,9 @@ void PrintBufferMetadata(ByteBufferStorageHeader *buffer);
 class ByteBufferWritable
 {
 public:
+	inline const static uint32_t INITIAL_DATA_OFFSET =
+		ByteBufferStorageHeader::INITIAL_DATA_OFFSET;
+
 	inline ByteBufferWritable()
 	{
 		buffer = nullptr;
@@ -77,52 +81,18 @@ public:
 		o._offset = 0;
 		o._flags = 0;
 	}
-	inline ByteBufferWritable(const ByteBufferWritable &o)
-	{
-		if (o.buffer == nullptr) {
-			buffer = nullptr;
-			_size = 0;
-			_capacity = 0;
-			_offset = 0;
-			_flags = 0;
-			return;
-		}
-		_size = o._size;
-		_offset = o._offset;
-		_flags = o._flags;
-		auto buf = MemoryPool::Allocate(o._capacity + o._offset);
-		buffer = ((uint8_t *)buf.object) + o._offset;
-		_capacity = buf.capacity - _offset;
-	}
-	inline ByteBufferWritable(ByteBufferWritable &o)
-		: ByteBufferWritable((const ByteBufferWritable &)o)
-	{
-	}
-	inline ByteBufferWritable(uint32_t initialCapacity) : ByteBufferWritable()
-	{
-		buffer = nullptr;
-		_capacity = initialCapacity;
-		_offset = ByteBufferStorageHeader::INITIAL_DATA_OFFSET;
-		_size = 0;
-		_flags = 0;
-		auto buf = MemoryPool::Allocate(_capacity + _offset);
-		buffer = ((uint8_t *)buf.object) + _offset;
-		_capacity = buf.capacity - _offset;
-	}
+	ByteBufferWritable(const ByteBufferWritable &o);
+	ByteBufferWritable(ByteBufferWritable &o);
+	ByteBufferWritable(uint32_t capacity);
 
 	~ByteBufferWritable()
 	{
 		if (buffer) {
-			assert(_capacity);
-			assert(_offset);
-			MemoryPool::Release(buffer - _offset, _capacity + _offset);
-			buffer = nullptr;
-			_size = 0;
-			_capacity = 0;
-			_offset = 0;
-			_flags = 0;
+			free_buffer();
 		}
 	}
+
+	void free_buffer();
 
 	inline ByteBufferWritable &operator=(ByteBufferWritable &&o)
 	{
@@ -148,7 +118,7 @@ public:
 		_size = 0;
 		if (buffer) {
 			buffer -= _offset;
-			_offset = ByteBufferStorageHeader::INITIAL_DATA_OFFSET;
+			_offset = INITIAL_DATA_OFFSET;
 			buffer += _offset;
 		} else {
 			_capacity = 0;
@@ -157,7 +127,8 @@ public:
 		_flags = 0;
 	}
 
-	inline bool valid() const { return buffer != nullptr; }
+	inline bool valid() const {
+		return buffer != nullptr; }
 
 	inline void append(const uint8_t *src, uint32_t bytes)
 	{
@@ -182,7 +153,7 @@ public:
 			*this = std::move(buf);
 			return;
 		} else if (buffer == nullptr) {
-			if (src) {
+			if (src != nullptr) {
 				append(src, bytes);
 			} else {
 				resize(bytes);
@@ -212,55 +183,29 @@ public:
 
 	inline uint8_t *data() { return buffer; }
 	inline const uint8_t *data() const { return buffer; }
-	inline size_t size() const { return _size; }
-	inline void resize(size_t newSize)
+	inline uint32_t size() const { return _size; }
+	inline void resize(uint32_t newSize)
 	{
 		if (_capacity < newSize) {
 			reserve(newSize);
 		}
 		_size = newSize;
 	}
-	inline size_t capacity() const { return _capacity; }
+	inline uint32_t capacity() const { return _capacity; }
 
-	void reserve(const size_t newCapacity)
+	void reserve(const uint32_t newCapacity)
 	{
 		assert(_size <= _capacity);
 		if (newCapacity > _capacity) {
-			if (buffer == nullptr) {
-				_offset = ByteBufferStorageHeader::INITIAL_DATA_OFFSET;
-				uint32_t nc = ((_offset + newCapacity - 1) | 0x3F) + 1;
-				if (nc < 64) {
-					nc = 64;
-				}
-				assert(nc >= newCapacity + _offset);
-				auto buf = MemoryPool::Allocate(nc);
-				assert(buf.object);
-				assert(buf.capacity >= newCapacity + _offset);
-				_size = 0;
-				buffer = ((uint8_t *)buf.object) + _offset;
-				_capacity = buf.capacity - _offset;
-			} else {
-				uint32_t nc = ((_offset + _capacity - 1) | 0x3F) + 1;
-				if (nc < 64) {
-					nc = 64;
-				}
-				while (nc < newCapacity + _offset) {
-					nc = (nc + (nc << 1)) >> 1;
-				}
-				nc = ((nc - 1) | 0x3F) + 1;
-				assert(nc >= newCapacity + _offset);
-
-				ByteBufferWritable buf(nc - _offset);
-				buf.append(buffer, _size);
-				buf._flags = _flags;
-				*this = std::move(buf);
-			}
+			reserve_or_shrink(newCapacity);
 			assert(buffer);
 		} else {
 			assert(buffer);
 			assert(_capacity >= newCapacity);
 		}
 	}
+	void reserve_or_shrink(const uint32_t minCapacity);
+	static uint32_t round_capacity_up(uint32_t capacity);
 
 	friend class ByteBufferReadable;
 protected:
@@ -276,6 +221,9 @@ public:
 class ByteBufferReadable
 {
 public:
+	inline const static uint32_t INITIAL_DATA_OFFSET =
+		ByteBufferStorageHeader::INITIAL_DATA_OFFSET;
+
 	ByteBufferReadable() { storage = nullptr; }
 	ByteBufferReadable(ByteBufferWritable &&buffer)
 	{
@@ -395,7 +343,7 @@ public:
 				ByteBufferWritable ret;
 				ret._size = 0;
 				ret._flags = 0;
-				ret._offset = ByteBufferStorageHeader::INITIAL_DATA_OFFSET;
+				ret._offset = INITIAL_DATA_OFFSET;
 				ret._capacity = cap - ret._offset;
 				ret.buffer = ptr + ret._offset;
 				storage = nullptr;

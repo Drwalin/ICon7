@@ -62,6 +62,11 @@ public:
 	{
 		assert(buffer.data());
 		PeerData *peer = this->peer.GetLocalPeerData();
+		if (peer == nullptr) {
+			LOG_WARN("Peer: {%u,%u} does not exist to send.", this->peer.id,
+					 this->peer.version);
+			return;
+		}
 		const uint32_t rcbId = peer->_InternalGetNextValidReturnCallbackId();
 		const uint32_t rcbId_v = bitscpp::HostToNetworkUint(rcbId);
 		memcpy((void *)buffer.data(), &rcbId_v, sizeof(rcbId_v));
@@ -143,7 +148,7 @@ public:
 	static void Send(PeerHandle peer, Flags flags, const RpcName &name,
 					 const Targs &...args)
 	{
-		ByteBufferWritable buffer(1300);
+		ByteBufferWritable buffer;
 		SerializeSend(buffer, flags, name, args...);
 		Peer::Send(peer, std::move(buffer));
 	}
@@ -181,7 +186,7 @@ public:
 	static ByteBufferReadable
 	SerializeSend(Flags flags, const RpcName &name, const Targs &...args)
 	{
-		ByteBufferWritable buffer(1300);
+		ByteBufferWritable buffer;
 		SerializeSend(buffer, flags, name, args...);
 		return buffer;
 	}
@@ -191,7 +196,7 @@ public:
 					 Flags flags, OnReturnCallback &&callback,
 					 const RpcName &name, const Targs &...args)
 	{
-		ByteWriter writer(1300);
+		ByteWriter writer;
 		writer.op_untyped_uint32(0);
 		InitializeSerializeSend(writer, name);
 		(writer.op(args), ...);
@@ -205,7 +210,7 @@ public:
 	static void Call(PeerHandle peer, Flags flags, OnReturnCallback &&callback,
 					 const RpcName &name, const Targs &...args)
 	{
-		ByteWriter writer(1300);
+		ByteWriter writer;
 		writer.op_untyped_uint32(0);
 		InitializeSerializeSend(writer, name);
 		(writer.op(args), ...);

@@ -444,15 +444,16 @@ int main(int argc, char **argv)
 				++II;
 				f.wait();
 				icon7::PeerHandle peerHandle = f.get();
-				std::shared_ptr<icon7::Peer> peer = peerHandle.GetSharedPeer();
 
-				if (peerHandle == icon7::PeerHandle{}) {
+				if (!peerHandle) {
 					LOG_WARN("Failed to etablish connection: %i of tested %i "
 							 "of total %lu, due to nullptr value of future",
 							 JJ, II, peers.size());
 					++notPassedTests;
 					continue;
 				}
+
+				std::shared_ptr<icon7::Peer> peer = peerHandle.GetSharedPeer();
 
 				for (int j = 0; j < 1000; ++j) {
 					if (peer->IsReadyToUse() == false &&
@@ -481,6 +482,19 @@ int main(int argc, char **argv)
 				}
 
 				validPeers.emplace_back(peer);
+				peer->SetOnDisconnect([](icon7::PeerHandle handle){
+							auto peer = handle.GetLocalPeerData();
+							if (peer) {
+								LOG_FATAL("Valid peer got disconnected: {%u,%u}"
+										  "    "
+										  "peer state: %u    ",
+										  handle.id, handle.version,
+										  peer->sharedPeer->GetPeerStateFlags());
+							} else {
+								LOG_FATAL("Valid peer got disconnected: {%u,%u}"
+										  "    but does not have a valid PeerData before disconnection concludes", handle.id, handle.version);
+							}
+						});
 			}
 
 			LOG_INFO("Hosts pair %i | failed %i | connected peers: %lu / %lu",
@@ -502,6 +516,9 @@ int main(int argc, char **argv)
 						icon7::time::Sleep(delayBetweeEachTotalSend);
 					}
 					for (auto p : validPeers) {
+						if (p->IsDisconnecting()) {
+							continue;
+						}
 						icon7::PeerHandle peer = p->peerHandle;
 						auto curTim = icon7::time::GetTemporaryTimestamp();
 						auto onReturned = [curTim, &sumTim, &arrayOfLatency](
@@ -532,13 +549,16 @@ int main(int argc, char **argv)
 
 					for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
 						if (l % serializeSendsModulo < serializeSendsFract) {
-							icon7::ByteBufferWritable buffer(1300);
+							icon7::ByteBufferWritable buffer;
 							icon7::RPCEnvironment::SerializeSend(buffer, icon7::FLAG_RELIABLE,
 											   "sum", 3, 23,
 											   additionalPayload);
 							sendFrameSize = buffer.size();
 							icon7::ByteBufferReadable constBuffer(std::move(buffer));
 							for (auto p : validPeers) {
+								if (p->IsDisconnecting()) {
+									continue;
+								}
 								auto peer = p.get();
 
 								THROTTLE_SEND();
@@ -551,16 +571,18 @@ int main(int argc, char **argv)
 									icon7::Peer::Send(peer->peerHandle, constBuffer);
 								}
 
-
 								sent++;
 							}
 						} else {
 							for (auto p : validPeers) {
+								if (p->IsDisconnecting()) {
+									continue;
+								}
 								auto peer = p.get();
 
 								THROTTLE_SEND();
 								if (useBatchedSends) {
-									icon7::ByteBufferWritable buffer(1300);
+									icon7::ByteBufferWritable buffer;
 									icon7::RPCEnvironment::SerializeSend(buffer,
 											icon7::FLAG_RELIABLE, "sum", 3,
 											23, additionalPayload);
@@ -652,7 +674,14 @@ int main(int argc, char **argv)
 			}
 
 			for (auto &p : validPeers) {
+				p->SetOnDisconnect(nullptr);
+				icon7::time::Sleep(icon7::time::microseconds(10));
+			}
+			loopb->WakeUp();
+			icon7::time::Sleep(icon7::time::milliseconds(2));
+			for (auto &p : validPeers) {
 				p->Disconnect();
+				icon7::time::Sleep(icon7::time::microseconds(10));
 			}
 
 			validPeers.clear();

@@ -23,8 +23,8 @@ option(USOCKETS_USE_OPENSSL "Use OpenSSL instead of BoringSSL" ON)
 set(ICON7_LOG_DATETIME_SUBSECONDS_DIGITS 5 CACHE STRING "Number of sub-second digits in ICon7 log date-time")
 
 if(ICON7_CLANG_FUZZTEST)
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O1 -g -fprofile-instr-generate -fcoverage-mapping")
-	set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -O1 -g -fprofile-instr-generate -fcoverage-mapping")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -fprofile-instr-generate -fcoverage-mapping")
+	set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -g -fprofile-instr-generate -fcoverage-mapping")
 endif()
 
 if(ENABLE_LTO)

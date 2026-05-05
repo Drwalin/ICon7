@@ -126,6 +126,34 @@ void Peer::_InternalErrorSendOnDisconnecting()
 	}
 }
 
+void Peer::SetOnDisconnect(void (*callback)(PeerHandle))
+{
+	if (IsDisconnecting()) {
+		_InternalErrorSendOnDisconnecting();
+		return;
+	}
+	class CommandSetOnDisconnect final : public icon7::commands::ExecuteOnPeer
+	{
+	public:
+		void (*callback)(PeerHandle);
+		CommandSetOnDisconnect(PeerHandle peer, void (*callback)(PeerHandle))
+			: ExecuteOnPeer(peer), callback(callback)
+		{
+		}
+		virtual ~CommandSetOnDisconnect() {}
+		virtual void Execute() override
+		{
+			PeerData *data = peer.GetLocalPeerData();
+			if (data) {
+				data->SetOnDisconnect(callback);
+			}
+		}
+	};
+
+	host->EnqueueCommand(
+		CommandHandle<CommandSetOnDisconnect>::Create(peerHandle, callback));
+}
+
 void Peer::Disconnect()
 {
 	peerFlags |= BIT_DISCONNECTING;

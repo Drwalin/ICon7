@@ -56,8 +56,9 @@ void ExecuteListen::Execute()
 
 void ExecuteDisconnect::Execute() { 
 	if (peer) {
-		assert(peer.GetLocalPeerData());
-		peer.GetLocalPeerData()->_InternalDisconnect(); 
+		if (PeerData *data = peer.GetLocalPeerData()) {
+			data->_InternalDisconnect(); 
+		}
 	}
 }
 
