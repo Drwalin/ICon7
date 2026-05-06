@@ -82,7 +82,6 @@ public:
 		o._flags = 0;
 	}
 	ByteBufferWritable(const ByteBufferWritable &o);
-	ByteBufferWritable(ByteBufferWritable &o);
 	ByteBufferWritable(uint32_t capacity);
 
 	~ByteBufferWritable()
@@ -96,18 +95,20 @@ public:
 
 	inline ByteBufferWritable &operator=(ByteBufferWritable &&o)
 	{
+		if(&o == this) {
+			[[unlikely]];
+			return *this;
+		}
 		this->~ByteBufferWritable();
 		new (this) ByteBufferWritable(std::move(o));
 		return *this;
 	}
 	inline ByteBufferWritable &operator=(const ByteBufferWritable &o)
 	{
-		this->~ByteBufferWritable();
-		new (this) ByteBufferWritable(o);
-		return *this;
-	}
-	inline ByteBufferWritable &operator=(ByteBufferWritable &o)
-	{
+		if(&o == this) {
+			[[unlikely]];
+			return *this;
+		}
 		this->~ByteBufferWritable();
 		new (this) ByteBufferWritable(o);
 		return *this;
@@ -118,11 +119,14 @@ public:
 		_size = 0;
 		if (buffer) {
 			buffer -= _offset;
+			_capacity += _offset;
 			_offset = INITIAL_DATA_OFFSET;
+			_capacity -= _offset;
 			buffer += _offset;
 		} else {
-			_capacity = 0;
-			_offset = 0;
+			assert(_capacity == 0);
+			assert(_offset == 0);
+			assert(_size == 0);
 		}
 		_flags = 0;
 	}
@@ -195,13 +199,21 @@ public:
 
 	void reserve(const uint32_t newCapacity)
 	{
-		assert(_size <= _capacity);
+		assert(newCapacity < (1<<30));
+		assert(_capacity >= _size);
 		if (newCapacity > _capacity) {
+			assert(newCapacity >= _size);
 			reserve_or_shrink(newCapacity);
 			assert(buffer);
-		} else {
-			assert(buffer);
 			assert(_capacity >= newCapacity);
+		}
+		if (buffer) {
+			assert(_capacity != 0);
+			assert(_offset != 0);
+		} else {
+			assert(_capacity == 0);
+			assert(_offset == 0);
+			assert(_size == 0);
 		}
 	}
 	void reserve_or_shrink(const uint32_t minCapacity);
@@ -245,20 +257,13 @@ public:
 		buffer._flags = 0;
 		buffer.buffer = nullptr;
 		
-		PrintBufferMetadata(storage);
+// 		PrintBufferMetadata(storage);
 	}
 
 	ByteBufferReadable(ByteBufferReadable &&o)
 	{
 		storage = o.storage;
 		o.storage = nullptr;
-	}
-	ByteBufferReadable(ByteBufferReadable &o)
-	{
-		storage = o.storage;
-		if (storage) {
-			storage->ref();
-		}
 	}
 	ByteBufferReadable(const ByteBufferReadable &o)
 	{
@@ -278,30 +283,29 @@ public:
 
 	ByteBufferReadable &operator=(ByteBufferReadable &&o)
 	{
+		if(storage == o.storage) {
+			[[unlikely]];
+			return *this;
+		}
 		if (storage) {
 			storage->unref();
+			storage = nullptr;
 		}
 		if (o.storage) {
 			storage = o.storage;
-		}
-		o.storage = nullptr;
-		return *this;
-	}
-	ByteBufferReadable &operator=(ByteBufferReadable &o)
-	{
-		if (storage) {
-			storage->unref();
-		}
-		if (o.storage) {
-			storage = o.storage;
-			storage->ref();
+			o.storage = nullptr;
 		}
 		return *this;
 	}
 	ByteBufferReadable &operator=(const ByteBufferReadable &o)
 	{
+		if(storage == o.storage) {
+			[[unlikely]];
+			return *this;
+		}
 		if (storage) {
 			storage->unref();
+			storage = nullptr;
 		}
 		if (o.storage) {
 			storage = o.storage;
@@ -337,7 +341,8 @@ public:
 	ByteBufferWritable TryRecycle()
 	{
 		if (storage) {
-			if (storage->refCounter.load() == 1) {
+			uint32_t expected = 1;
+			if (storage->refCounter.compare_exchange_strong(expected, 0)) {
 				const uint32_t cap = storage->offset + storage->capacity;
 				uint8_t *const ptr = (uint8_t *)storage;
 				ByteBufferWritable ret;
@@ -349,6 +354,7 @@ public:
 				storage = nullptr;
 				return ret;
 			}
+			assert(expected >= 1);
 		}
 		return {};
 	}

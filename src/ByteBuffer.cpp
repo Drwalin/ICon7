@@ -3,9 +3,9 @@
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
-#include <bit> // IWYU pragma: keep
+#include <bit>
 
-#include "../include/icon7/MemoryPool.hpp" // IWYU pragma: keep
+#include "../include/icon7/MemoryPool.hpp"
 #include "../include/icon7/ByteReader.hpp"
 #include "../include/icon7/ByteWriter.hpp" // IWYU pragma: keep
 
@@ -15,7 +15,6 @@ namespace icon7
 {
 void PrintBufferMetadata(ByteBufferStorageHeader *buffer)
 {
-	return;
 	const uint8_t *data = buffer->data();
 	const uint32_t size = buffer->size;
 	const uint32_t headerSize = FramingProtocol::GetPacketHeaderSize(data[0]);
@@ -64,17 +63,14 @@ void ByteBufferStorageHeader::free(ByteBufferStorageHeader *header)
 }
 
 ByteBufferWritable::ByteBufferWritable(const ByteBufferWritable &o)
-	: ByteBufferWritable()
 {
 	if (o.buffer != nullptr) {
 		new (this) ByteBufferWritable(o._size);
 		append(o.data(), o.size());
 		_flags = o._flags;
+	} else {
+		new (this) ByteBufferWritable();
 	}
-}
-ByteBufferWritable::ByteBufferWritable(ByteBufferWritable &o)
-	: ByteBufferWritable((const ByteBufferWritable &)o)
-{
 }
 ByteBufferWritable::ByteBufferWritable(uint32_t capacity) : ByteBufferWritable()
 {
@@ -112,6 +108,10 @@ void ByteBufferWritable::reserve_or_shrink(const uint32_t minCapacity)
 	buf._flags = _flags;
 	if (buffer != nullptr) {
 		buf.append(buffer, std::min(_size, buf._capacity));
+	} else {
+		assert(_size == 0);
+		assert(_capacity == 0);
+		assert(_offset == 0);
 	}
 	*this = std::move(buf);
 	assert(buffer);
