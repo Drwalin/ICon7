@@ -424,7 +424,7 @@ int main(int argc, char **argv)
 				v = 0.0;
 			}
 			if (printMoreStats) {
-				printf("\n\n");
+				icon7::log::PrintLineSync("");
 			}
 
 			std::vector<concurrent::future<icon7::PeerHandle>> peers;

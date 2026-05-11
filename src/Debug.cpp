@@ -20,16 +20,26 @@
 #include <unistd.h>
 #ifdef SYS_gettid
 static uint64_t GenThreadId() { return syscall(SYS_gettid); }
+static uint64_t GetProcessId() { return getpid(); }
 #define GEN_THREAD_ID() GenThreadId()
 #endif
+#else
+#include <windows.h>
+static uint64_t GenThreadId() { return GetCurrentThreadId(); }
+static uint64_t GetProcessId() { return GetCurrentProcessId(); }
+#define GEN_THREAD_ID() GenThreadId()
 #endif
 #if !defined(GEN_THREAD_ID)
+#include <windows.h>
 #include <atomic>
 static uint64_t GenThreadId()
 {
+	return GetCurrentThreadId();
 	static std::atomic<uint64_t> globID = 1;
 	return globID++;
 }
+static uint64_t GetProcessId() { return 0; }
+#warn UNKNWON ENVIRNMENT: not *nix nor windows
 #define GEN_THREAD_ID() GenThreadId()
 #endif
 
@@ -236,13 +246,13 @@ std::string GetPrettyFunctionName(const std::string function)
 #ifdef ICON7_LOG_USE_PRETTY_FUNCTION
 	static std::shared_mutex mutex;
 	static std::unordered_map<std::string, std::string> names;
-	mutex.lock_shared();
-	auto it = names.find(function);
-	if (it != names.end()) {
-		mutex.unlock_shared();
-		return it->second;
+	{
+		std::shared_lock lock(mutex);
+		auto it = names.find(function);
+		if (it != names.end()) {
+			return it->second;
+		}
 	}
-	mutex.unlock_shared();
 
 	std::string funcName = function;
 
@@ -329,9 +339,10 @@ std::string GetPrettyFunctionName(const std::string function)
 		funcName.erase(p, 4);
 	}
 
-	mutex.lock();
-	names[function] = funcName;
-	mutex.unlock();
+	{
+		std::lock_guard lock(mutex);
+		names[function] = funcName;
+	}
 
 	return funcName;
 #else
@@ -392,26 +403,72 @@ void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
 	va_end(va);
 }
 
+static FILE *GetFile()
+{
+// 	return stderr;
+	static FILE *file = nullptr;
+	static time::Timestamp openTime = {0};
+	time::Timestamp now = time::GetTimestamp();
+	if (file == nullptr || openTime + icon7::time::seconds(3600 * 24) < now) {
+		if (file) {
+			fflush(file);
+			if (file != stdout && file != stderr) {
+				fclose(file);
+			}
+			file = nullptr;
+		}
+		constexpr uint32_t BYTES = 128;
+		char fileName[BYTES] = {0};
+		openTime = now;
+		std::string timestampStr = icon7::time::TimestampToString(now, 0);
+		int written = snprintf(fileName, BYTES, "%s_%lu.log",
+							   timestampStr.c_str(), GetProcessId());
+		if (written > 64 || written <= 0) {
+			printf("DUPA1 = %i\n", written);
+			file = nullptr;
+		} else {
+			file = fopen(fileName, "w");
+		}
+		if (file == nullptr) {
+			printf("DUPA2\n");
+			file = stderr;
+		}
+	}
+	return file;
+}
+
+#define ICON7_MULTI_FILE_PRINT(func, ...) { \
+	if (output != stderr && output != stdout) { \
+		func(__VA_ARGS__); \
+	} \
+	FILE *tmp = output; \
+	output = stderr; \
+	func(__VA_ARGS__); \
+	output = tmp; \
+}
+
 void HexDump(void *buf, int bytes)
 {
 	std::lock_guard lock(mutex);
-	printf("Hex dump from [%p] bytes %i\n", buf, bytes);
+	FILE *output = GetFile();
+	ICON7_MULTI_FILE_PRINT(fprintf, output, "Hex dump from [%p] bytes %i\n", buf, bytes);
 	for (int i = 0; i < bytes; i += 16) {
 		for (int j = 0; j < 16 && j + i < bytes; ++j) {
 			char c = ((char *)buf)[i + j];
 			if (c >= ' ' && c < 127) {
-				printf("  %c", c);
+				ICON7_MULTI_FILE_PRINT(fprintf, output, "  %c", c);
 			} else {
-				printf("   ");
+				ICON7_MULTI_FILE_PRINT(fprintf, output, "   ");
 			}
 		}
-		printf("\n");
+		ICON7_MULTI_FILE_PRINT(fprintf, output, "\n");
 		for (int j = 0; j < 16 && j + i < bytes; ++j) {
-			printf(" %2.2X", (unsigned int)(((unsigned char *)buf)[i + j]));
+			ICON7_MULTI_FILE_PRINT(fprintf, output, " %2.2X",
+					(unsigned int)(((unsigned char *)buf)[i + j]));
 		}
-		printf("\n");
+		ICON7_MULTI_FILE_PRINT(fprintf, output, "\n");
 	}
-	fflush(stdout);
+	ICON7_MULTI_FILE_PRINT(fflush, output);
 }
 
 void PrintLineSync(const char *fmt, ...)
@@ -420,9 +477,10 @@ void PrintLineSync(const char *fmt, ...)
 	va_start(va, fmt);
 	{
 		std::lock_guard lock(mutex);
-		vfprintf(stdout, fmt, va);
-		fwrite("\n", 1, 1, stdout);
-		fflush(stdout);
+		FILE *output = GetFile();
+		ICON7_MULTI_FILE_PRINT(vfprintf, output, fmt, va);
+		ICON7_MULTI_FILE_PRINT(fwrite, "\n", 1, 1, output);
+		ICON7_MULTI_FILE_PRINT(fflush, output);
 	}
 	va_end(va);
 }
@@ -430,8 +488,10 @@ void PrintLineSync(const char *fmt, ...)
 void WriteSync(const char *buf, int bytes)
 {
 	std::lock_guard lock(mutex);
-	fwrite(buf, 1, bytes, stdout);
-	fflush(stdout);
+	FILE *output = GetFile();
+	ICON7_MULTI_FILE_PRINT(fwrite, buf, 1, bytes, output);
+	ICON7_MULTI_FILE_PRINT(fflush, output);
 }
+#undef ICON7_MULTI_FILE_PRINT
 } // namespace log
 } // namespace icon7
