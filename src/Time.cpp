@@ -11,6 +11,7 @@
 
 #include <chrono>
 
+#include "../include/icon7/Forward.hpp"
 #include "../include/icon7/ByteBuffer.hpp"
 #include "../include/icon7/ByteWriter.hpp"
 #include "../include/icon7/ByteReader.hpp"
@@ -288,13 +289,13 @@ namespace bitscpp
 namespace v2
 {
 void serialize(ByteReader &s, icon7::time::Point &v) { s.op(v.ns); }
-void serialize(ByteWriter_ByteBuffer &s, const icon7::time::Point &v) { s.op(v.ns); }
+void serialize(v2::ByteWriter<icon7::ByteBufferWritable> &s, const icon7::time::Point &v) { s.op(v.ns); }
 
 void serialize(ByteReader &s, icon7::time::Diff &v) { s.op(v.ns); }
-void serialize(ByteWriter_ByteBuffer &s, const icon7::time::Diff &v) { s.op(v.ns); }
+void serialize(v2::ByteWriter<icon7::ByteBufferWritable> &s, const icon7::time::Diff &v) { s.op(v.ns); }
 
 void serialize(ByteReader &s, icon7::time::Timestamp &v) { s.op(v.ns); }
-void serialize(ByteWriter_ByteBuffer &s, const icon7::time::Timestamp &v)
+void serialize(v2::ByteWriter<icon7::ByteBufferWritable> &s, const icon7::time::Timestamp &v)
 {
 	s.op(v.ns);
 }

@@ -6,6 +6,8 @@
 #ifndef ICON7_FORWARD_DECLARATIONS_HPP
 #define ICON7_FORWARD_DECLARATIONS_HPP
 
+#include <cstdint>
+
 #include <memory>
 
 namespace moodycamel
@@ -15,19 +17,8 @@ struct ConsumerToken;
 struct ProducerToken;
 } // namespace moodycamel
 
-namespace bitscpp
-{
-namespace v2
-{
-class ByteWriter_ByteBuffer;
-class ByteReader;
-} // namespace v2
-} // namespace bitscpp
-
 namespace icon7
 {
-class ByteWriter;
-class ByteReader;
 struct ByteBufferStorageHeader;
 class ByteBufferReadable;
 class ByteBufferWritable;
@@ -67,6 +58,22 @@ class ExecuteDisconnect;
 class ExecuteReturnCallbackBase;
 } // namespace icon7
 
+namespace bitscpp
+{
+namespace v2
+{
+template <typename BT> class ByteWriter;
+class ByteReader;
+} // namespace v2
+} // namespace bitscpp
+
+namespace icon7
+{
+class ByteWriter;
+using ByteWriterBase = bitscpp::v2::ByteWriter<icon7::ByteBufferWritable>;
+class ByteReader;
+} // namespace icon7
+
 namespace icon7
 {
 namespace uS
@@ -86,22 +93,22 @@ struct PeerHandle {
 	uint32_t id = 0;
 	uint32_t version = 0;
 	Loop *loop = nullptr;
-	inline bool operator==(const PeerHandle &r) const {
+	inline bool operator==(const PeerHandle &r) const
+	{
 		return id == r.id && version == r.version && loop == r.loop;
 	}
-	inline bool operator!=(const PeerHandle &r) const {
+	inline bool operator!=(const PeerHandle &r) const
+	{
 		return id != r.id || version != r.version || loop != r.loop;
 	}
-	inline operator bool() const {
-		return version && loop;
-	}
-	
+	inline operator bool() const { return version && loop; }
+
 	// Should be invoked very rarely
 	PeerData *GetLocalPeerData();
 	std::shared_ptr<Peer> GetSharedPeer();
 	Loop *GetLoop();
 	Host *GetHost();
 };
-}
+} // namespace icon7
 
 #endif

@@ -154,7 +154,7 @@ public:
 	}
 
 	static void
-	InitializeSerializeSend(bitscpp::v2::ByteWriter_ByteBuffer &writer,
+	InitializeSerializeSend(ByteWriterBase &writer,
 							const RpcName &name)
 	{
 		assert(name);
@@ -162,7 +162,7 @@ public:
 	}
 
 	static void
-	FinalizeSerializeSend(bitscpp::v2::ByteWriter_ByteBuffer &writer,
+	FinalizeSerializeSend(ByteWriterBase &writer,
 						  Flags &flags)
 	{
 		flags |= FLAGS_CALL_NO_FEEDBACK;
@@ -176,7 +176,7 @@ public:
 	static void SerializeSend(ByteBufferWritable &buffer, Flags flags,
 							  const RpcName &name, const Targs &...args)
 	{
-		bitscpp::v2::ByteWriter_ByteBuffer writer(&buffer);
+		ByteWriterBase writer(&buffer);
 		InitializeSerializeSend(writer, name);
 		(writer.op(args), ...);
 		FinalizeSerializeSend(writer, flags);

@@ -132,4 +132,12 @@ uint32_t ByteBufferWritable::round_capacity_up(uint32_t capacity)
 }
 } // namespace icon7
 
-#include "../../ICon7/bitscpp/src/ByteWriter_v2.cpp"
+#include "../bitscpp/src/ByteWriter_v2.inl.hpp"
+
+namespace bitscpp
+{
+namespace v2
+{
+template class ByteWriter<icon7::ByteBufferWritable>;
+} // namespace v2
+} // namespace bitscpp

@@ -41,7 +41,7 @@ struct RpcName {
 	std::string ToString() const;
 
 	void serialize(bitscpp::v2::ByteReader &reader);
-	void serialize(bitscpp::v2::ByteWriter_ByteBuffer &writer) const;
+	void serialize(ByteWriterBase &writer) const;
 
 	std::string str = "";
 	uint32_t uint = 0;

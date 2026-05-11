@@ -7,24 +7,25 @@
 #define ICON7_BYTE_WRITER_HPP
 
 #include "ByteBuffer.hpp"
-
-#undef BITSCPP_BYTE_WRITER_V2_BT_TYPE
-#define BITSCPP_BYTE_WRITER_V2_BT_TYPE icon7::ByteBufferWritable
-
-#undef BITSCPP_BYTE_WRITER_V2_NAME_SUFFIX
-#define BITSCPP_BYTE_WRITER_V2_NAME_SUFFIX _ByteBuffer
+#include "Forward.hpp"
 
 #include "../../bitscpp/include/bitscpp/ByteWriter_v2.hpp" // IWYU pragma: export
 
+namespace bitscpp
+{
+namespace v2
+{
+extern template class ByteWriter<icon7::ByteBufferWritable>;
+} // namespace v2
+} // namespace bitscpp
+
 namespace icon7
 {
-static_assert(std::is_same_v<BITSCPP_BYTE_WRITER_V2_BT_TYPE, icon7::ByteBufferWritable>);
-	
-class ByteWriter : public bitscpp::v2::ByteWriter_ByteBuffer
+class ByteWriter : public ByteWriterBase
 {
 public:
 	ByteBufferWritable _data;
-	using Base = bitscpp::v2::ByteWriter_ByteBuffer;
+	using Base = ByteWriterBase;
 
 public:
 	~ByteWriter() {}
