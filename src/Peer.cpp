@@ -126,7 +126,7 @@ void Peer::_InternalErrorSendOnDisconnecting()
 	}
 }
 
-void Peer::SetOnDisconnect(void (*callback)(PeerHandle))
+void Peer::SetOnDisconnect(std::function<void(PeerHandle)> callback)
 {
 	if (IsDisconnecting()) {
 		_InternalErrorSendOnDisconnecting();
@@ -135,8 +135,8 @@ void Peer::SetOnDisconnect(void (*callback)(PeerHandle))
 	class CommandSetOnDisconnect final : public icon7::commands::ExecuteOnPeer
 	{
 	public:
-		void (*callback)(PeerHandle);
-		CommandSetOnDisconnect(PeerHandle peer, void (*callback)(PeerHandle))
+		std::function<void(PeerHandle)> callback;
+		CommandSetOnDisconnect(PeerHandle peer, std::function<void(PeerHandle)> callback)
 			: ExecuteOnPeer(peer), callback(callback)
 		{
 		}

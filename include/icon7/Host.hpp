@@ -44,8 +44,8 @@ public:
 					  CommandHandle<commands::ExecuteBooleanOnHost> &&callback,
 					  CommandExecutionQueue *queue = nullptr);
 
-	void SetOnConnect(void (*callback)(PeerHandle));
-	void SetOnDisconnect(void (*callback)(PeerHandle));
+	void SetOnConnect(std::function<void(PeerHandle)> callback);
+	void SetOnDisconnect(std::function<void(PeerHandle)> callback);
 
 	concurrent::future<PeerHandle>
 	ConnectPromise(std::string address, uint16_t port);
@@ -99,8 +99,8 @@ private:
 // 	void FlushPendingPeers();
 
 protected:
-	void (*onConnect)(PeerHandle);
-	void (*onDisconnect)(PeerHandle);
+	std::function<void(PeerHandle)> onConnect;
+	std::function<void(PeerHandle)> onDisconnect;
 
 	const RPCEnvironment *rpcEnvironment;
 

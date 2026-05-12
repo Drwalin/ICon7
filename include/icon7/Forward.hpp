@@ -72,6 +72,7 @@ namespace icon7
 class ByteWriter;
 using ByteWriterBase = bitscpp::v2::ByteWriter<icon7::ByteBufferWritable>;
 class ByteReader;
+using ByteReaderBase = bitscpp::v2::ByteReader;
 } // namespace icon7
 
 namespace icon7
@@ -110,5 +111,25 @@ struct PeerHandle {
 	Host *GetHost();
 };
 } // namespace icon7
+
+namespace std
+{
+template<typename T>
+struct hash;
+}
+
+template<>
+struct std::hash<icon7::PeerHandle>
+{
+    std::size_t operator()(icon7::PeerHandle peer) const noexcept
+    {
+		uint64_t h = 0xcbf29ce484222325;
+		constexpr uint64_t p = 0x100000001b3;
+		h = (h ^ peer.id) * p;
+		h = (h ^ peer.version) * p;
+		h = (h ^ uintptr_t(peer.loop)) * p;
+		return h;
+    }
+};
 
 #endif

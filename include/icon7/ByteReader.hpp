@@ -6,13 +6,15 @@
 #ifndef ICON7_BYTE_READER_HPP
 #define ICON7_BYTE_READER_HPP
 
+#include "Forward.hpp" // IWYU pragma: export
+
 #include "../../bitscpp/include/bitscpp/ByteReader_v2.hpp" // IWYU pragma: export
 
 #include "ByteBuffer.hpp"
 
 namespace icon7
 {
-class ByteReader : public bitscpp::v2::ByteReader
+class ByteReader : public ByteReaderBase
 {
 public:
 	ByteBufferReadable _data;

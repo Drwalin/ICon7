@@ -69,11 +69,12 @@ public:
 		return peerFlags & BIT_ERROR_CONNECT;
 	}
 
-	void SetOnDisconnect(void (*callback)(PeerHandle));
+	void SetOnDisconnect(std::function<void(PeerHandle)> callback);
 
 public:
 	uint64_t userData;
 	void *userPointer;
+	std::shared_ptr<void> sharedUserPointer;
 
 public:
 	Host *const host;
@@ -131,7 +132,7 @@ public:
 		return sharedPeer->peerFlags & BIT_ERROR_CONNECT;
 	}
 
-	void SetOnDisconnect(void (*callback)(PeerHandle)) { onDisconnect = callback; }
+	void SetOnDisconnect(std::function<void(PeerHandle)> callback) { onDisconnect = callback; }
 
 public: // thread unsafe, safe only in hosts loop thread
 	void _InternalOnData(uint8_t *data, uint32_t length);
@@ -193,7 +194,7 @@ protected:
 	PeerData(Host *host);
 
 protected:
-	void (*onDisconnect)(PeerHandle);
+	std::function<void(PeerHandle)> onDisconnect;
 	uint32_t returnIdGen = 0;
 
 	std::vector<SendFrameStruct> globalQueue;

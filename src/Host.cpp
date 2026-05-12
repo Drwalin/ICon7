@@ -56,8 +56,8 @@ void Host::DisconnectAll()
 	}
 }
 
-void Host::SetOnConnect(void (*callback)(PeerHandle)) { onConnect = callback; }
-void Host::SetOnDisconnect(void (*callback)(PeerHandle))
+void Host::SetOnConnect(std::function<void(PeerHandle)> callback) { onConnect = callback; }
+void Host::SetOnDisconnect(std::function<void(PeerHandle)> callback)
 {
 	onDisconnect = callback;
 }

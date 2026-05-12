@@ -7,7 +7,7 @@
 #define ICON7_BYTE_WRITER_HPP
 
 #include "ByteBuffer.hpp"
-#include "Forward.hpp"
+#include "Forward.hpp" // IWYU pragma: export
 
 #include "../../bitscpp/include/bitscpp/ByteWriter_v2.hpp" // IWYU pragma: export
 
