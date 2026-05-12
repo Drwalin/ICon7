@@ -18,15 +18,21 @@ class Host;
 class PeerFlagsArgumentsReader
 {
 public:
-	static void ReadType(PeerHandle peer, Flags flags, ByteReader &reader, Flags &v);
-	static void ReadType(PeerHandle peer, Flags flags, ByteReader &reader, Host *&v);
-	static void ReadType(PeerHandle peer, Flags flags, ByteReader &reader, PeerHandle &v);
-	static void ReadType(PeerHandle peer, Flags flags, ByteReader &reader,
-						 ByteReader *&v);
+	static void ReadType(CommandExecutionQueue *queue, PeerHandle peer,
+						 Flags flags, ByteReader &reader, Flags &v);
+	static void ReadType(CommandExecutionQueue *queue, PeerHandle peer,
+						 Flags flags, ByteReader &reader, Host *&v);
+	static void ReadType(CommandExecutionQueue *queue, PeerHandle peer,
+						 Flags flags, ByteReader &reader, PeerHandle &v);
+	static void ReadType(CommandExecutionQueue *queue, PeerHandle peer,
+						 Flags flags, ByteReader &reader, ByteReader *&v);
+	static void ReadType(CommandExecutionQueue *queue, PeerHandle peer,
+						 Flags flags, ByteReader &reader,
+						 CommandExecutionQueue *&v);
 
 	template <typename T>
-	inline static void ReadType(PeerHandle peer, Flags flags, ByteReader &reader,
-								T &value)
+	inline static void ReadType(CommandExecutionQueue *queue, PeerHandle peer,
+								Flags flags, ByteReader &reader, T &value)
 	{
 		reader.op(value);
 	}

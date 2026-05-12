@@ -32,7 +32,7 @@ public:
 	}
 	virtual ~MessageConverter() {}
 
-	virtual void Call(PeerHandle peer, ByteReader &reader, Flags flags,
+	virtual void DeserializeAndExecute(CommandExecutionQueue *queue, PeerHandle peer, ByteReader &reader, Flags flags,
 					  uint32_t returnId) = 0;
 
 	inline CommandExecutionQueue *
@@ -48,10 +48,9 @@ public:
 		return nullptr;
 	}
 
-	CommandExecutionQueue *(*getExecutionQueue)(
-		MessageConverter *messageConverter, PeerHandle peer, ByteReader &reader,
-		Flags flags) = nullptr;
-
+	std::function<CommandExecutionQueue *(
+			MessageConverter *messageConverter, PeerHandle peer,
+			ByteReader &reader, Flags flags)> getExecutionQueue = nullptr;
 	CommandExecutionQueue *_executionQueue = nullptr;
 	RpcName name;
 };
@@ -141,21 +140,21 @@ public:
 
 	virtual ~MessageConverterSpec() {}
 
-	virtual void Call(PeerHandle peer, ByteReader &reader, Flags flags,
+	virtual void DeserializeAndExecute(CommandExecutionQueue *queue, PeerHandle peer, ByteReader &reader, Flags flags,
 					  uint32_t returnId) override
 	{
 		assert(name);
 		auto seq = std::index_sequence_for<Targs...>{};
-		_InternalCall(peer, flags, reader, returnId, seq);
+		_InternalCall(queue, peer, flags, reader, returnId, seq);
 	}
 
 private:
 	template <size_t... SeqArgs>
-	void _InternalCall(PeerHandle peer, Flags flags, ByteReader &reader,
+	void _InternalCall(CommandExecutionQueue *queue, PeerHandle peer, Flags flags, ByteReader &reader,
 					   uint32_t returnId, std::index_sequence<SeqArgs...> seq)
 	{
 		TupleType args;
-		(PeerFlagsArgumentsReader::ReadType(peer, flags, reader,
+		(PeerFlagsArgumentsReader::ReadType(queue, peer, flags, reader,
 											std::get<SeqArgs>(args)),
 		 ...);
 		if (reader.get_errors() != 0) {
@@ -185,21 +184,21 @@ public:
 
 	virtual ~MessageConverterSpecStdFunction() {}
 
-	virtual void Call(PeerHandle peer, ByteReader &reader, Flags flags,
+	virtual void DeserializeAndExecute(CommandExecutionQueue *queue, PeerHandle peer, ByteReader &reader, Flags flags,
 					  uint32_t returnId) override
 	{
 		assert(name);
 		auto seq = std::index_sequence_for<Targs...>{};
-		_InternalCall(peer, flags, reader, returnId, seq);
+		_InternalCall(queue, peer, flags, reader, returnId, seq);
 	}
 
 private:
 	template <size_t... SeqArgs>
-	void _InternalCall(PeerHandle peer, Flags flags, ByteReader &reader,
+	void _InternalCall(CommandExecutionQueue *queue, PeerHandle peer, Flags flags, ByteReader &reader,
 					   uint32_t returnId, std::index_sequence<SeqArgs...> seq)
 	{
 		TupleType args;
-		(PeerFlagsArgumentsReader::ReadType(peer, flags, reader,
+		(PeerFlagsArgumentsReader::ReadType(queue, peer, flags, reader,
 											std::get<SeqArgs>(args)),
 		 ...);
 		if (reader.get_errors() != 0) {
@@ -229,21 +228,21 @@ public:
 
 	virtual ~MessageConverterSpecMethodOfObject() {}
 
-	virtual void Call(PeerHandle peer, ByteReader &reader, Flags flags,
+	virtual void DeserializeAndExecute(CommandExecutionQueue *queue, PeerHandle peer, ByteReader &reader, Flags flags,
 					  uint32_t returnId) override
 	{
 		assert(name);
 		auto seq = std::index_sequence_for<Targs...>{};
-		_InternalCall(peer, flags, reader, returnId, seq);
+		_InternalCall(queue, peer, flags, reader, returnId, seq);
 	}
 
 private:
 	template <size_t... SeqArgs>
-	void _InternalCall(PeerHandle peer, Flags flags, ByteReader &reader,
+	void _InternalCall(CommandExecutionQueue *queue, PeerHandle peer, Flags flags, ByteReader &reader,
 					   uint32_t returnId, std::index_sequence<SeqArgs...> seq)
 	{
 		TupleType args;
-		(PeerFlagsArgumentsReader::ReadType(peer, flags, reader,
+		(PeerFlagsArgumentsReader::ReadType(queue, peer, flags, reader,
 											std::get<SeqArgs>(args)),
 		 ...);
 		if (reader.get_errors() != 0) {

@@ -102,9 +102,9 @@ public:
 	MessageConverter *
 	RegisterMessage(RpcName name, std::function<Fun> fun,
 					CommandExecutionQueue *executionQueue = nullptr,
-					CommandExecutionQueue *(*getExecutionQueue)(
+					std::function<CommandExecutionQueue *(
 						MessageConverter *messageConverter, PeerHandle peer,
-						ByteReader &reader, Flags flags) = nullptr)
+						ByteReader &reader, Flags flags)> getExecutionQueue = nullptr)
 	{
 		auto func = new MessageConverterSpecStdFunction(fun);
 		func->_executionQueue = executionQueue;
@@ -116,9 +116,9 @@ public:
 	MessageConverter *
 	RegisterMessage(RpcName name, Fun &&fun,
 					CommandExecutionQueue *executionQueue = nullptr,
-					CommandExecutionQueue *(*getExecutionQueue)(
+					std::function<CommandExecutionQueue *(
 						MessageConverter *messageConverter, PeerHandle peer,
-						ByteReader &reader, Flags flags) = nullptr)
+						ByteReader &reader, Flags flags)> getExecutionQueue = nullptr)
 	{
 		auto f = ConvertLambdaToFunctionPtr(fun);
 		auto func = new MessageConverterSpec(f);
@@ -131,9 +131,9 @@ public:
 	MessageConverter *
 	RegisterObjectMessage(RpcName name, T *object, Fun &&fun,
 						  CommandExecutionQueue *executionQueue = nullptr,
-						  CommandExecutionQueue *(*getExecutionQueue)(
+						  std::function<CommandExecutionQueue *(
 							  MessageConverter *messageConverter, PeerHandle peer,
-							  ByteReader &reader, Flags flags) = nullptr)
+							  ByteReader &reader, Flags flags)> getExecutionQueue = nullptr)
 	{
 		auto func = new MessageConverterSpecMethodOfObject(object, fun);
 		func->_executionQueue = executionQueue;

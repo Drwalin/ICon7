@@ -77,16 +77,19 @@ void RPCEnvironment::OnReceiveCall(PeerData *peer, ByteReader &reader,
 	}
 
 	if (msgConv) {
-		auto queue = msgConv->ExecuteGetQueue(peer->peerHandle, reader, flags);
+		CommandExecutionQueue *queue =
+			msgConv->ExecuteGetQueue(peer->peerHandle, reader, flags);
 		if (queue) {
 			auto com = CommandHandle<commands::internal::ExecuteRPC>::Create(
 				std::move(reader), peer->peerHandle);
 			com->flags = flags;
 			com->returnId = returnId;
 			com->messageConverter = msgConv;
+			com->queue = queue;
 			queue->EnqueueCommand(std::move(com));
 		} else {
-			msgConv->Call(peer->peerHandle, reader, flags, returnId);
+			queue = peer->loop->GetCommandExecutionQueue();
+			msgConv->DeserializeAndExecute(queue, peer->peerHandle, reader, flags, returnId);
 		}
 	} else {
 		LOG_WARN("Function %s not registered.", name.ToString().c_str());

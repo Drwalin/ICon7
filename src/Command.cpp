@@ -24,7 +24,7 @@ void ExecuteAddPeerToFlush::Execute()
 
 void ExecuteRPC::Execute()
 {
-	messageConverter->Call(peer, reader, flags, returnId);
+	messageConverter->DeserializeAndExecute(queue, peer, reader, flags, returnId);
 }
 
 void ExecuteConnect::Execute() { host->_InternalConnect(*this); }

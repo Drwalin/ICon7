@@ -233,6 +233,7 @@ public:
 	MessageConverter *messageConverter = nullptr;
 	Flags flags = 0;
 	uint32_t returnId = 0;
+	CommandExecutionQueue *queue = nullptr;
 
 	virtual void Execute() override;
 };
