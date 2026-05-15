@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include <set>
+#include <unordered_set>
 
 template <typename T> struct _DataStats {
 	T mean;
@@ -64,7 +64,7 @@ template <typename T> _DataStats<T> CalcDataStats(T *ar, size_t count)
 	return stats;
 }
 
-std::string ParamsToString(const std::vector<std::string> &strs)
+static std::string ParamsToString(const std::vector<std::string> &strs)
 {
 	std::string str;
 	for (const auto &s : strs) {
@@ -191,7 +191,9 @@ public:
 	void AddParam(const std::vector<std::string> &params)
 	{
 		std::string str = ParamsToString(params);
-		availableOptions.insert(str);
+		if (availableOptions.contains(str) == false) {
+			availableOptions.insert(str);
+		}
 	}
 
 	void PrintAvailableOptions() const
@@ -208,9 +210,10 @@ public:
 	struct Entry {
 		std::string key, value;
 	};
+
 	std::string progName;
 	std::vector<Entry> args;
 	std::vector<std::string> floatingArgs;
 	
-	std::set<std::string> availableOptions;
+	std::unordered_set<std::string> availableOptions;
 };

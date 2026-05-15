@@ -12,3 +12,4 @@ release_test
 release
 .cache
 release-clang
+compile_commands.json

@@ -305,7 +305,7 @@ int main(int argc, char **argv)
 	const int connectionsCount =
 		args.GetInt({"-connections", "-con"}, 171, 1, 1000000);
 	icon7::time::Diff delayBetweeEachTotalSend = icon7::time::microseconds(
-		args.GetInt({"-delay", "-d"}, 0, 0, 10000) * 500); // gets milliseconds
+		args.GetInt({"-delay", "-d"}, 0, 0, 10000) * 1000); // gets milliseconds
 	const int64_t maxWaitAfterPayloadDone =
 		args.GetInt({"-max-wait-after-payload"}, 1 * 60 * 1000, 0,
 					1000ll * 3600ll * 24ll * 365ll);
@@ -516,6 +516,7 @@ int main(int argc, char **argv)
 				for (int k = 0; k < totalSends; ++k) {
 
 					buffersToSend.clear();
+					buffersToSend.push_back({});
 					for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
 						if (l % serializeSendsModulo < serializeSendsFract) {
 							icon7::ByteBufferWritable buffer;
@@ -532,41 +533,32 @@ int main(int argc, char **argv)
 					if (k > 0) {
 						icon7::time::Sleep(delayBetweeEachTotalSend);
 					}
-					for (auto p : validPeers) {
-						if (p->IsDisconnecting()) {
-							continue;
-						}
-						THROTTLE_SEND();
-						icon7::PeerHandle peer = p->peerHandle;
-						auto curTim = icon7::time::GetTemporaryTimestamp();
-						auto onReturned = [curTim, &sumTim, &arrayOfLatency](
-											  icon7::PeerHandle peer,
-											  icon7::Flags flags,
-											  uint32_t result) -> void {
-							auto n = icon7::time::GetTemporaryTimestamp();
-							auto dt =
-								icon7::time::NanosecondsToSeconds(n - curTim);
-							sumTim += dt;
-							uint32_t i = returned++;
-							arrayOfLatency[i] = dt;
-						};
-
-						icon7::RPCEnvironment::Call(&commandsBuffer, peer, icon7::FLAG_RELIABLE,
-								icon7::OnReturnCallback::Make<uint32_t>(
-									std::move(onReturned),
-									[](icon7::PeerHandle peer) -> void {
-									printf(" Multiplication timeout\n");
-									},
-									24 * 3600 * 1000, peer),
-								"mul", 5, 13, additionalPayload);
-						sent++;
-					}
-					commandsBuffer.FlushBuffer();
-					icon7::time::Sleep(delayBetweeEachTotalSend);
-					
 					auto executeSend = [&](icon7::PeerHandle peer, int l) {
 						THROTTLE_SEND();
-						if (buffersToSend[l].data() == nullptr) {
+						assert(l < buffersToSend.size());
+						if (l == 0) {
+							auto curTim = icon7::time::GetTemporaryTimestamp();
+							auto onReturned = [curTim, &sumTim, &arrayOfLatency](
+												  icon7::PeerHandle peer,
+												  icon7::Flags flags,
+												  uint32_t result) -> void {
+								auto n = icon7::time::GetTemporaryTimestamp();
+								auto dt =
+									icon7::time::NanosecondsToSeconds(n - curTim);
+								sumTim += dt;
+								uint32_t i = returned++;
+								arrayOfLatency[i] = dt;
+							};
+
+							icon7::RPCEnvironment::Call(&commandsBuffer, peer, icon7::FLAG_RELIABLE,
+									icon7::OnReturnCallback::Make<uint32_t>(
+										std::move(onReturned),
+										[](icon7::PeerHandle peer) -> void {
+										printf(" Multiplication timeout\n");
+										},
+										24 * 3600 * 1000, peer),
+									"mul", 5, 13, additionalPayload);
+						} else if (buffersToSend[l].data() == nullptr) {
 							icon7::RPCEnvironment::Send(
 									useBatchedSends ? &commandsBuffer : nullptr,
 									peer,
@@ -580,13 +572,29 @@ int main(int argc, char **argv)
 						sent++;
 					};
 
-					for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
+					if (orderSendsByPeer) {
+						for (auto p : validPeers) {
+							for (int l = 0; l < sendsMoreThanCalls; ++l) {
+								if (p->IsDisconnecting()) {
+									continue;
+								}
+								executeSend(p->peerHandle, l);
+							}
+						}
+					} else {
 						for (auto p : validPeers) {
 							if (p->IsDisconnecting()) {
 								continue;
 							}
-							icon7::PeerHandle peer = p->peerHandle;
-							executeSend(peer, l);
+							executeSend(p->peerHandle, 0);
+						}
+						for (int l = 1; l < sendsMoreThanCalls; ++l) {
+							for (auto p : validPeers) {
+								if (p->IsDisconnecting()) {
+									continue;
+								}
+								executeSend(p->peerHandle, l);
+							}
 						}
 					}
 					commandsBuffer.FlushBuffer();

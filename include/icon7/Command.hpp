@@ -63,19 +63,22 @@ public:
 template <typename T = Command> class CommandHandle
 {
 public:
-	CommandHandle() : _com(nullptr) {}
+	CommandHandle()
+	{
+		handle = 0;
+	}
 	template <typename T2> CommandHandle(CommandHandle<T2> &&o)
 	{
 		static_assert(std::is_base_of_v<T, T2>);
-		_com = o._com;
-		o._com = nullptr;
+		handle = o.handle;
+		o.handle = 0;
 	}
 	CommandHandle(CommandHandle<std::coroutine_handle<>> &&o)
 	{
 		static_assert(std::is_same_v<T, Command> ||
 					  std::is_same_v<T, std::coroutine_handle<>>);
-		_com = o._com;
-		o._com = nullptr;
+		handle = o.handle;
+		o.handle = 0;
 	}
 	CommandHandle(CommandHandle &o) = delete;
 	CommandHandle(const CommandHandle &o) = delete;
@@ -86,21 +89,21 @@ public:
 	CommandHandle &operator=(const CommandHandle &o) = delete;
 	template <typename T2> CommandHandle &operator=(CommandHandle<T2> &&o)
 	{
-		if (_int != 0) {
+		if (handle != 0) {
 			LOG_FATAL(
 				"Cannot move CommandHandle<> into not empty CommandHandle<>");
 			return *this;
 		}
 		static_assert(std::is_base_of_v<T, T2>);
-		this->~CommandHandle();
-		new (this) CommandHandle<T>(std::move(o));
+		handle = o.handle;
+		o.handle = 0;
 		return *this;
 	}
 
 	void Destroy()
 	{
-		const uint8_t type = _int & COMMAND_BITS_MASK;
-		uintptr_t __int = _int & ~uintptr_t(COMMAND_BITS_MASK);
+		const uint8_t type = handle & COMMAND_BITS_MASK;
+		uintptr_t __int = handle & ~uintptr_t(COMMAND_BITS_MASK);
 		Command *com = (Command *)__int;
 		void *coro = (void *)__int;
 		if (__int != 0) {
@@ -113,36 +116,38 @@ public:
 				break;
 			}
 		}
-		_com = nullptr;
+		handle = 0;
 	}
 
 	template <typename... Args>
 	inline static CommandHandle<T> Create(Args &&...args)
 	{
 		CommandHandle<T> com;
-		com._com = MemoryPool::AllocateTyped<T>(std::move(args)...);
-		if ((((uintptr_t)com._com) & COMMAND_BITS_MASK) != 0) {
+		Command *_com = MemoryPool::AllocateTyped<T>(std::move(args)...);
+		com.handle = (uintptr_t)_com;
+		if ((((uintptr_t)com.handle) & COMMAND_BITS_MASK) != 0) {
 			LOG_FATAL("Allocator does not return 8-byte align memory");
 		}
-		com._com->_commandSize = sizeof(T);
+		_com->_commandSize = sizeof(T);
 		return com;
 	}
 
 	inline static CommandHandle<T> Create(std::coroutine_handle<> handle)
 	{
 		CommandHandle<T> com;
-		com._coro = handle.address();
-		if ((((uintptr_t)com._com) & COMMAND_BITS_MASK) != 0) {
+		void *_coro = handle.address();
+		com.handle = (uintptr_t)_coro;
+		if ((((uintptr_t)com.handle) & COMMAND_BITS_MASK) != 0) {
 			LOG_FATAL("Allocator does not return 8-byte align memory");
 		}
-		com._int |= COROUTINE_HANDLE;
+		com.handle |= COROUTINE_HANDLE;
 		return com;
 	}
 
 	inline void Execute()
 	{
-		const uint8_t type = _int & COMMAND_BITS_MASK;
-		uintptr_t __int = _int & ~uintptr_t(COMMAND_BITS_MASK);
+		const uint8_t type = handle & COMMAND_BITS_MASK;
+		uintptr_t __int = handle & ~uintptr_t(COMMAND_BITS_MASK);
 		Command *com = (Command *)__int;
 		void *coro = (void *)__int;
 		if (__int != 0) {
@@ -156,23 +161,21 @@ public:
 				break;
 			}
 		}
-		_com = nullptr;
+		handle = 0;
 	}
 
-	inline bool IsValid() const { return _com != nullptr; }
+	inline bool IsValid() const { return handle != 0; }
 
-	inline T &operator*(int) { return *(T *)_com; }
+	inline T &operator*(int) { return *(T *)(handle & ~(uintptr_t)COMMAND_BITS_MASK); }
 
-	inline T *operator->() { return (T *)_com; }
+	inline T *operator->() { return (T *)(handle & ~(uintptr_t)COMMAND_BITS_MASK); }
 
 	friend class CommandExecutionQueue;
 
 public:
-	union {
-		Command *_com;
-		void *_coro;
-		uintptr_t _int;
-	};
+	static_assert(sizeof(uintptr_t) == sizeof(void*));
+	static_assert(sizeof(uintptr_t) == sizeof(Command*));
+	uintptr_t handle = 0;
 };
 
 template <>

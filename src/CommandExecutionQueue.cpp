@@ -185,7 +185,6 @@ uint32_t CommandExecutionQueue::Execute(uint32_t maxToDequeue)
 		total += dequeued;
 		for (int i = 0; i < dequeued; ++i) {
 			commands[i].Execute();
-			commands[i].~CommandHandle();
 		}
 
 		if (dequeued != toDequeue) {
