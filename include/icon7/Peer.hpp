@@ -53,6 +53,8 @@ public:
 
 	static void Send(PeerHandle peer, ByteBufferReadable &frame);
 	static void Send(PeerHandle peer, ByteBufferReadable &&frame);
+	static void Send(CommandsBufferHandler *commandsBuffer, PeerHandle peer, ByteBufferReadable &frame);
+	static void Send(CommandsBufferHandler *commandsBuffer, PeerHandle peer, ByteBufferReadable &&frame);
 	void Send(ByteBufferReadable &frame);
 	void Send(ByteBufferReadable &&frame);
 	void Disconnect();

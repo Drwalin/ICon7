@@ -326,6 +326,7 @@ int main(int argc, char **argv)
 		args.GetInt({"-max-in-flight-packets"}, 10000, 1, 10000000);
 
 	const bool useBatchedSends = args.GetFlag({"-batch-sends"});
+	const bool orderSendsByPeer = args.GetFlag({"-order-sends-by-peer"});
 
 	const std::string listenIp =
 		args.GetString({"-ip"}, "127.0.0.1");
@@ -511,7 +512,23 @@ int main(int argc, char **argv)
 				icon7::CommandsBufferHandler commandsBuffer{
 					hostb->GetCommandExecutionQueue()};
 
+				std::vector<icon7::ByteBufferReadable> buffersToSend;
 				for (int k = 0; k < totalSends; ++k) {
+
+					buffersToSend.clear();
+					for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
+						if (l % serializeSendsModulo < serializeSendsFract) {
+							icon7::ByteBufferWritable buffer;
+							icon7::RPCEnvironment::SerializeSend(buffer, icon7::FLAG_RELIABLE,
+									"sum", 3, 23,
+									additionalPayload);
+							sendFrameSize = buffer.size();
+							buffersToSend.emplace_back(std::move(buffer));
+						} else {
+							buffersToSend.push_back({});
+						}
+					}
+
 					if (k > 0) {
 						icon7::time::Sleep(delayBetweeEachTotalSend);
 					}
@@ -519,6 +536,7 @@ int main(int argc, char **argv)
 						if (p->IsDisconnecting()) {
 							continue;
 						}
+						THROTTLE_SEND();
 						icon7::PeerHandle peer = p->peerHandle;
 						auto curTim = icon7::time::GetTemporaryTimestamp();
 						auto onReturned = [curTim, &sumTim, &arrayOfLatency](
@@ -532,7 +550,6 @@ int main(int argc, char **argv)
 							uint32_t i = returned++;
 							arrayOfLatency[i] = dt;
 						};
-						THROTTLE_SEND();
 
 						icon7::RPCEnvironment::Call(&commandsBuffer, peer, icon7::FLAG_RELIABLE,
 								icon7::OnReturnCallback::Make<uint32_t>(
@@ -546,61 +563,31 @@ int main(int argc, char **argv)
 					}
 					commandsBuffer.FlushBuffer();
 					icon7::time::Sleep(delayBetweeEachTotalSend);
+					
+					auto executeSend = [&](icon7::PeerHandle peer, int l) {
+						THROTTLE_SEND();
+						if (buffersToSend[l].data() == nullptr) {
+							icon7::RPCEnvironment::Send(
+									useBatchedSends ? &commandsBuffer : nullptr,
+									peer,
+									icon7::FLAG_RELIABLE,"sum", 3,
+									23, additionalPayload);
+						} else {
+							icon7::Peer::Send(
+								useBatchedSends ? &commandsBuffer : nullptr,
+									peer, buffersToSend[l]);
+						}
+						sent++;
+					};
 
 					for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
-						if (l % serializeSendsModulo < serializeSendsFract) {
-							icon7::ByteBufferWritable buffer;
-							icon7::RPCEnvironment::SerializeSend(buffer, icon7::FLAG_RELIABLE,
-											   "sum", 3, 23,
-											   additionalPayload);
-							sendFrameSize = buffer.size();
-							icon7::ByteBufferReadable constBuffer(std::move(buffer));
-							for (auto p : validPeers) {
-								if (p->IsDisconnecting()) {
-									continue;
-								}
-								auto peer = p.get();
-
-								THROTTLE_SEND();
-								if (useBatchedSends) {
-									commandsBuffer.EnqueueCommand<
-										icon7::commands::internal::
-										ExecutePeerSendFrame>(
-												peer->peerHandle)->frame = constBuffer;
-								} else {
-									icon7::Peer::Send(peer->peerHandle, constBuffer);
-								}
-
-								sent++;
+						for (auto p : validPeers) {
+							if (p->IsDisconnecting()) {
+								continue;
 							}
-						} else {
-							for (auto p : validPeers) {
-								if (p->IsDisconnecting()) {
-									continue;
-								}
-								auto peer = p.get();
-
-								THROTTLE_SEND();
-								if (useBatchedSends) {
-									icon7::ByteBufferWritable buffer;
-									icon7::RPCEnvironment::SerializeSend(buffer,
-											icon7::FLAG_RELIABLE, "sum", 3,
-											23, additionalPayload);
-									icon7::ByteBufferReadable constBuffer(std::move(buffer));
-									commandsBuffer.EnqueueCommand<
-										icon7::commands::internal::
-										ExecutePeerSendFrame>(
-												peer->peerHandle)->frame = std::move(constBuffer);
-								} else {
-									icon7::RPCEnvironment::Send(peer->peerHandle,
-											icon7::FLAG_RELIABLE,"sum", 3,
-											23, additionalPayload);
-								}
-
-								sent++;
-							}
+							icon7::PeerHandle peer = p->peerHandle;
+							executeSend(peer, l);
 						}
-						commandsBuffer.FlushBuffer();
 					}
 					commandsBuffer.FlushBuffer();
 				}

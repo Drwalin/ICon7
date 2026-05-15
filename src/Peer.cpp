@@ -90,6 +90,25 @@ void Peer::Send(PeerHandle peer, ByteBufferReadable &&frame)
 	assert(frame.storage == nullptr);
 }
 
+void Peer::Send(CommandsBufferHandler *commandsBuffer, PeerHandle peer, ByteBufferReadable &frame)
+{
+	ByteBufferReadable f = frame;
+	Send(commandsBuffer, peer, std::move(f));
+}
+
+void Peer::Send(CommandsBufferHandler *commandsBuffer, PeerHandle peer, ByteBufferReadable &&frame)
+{
+	assert(frame.data());
+	if (commandsBuffer) {
+		commandsBuffer->EnqueueCommand<
+			icon7::commands::internal::
+			ExecutePeerSendFrame>(
+					peer)->frame = std::move(frame);
+	} else {
+		Send(peer, std::move(frame));
+	}
+}
+
 void PeerData::Send(ByteBufferReadable &frame)
 {
 	assert(frame.data());

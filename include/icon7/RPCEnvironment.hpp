@@ -153,6 +153,22 @@ public:
 		Peer::Send(peer, std::move(buffer));
 	}
 
+	template <typename... Targs>
+	static void Send(CommandsBufferHandler *commandsBuffer, PeerHandle peer,
+					 Flags flags, const RpcName &name, const Targs &...args)
+	{
+		ByteBufferWritable buffer;
+		SerializeSend(buffer, flags, name, args...);
+		if (commandsBuffer == nullptr) {
+			Peer::Send(peer, std::move(buffer));
+		} else {
+			commandsBuffer
+				->EnqueueCommand<
+					icon7::commands::internal::ExecutePeerSendFrame>(peer)
+				->frame = std::move(buffer);
+		}
+	}
+
 	static void
 	InitializeSerializeSend(ByteWriterBase &writer,
 							const RpcName &name)
