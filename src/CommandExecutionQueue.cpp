@@ -1,7 +1,9 @@
-// Copyright (C) 2023-2025 Marek Zalewski aka Drwalin
+// Copyright (C) 2023-2026 Marek Zalewski aka Drwalin
 //
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
+
+#include <cstring>
 
 #include <memory>
 #include <thread>
@@ -34,6 +36,8 @@ void CoroutineSchedulable::promise_type::operator delete(void *ptr,
 void CommandExecutionQueue::CoroutineAwaitable::await_suspend(
 	std::coroutine_handle<> h)
 {
+	assert(queue != nullptr);
+	assert(h.done() == false);
 	queue->EnqueueCommand(CommandHandle<>::Create(h));
 	queue = nullptr;
 	objectHolder = nullptr;
@@ -59,7 +63,6 @@ void CommandExecutionQueue::EnqueueCommand(CommandHandle<Command> &&command)
 		LOG_ERROR("Trying to enqueue empty command");
 	} else {
 		queue->enqueue(std::move(command));
-		command._com = nullptr;
 	}
 }
 
@@ -89,7 +92,6 @@ bool CommandExecutionQueue::TryDequeue(CommandHandle<Command> &command)
 	if (queue->try_dequeue(command)) {
 		return true;
 	} else {
-		command._com = nullptr;
 		return false;
 	}
 }
@@ -116,6 +118,9 @@ bool CommandExecutionQueue::IsRunningAsync() const
 void CommandExecutionQueue::RunAsyncExecution(
 	uint32_t sleepMicrosecondsOnNoActions, uint32_t maxSleepDuration)
 {
+	if (queue == nullptr) {
+		return;
+	}
 	std::thread(&CommandExecutionQueue::ExecuteLoop, this,
 				sleepMicrosecondsOnNoActions, maxSleepDuration)
 		.detach();
@@ -124,14 +129,32 @@ void CommandExecutionQueue::RunAsyncExecution(
 void CommandExecutionQueue::ExecuteLoop(uint32_t sleepMicrosecondsOnNoActions,
 										uint32_t maxSleepDuration)
 {
+	if (queue == nullptr) {
+		LOG_ERROR("queue == nullptr");
+		return;
+	}
+	if (asyncExecutionFlags & IS_RUNNING) {
+		if ((asyncExecutionFlags & QUEUE_STOP) == 0) {
+			LOG_ERROR("execution loop already running");
+			return;
+		}
+		WaitStopAsyncExecution();
+		if((asyncExecutionFlags & IS_RUNNING) == 0) {
+			LOG_FATAL("execution loop still running, after stopping it's execution");
+			return;
+		}
+	}
 	asyncExecutionFlags = IS_RUNNING;
-	uint32_t accumulativeNopCounter = 0;
+	uint64_t accumulativeNopCounter = 0;
 	while (asyncExecutionFlags.load() == IS_RUNNING) {
-		uint32_t dequeued = Execute(128);
+		uint32_t dequeued = Execute(1024);
 		if (dequeued == 0) {
 			uint64_t sleepTime =
 				sleepMicrosecondsOnNoActions + accumulativeNopCounter * 64;
 			accumulativeNopCounter++;
+			if (accumulativeNopCounter > 100000) {
+				accumulativeNopCounter = 100000;
+			}
 			if (sleepTime < 1)
 				sleepTime = 1;
 			if (sleepTime > maxSleepDuration)
@@ -163,7 +186,6 @@ uint32_t CommandExecutionQueue::Execute(uint32_t maxToDequeue)
 		for (int i = 0; i < dequeued; ++i) {
 			commands[i].Execute();
 			commands[i].~CommandHandle();
-			commands[i]._com = nullptr;
 		}
 
 		if (dequeued != toDequeue) {
@@ -175,13 +197,11 @@ uint32_t CommandExecutionQueue::Execute(uint32_t maxToDequeue)
 			}
 			if (dequeued < 13) {
 				notFullDequeuesMax -= 57;
-			}
-			if (dequeued == 0) {
+			} else if (dequeued == 0) {
 				notFullDequeuesMax -= 223;
 			}
-		} else {
-			maxToDequeue -= dequeued;
 		}
+		maxToDequeue -= dequeued;
 	}
 	return total;
 }

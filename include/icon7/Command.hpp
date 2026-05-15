@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2025 Marek Zalewski aka Drwalin
+// Copyright (C) 2023-2026 Marek Zalewski aka Drwalin
 //
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
@@ -27,20 +27,17 @@ class CommandExecutionQueue;
  * This low-bit of pointer tagging is not implemented.
  */
 enum CommandPtrLowBitValues : uint8_t {
-	/*
-	 * Pointer to class Command
-	 */
+	// Pointer to class Command
 	REGULAR_COMMAND = 0,
 
-	/*
-	 * Pointer is value of std::coroutine_handle<>
-	 */
+	// Pointer is value of std::coroutine_handle<>
 	COROUTINE_HANDLE = 1,
 
-	// 	/*
-	// 	 * Treating pointer as pointer to function: void(void)
-	// 	 */
+	// 	// Treating pointer as pointer to function: void(void)
 	// 	FUNCTION_POINTER = 2,
+
+	// Mask pointer bits
+	COMMAND_BITS_MASK = 0x7,
 };
 
 class Command
@@ -89,7 +86,7 @@ public:
 	CommandHandle &operator=(const CommandHandle &o) = delete;
 	template <typename T2> CommandHandle &operator=(CommandHandle<T2> &&o)
 	{
-		if (_com != nullptr) {
+		if (_int != 0) {
 			LOG_FATAL(
 				"Cannot move CommandHandle<> into not empty CommandHandle<>");
 			return *this;
@@ -102,19 +99,21 @@ public:
 
 	void Destroy()
 	{
-		const uint8_t type = _int & 0x7;
-		_int ^= (uintptr_t)type;
-		if (_com != nullptr) {
+		const uint8_t type = _int & COMMAND_BITS_MASK;
+		uintptr_t __int = _int & ~uintptr_t(COMMAND_BITS_MASK);
+		Command *com = (Command *)__int;
+		void *coro = (void *)__int;
+		if (__int != 0) {
 			switch (type) {
 			case REGULAR_COMMAND:
-				MemoryPool::ReleaseTyped(_com, _com->_commandSize);
+				MemoryPool::ReleaseTyped(com, com->_commandSize);
 				break;
 			case COROUTINE_HANDLE:
-				std::coroutine_handle<>::from_address(_coro).destroy();
+				std::coroutine_handle<>::from_address(coro).destroy();
 				break;
 			}
-			_com = nullptr;
 		}
+		_com = nullptr;
 	}
 
 	template <typename... Args>
@@ -122,8 +121,8 @@ public:
 	{
 		CommandHandle<T> com;
 		com._com = MemoryPool::AllocateTyped<T>(std::move(args)...);
-		if ((((uintptr_t)com._com) & 0x7) != 0) {
-			LOG_FATAL("Allocator does not return 16-byte align memory");
+		if ((((uintptr_t)com._com) & COMMAND_BITS_MASK) != 0) {
+			LOG_FATAL("Allocator does not return 8-byte align memory");
 		}
 		com._com->_commandSize = sizeof(T);
 		return com;
@@ -133,8 +132,8 @@ public:
 	{
 		CommandHandle<T> com;
 		com._coro = handle.address();
-		if ((((uintptr_t)com._com) & 0x7) != 0) {
-			LOG_FATAL("Allocator does not return 16-byte align memory");
+		if ((((uintptr_t)com._com) & COMMAND_BITS_MASK) != 0) {
+			LOG_FATAL("Allocator does not return 8-byte align memory");
 		}
 		com._int |= COROUTINE_HANDLE;
 		return com;
@@ -142,20 +141,22 @@ public:
 
 	inline void Execute()
 	{
-		const uint8_t type = _int & 0x7;
-		_int ^= (uintptr_t)type;
-		if (_com != nullptr) {
+		const uint8_t type = _int & COMMAND_BITS_MASK;
+		uintptr_t __int = _int & ~uintptr_t(COMMAND_BITS_MASK);
+		Command *com = (Command *)__int;
+		void *coro = (void *)__int;
+		if (__int != 0) {
 			switch (type) {
 			case REGULAR_COMMAND:
-				_com->Execute();
-				MemoryPool::ReleaseTyped(_com, _com->_commandSize);
+				com->Execute();
+				MemoryPool::ReleaseTyped(com, com->_commandSize);
 				break;
 			case COROUTINE_HANDLE:
-				std::coroutine_handle<>::from_address(_coro)();
+				std::coroutine_handle<>::from_address(coro)();
 				break;
 			}
-			_com = nullptr;
 		}
+		_com = nullptr;
 	}
 
 	inline bool IsValid() const { return _com != nullptr; }
