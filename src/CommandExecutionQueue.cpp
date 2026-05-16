@@ -88,7 +88,7 @@ void CommandExecutionQueue::QueueStopAsyncExecution()
 
 bool CommandExecutionQueue::TryDequeue(CommandHandle<Command> &command)
 {
-	command.~CommandHandle();
+	command.Destroy();
 	if (queue->try_dequeue(command)) {
 		return true;
 	} else {
@@ -139,7 +139,7 @@ void CommandExecutionQueue::ExecuteLoop(uint32_t sleepMicrosecondsOnNoActions,
 			return;
 		}
 		WaitStopAsyncExecution();
-		if((asyncExecutionFlags & IS_RUNNING) == 0) {
+		if((asyncExecutionFlags & IS_RUNNING) != 0) {
 			LOG_FATAL("execution loop still running, after stopping it's execution");
 			return;
 		}

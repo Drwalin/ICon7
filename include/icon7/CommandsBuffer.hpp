@@ -27,6 +27,9 @@ public:
 	CommandsBuffer &operator=(CommandsBuffer &&);
 	~CommandsBuffer();
 
+	void Init(uint32_t size);
+	void Reset();
+
 	void ExecuteAll();
 	void CallDestructors();
 
@@ -66,7 +69,7 @@ public:
 private:
 public:
 	uint8_t *commandsBufferData = nullptr;
-	uint32_t totalBytes;
+	uint32_t totalBytes = 0;
 
 	uint32_t countCommands = 0;
 	uint32_t commandsExecuted = 0;

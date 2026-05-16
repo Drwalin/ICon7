@@ -21,11 +21,27 @@ CommandsBuffer::CommandsBuffer()
 
 CommandsBuffer::CommandsBuffer(uint32_t size)
 {
+	Init(size);
+}
+
+void CommandsBuffer::Init(uint32_t size)
+{
+	Reset();
+	if (size > (1<<28)) {
+		LOG_FATAL("Trying to allocate too big CommandsBuffer");
+	}
 	if ((size & 0x3F) != 0) {
 		LOG_FATAL("CommandsBuffer needs to have size of multiple of 64");
 	}
 	totalBytes = size;
-	commandsBufferData = (uint8_t *)MemoryPool::Allocate(totalBytes).object;
+	AllocatedObject<void> obj = MemoryPool::Allocate(totalBytes);
+	commandsBufferData = (uint8_t *)obj.object;
+	if (commandsBufferData == nullptr) {
+		totalBytes = 0;
+		LOG_FATAL("Failed to allocate buffer");
+	} else {
+		totalBytes = obj.capacity;
+	}
 	countCommands = 0;
 	commandsExecuted = 0;
 	offsetOfFree = 0;
@@ -48,12 +64,21 @@ CommandsBuffer::CommandsBuffer(CommandsBuffer &&o)
 
 CommandsBuffer &CommandsBuffer::operator=(CommandsBuffer &&o)
 {
+	if (this == &o) {
+		LOG_WARN("Moving object into itself");
+		return *this;
+	}
 	this->~CommandsBuffer();
 	new (this) CommandsBuffer(std::move(o));
 	return *this;
 }
 
 CommandsBuffer::~CommandsBuffer()
+{
+	Reset();
+}
+
+void CommandsBuffer::Reset()
 {
 	if (commandsBufferData) {
 		CallDestructors();
@@ -62,7 +87,6 @@ CommandsBuffer::~CommandsBuffer()
 		totalBytes = 0;
 		countCommands = 0;
 		commandsExecuted = 0;
-		offsetOfFree = 0;
 	}
 }
 
@@ -85,9 +109,16 @@ void CommandsBuffer::CallDestructors()
 
 bool CommandsBuffer::CanAllocate(uint32_t size, uint32_t alignement) const
 {
+	if (IsValid() == false) {
+		LOG_FATAL("Trying to allocate in invalid buffer.");
+		return false;
+	}
 	const uint32_t commandId = countCommands;
 	const uint32_t metaOffset = GetMetadataOffset(commandId);
 	const uint32_t commandOffset = GetOffsetOfNextCommand(alignement);
+	if (size > (1<<20)) {
+		LOG_FATAL("Trying to allocate too big entry in CommandsBuffer.");
+	}
 	if (commandOffset + size > metaOffset) {
 		return false;
 	}
@@ -120,6 +151,8 @@ CommandsBuffer::GetMetadataPtr(uint32_t id)
 
 uint32_t CommandsBuffer::GetOffsetOfNextCommand(uint32_t alignement) const
 {
+	assert(alignement <= 4096);
+	assert(offsetOfFree < totalBytes);
 	uint32_t offset = offsetOfFree + alignement - 1;
 	offset &= ~(alignement - 1);
 	return offset;

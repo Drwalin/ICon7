@@ -45,7 +45,7 @@ void ExecuteListen::Execute()
 		onListen = CommandHandle<DummyOnListen>::Create();
 		onListen->host = host;
 		host->_InternalListen(address, ipProto, port, onListen);
-		onListen.~CommandHandle();
+		onListen.Destroy();
 	} else {
 		host->_InternalListen(address, ipProto, port, onListen);
 		if (queue) {
