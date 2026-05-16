@@ -20,7 +20,7 @@ public:
 	FrameDecoder();
 
 	void Restart();
-	void PushData(uint8_t *data, uint32_t length,
+	void PushData(uint8_t const *data, uint32_t length,
 				  void (*onPacket)(ByteBufferReadable &buffer,
 								   uint32_t headerSize, void *userPtr),
 				  void *userPtr);
