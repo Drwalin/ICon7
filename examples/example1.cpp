@@ -101,7 +101,7 @@ int main()
 		},
 		&rpc, hostb, port);
 
-	for (int i = 0; i < 300 && returned.load() < 3; ++i) {
+	for (int i = 0; i < 3000 && returned.load() < 3; ++i) {
 		icon7::time::Sleep(icon7::time::milliseconds(1));
 	}
 	icon7::time::Sleep(icon7::time::milliseconds(1));
@@ -114,5 +114,5 @@ int main()
 	t.join();
 
 	icon7::Deinitialize();
-	return 0;
+	return returned.load() == 3 ? 0 : 1;
 }
