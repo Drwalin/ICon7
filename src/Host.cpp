@@ -100,6 +100,7 @@ void Host::_InternalConnect_Finish(commands::internal::ExecuteConnect &com)
 // 	}
 
 	if (com.onConnected.IsValid() == false) {
+		LOG_WARN("com.onConnected is invalid on connect finish");
 		return;
 	}
 

@@ -20,6 +20,7 @@ option(ICON7_LOG_USE_FILENAME_WITHOUT_PATH "Write file names without full path t
 option(ICON7_LOG_USE_PRETTY_FUNCTION "Use pretty function name for ICon7 log" ON)
 option(ICON7_CLANG_FUZZTEST "Compile fuzztesting and use clang" OFF)
 option(USOCKETS_USE_OPENSSL "Use OpenSSL instead of BoringSSL" ON)
+option(ICON7_LOG_ONLY_ON_STDERR "Print logs only on STDERR without a file" OFF)
 set(ICON7_LOG_DATETIME_SUBSECONDS_DIGITS 5 CACHE STRING "Number of sub-second digits in ICon7 log date-time")
 
 if(ICON7_CLANG_FUZZTEST)
@@ -95,6 +96,9 @@ target_link_libraries(icon7 uSockets)
 target_link_libraries(icon7 concurrent)
 target_link_libraries(icon7 bitscpp)
 add_common_precompiled_headers(icon7)
+if(ICON7_LOG_ONLY_ON_STDERR)
+	set_source_files_properties(src/Debug.cpp PROPERTIES COMPILE_FLAGS -DICON7_LOG_ONLY_ON_STDERR=1)
+endif()
 
 if(ASAN)
 	add_definitions(-fsanitize=address)

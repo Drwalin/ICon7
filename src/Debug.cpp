@@ -405,7 +405,9 @@ void Log(LogLevel logLevel, bool printTime, bool printFile, const char *file,
 
 static FILE *GetFile()
 {
-// 	return stderr;
+#ifdef ICON7_LOG_ONLY_ON_STDERR
+	return stderr;
+#else
 	static FILE *file = nullptr;
 	static time::Timestamp openTime = {0};
 	time::Timestamp now = time::GetTimestamp();
@@ -435,6 +437,7 @@ static FILE *GetFile()
 		}
 	}
 	return file;
+#endif
 }
 
 #define ICON7_MULTI_FILE_PRINT(func, ...) { \

@@ -284,7 +284,7 @@ public:
 	std::string address;
 	uint16_t port = 0;
 
-	CommandExecutionQueue *executionQueue;
+	CommandExecutionQueue *executionQueue = nullptr;
 	CommandHandle<ExecuteOnPeer> onConnected;
 
 	virtual void Execute() override;
