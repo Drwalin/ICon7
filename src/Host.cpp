@@ -4,6 +4,7 @@
 // You should have received a copy of the MIT License along with this program.
 
 #include <cassert>
+#include <cstdlib>
 
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/Peer.hpp"
@@ -17,13 +18,15 @@
 namespace icon7
 {
 Host::Host(std::string objectName, RPCEnvironment *rpcEnvironment, std::shared_ptr<Loop> loop)
-	: rpcEnvironment(rpcEnvironment), peerReferences(this, loop.get()), objectName(objectName)
+	:
+	userData(0),
+	userPointer(nullptr),
+	onConnect(nullptr),
+	onDisconnect(nullptr),
+	rpcEnvironment(rpcEnvironment),
+	peerReferences(this, loop.get()),
+	objectName(objectName)
 {
-	userData = 0;
-	userPointer = nullptr;
-	onConnect = nullptr;
-	onDisconnect = nullptr;
-	rpcEnvironment = nullptr;
 }
 
 Host::~Host() {}
@@ -96,6 +99,10 @@ void Host::_InternalConnect_Finish(commands::internal::ExecuteConnect &com)
 // 		peerReferences.peers.insert(com.onConnected->peer.ptr);
 // 	}
 
+	if (com.onConnected.IsValid() == false) {
+		return;
+	}
+
 	if (com.executionQueue) {
 		com.executionQueue->EnqueueCommand(std::move(com.onConnected));
 	} else {
@@ -110,12 +117,21 @@ void Host::_Internal_on_open_Finish(PeerHandle peer)
 	if (onConnect) {
 		onConnect(peer);
 	}
-	peer.GetLocalPeerData()->SetReadyToUse();
+	auto p = peer.GetLocalPeerData();
+	if (p == nullptr) {
+		LOG_FATAL("peer.GetLocalPeerData() returned nullptr for existing peer");
+		return;
+	}
+	p->SetReadyToUse();
 }
 
 void Host::_Internal_on_close_Finish(PeerHandle peer)
 {
 	auto p = peer.GetLocalPeerData();
+	if (p == nullptr) {
+		LOG_FATAL("peer.GetLocalPeerData() returned nullptr for existing peer");
+		return;
+	}
 	p->sharedPeer->peerFlags |= PeerStatusBits::BIT_DISCONNECTING;
 	p->_InternalOnDisconnect();
 	auto peerDataHolder = this->peerReferences.Release(peer);
@@ -191,6 +207,7 @@ void Host::Connect(std::string address, uint16_t port,
 
 void Host::EnqueueCommand(CommandHandle<Command> &&command)
 {
+	assert(loop);
 	loop->EnqueueCommand(std::move(command));
 }
 
@@ -231,6 +248,7 @@ PeerHandle Host::_InternalGetRandomPeer()
 	if (peerReferences.peers.size() == 0) {
 		return {};
 	}
+	// TODO: do not use rand(), find better alternative for random peer
 	int r = rand() % peerReferences.peers.size();
 	return peerReferences.peers[r]->peerHandle;
 }

@@ -30,7 +30,8 @@ void ExecuteRPC::Execute()
 
 void ExecuteConnect::Execute() {
 	assert(host != nullptr);
-	host->_InternalConnect(*this); }
+	host->_InternalConnect(*this);
+}
 
 void ExecuteListen::Execute()
 {
