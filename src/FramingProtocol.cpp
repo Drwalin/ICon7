@@ -5,6 +5,7 @@
 
 #include <cstdint>
 
+#include "../include/icon7/Debug.hpp"
 #include "../include/icon7/Flags.hpp"
 #include "../include/icon7/ByteBuffer.hpp"
 #include "../bitscpp/include/bitscpp/ByteReader_v2.hpp"
@@ -24,12 +25,15 @@ uint32_t FramingProtocol::GetHeaderSize(uint32_t dataSize)
 	} else if (dataSize <= 1 << 28) {
 		return 4;
 	}
+	LOG_FATAL("Invalid data size");
 	return 0;
 }
 
 void FramingProtocol::WriteHeader(uint8_t *header, uint32_t headerSize,
 								  uint32_t dataSize, Flags flags)
 {
+	assert(headerSize >= 1);
+	assert(headerSize <= 4);
 	uint32_t h = 0;
 	h |= ((flags & 6) << 1);
 	h |= (headerSize)-1;
@@ -65,6 +69,9 @@ uint32_t FramingProtocol::GetPacketBodySize(const uint8_t *header,
 		case 1:
 			h |= ((uint32_t)header[0]);
 			break;
+		default:
+			LOG_FATAL("Invalid header size: %u", (uint32_t)headerSize);
+			return 0;
 	}
 	return (h >> 4) + 1;
 }
@@ -83,7 +90,7 @@ FramingProtocol::WriteHeaderIntoBuffer(ByteBufferWritable &buffer, Flags flags)
 
 void FramingProtocol::PrintDetailsAboutFrame(const ByteBufferReadable &frame)
 {
-	return;
+	if (false) {
 	const uint32_t totalSize = frame.size();
 	const uint32_t headerSize = GetPacketHeaderSize(frame.data()[0]);
 	uint32_t header;
@@ -95,10 +102,11 @@ void FramingProtocol::PrintDetailsAboutFrame(const ByteBufferReadable &frame)
 	const Flags flagsRead =
 		GetPacketFlags(frame.data(), flagsStored & FLAG_RELIABLE);
 
-	char str[1024];
-	memset(str, 0, 1024);
+	constexpr size_t TMP_BUFFER_SIZE = 1024;
+	char str[TMP_BUFFER_SIZE];
+	memset(str, 0, TMP_BUFFER_SIZE);
 	char *ptr = str;
-	const char *end = str+1023;
+	const char *end = str+TMP_BUFFER_SIZE-1;
 
 // 	assert(storedInFrameBodySize == calculatedBodySize);
 // 	assert(flagsStored == flagsRead);
@@ -159,5 +167,6 @@ void FramingProtocol::PrintDetailsAboutFrame(const ByteBufferReadable &frame)
 
 	printf("%s", str);
 	fflush(stdout);
+	}
 }
 } // namespace icon7
