@@ -190,7 +190,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 						uint32_t i = returned++;
 						arrayOfLatency[i] = dt;
 					};
-					rpc2.Call(&commandsBuffer, peer, icon7::FLAG_RELIABLE,
+					icon7::RPCEnvironment::Call(&commandsBuffer, peer, icon7::FLAG_RELIABLE,
 							  icon7::OnReturnCallback::Make<uint32_t>(
 								  std::move(onReturned),
 								  [](icon7::PeerHandle peer) -> void {
@@ -207,16 +207,16 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 				for (int l = 0; l < sendsMoreThanCalls - 1; ++l) {
 					if (l % serializeSendsModulo < serializeSendsFract) {
 						icon7::ByteBufferWritable buffer(100);
-						rpc2.SerializeSend(buffer, icon7::FLAG_RELIABLE, "sum",
+						icon7::RPCEnvironment::SerializeSend(buffer, icon7::FLAG_RELIABLE, "sum",
 										   3, 23, additionalPayload.data());
 						icon7::ByteBufferReadable br(std::move(buffer));
 						for (auto peer : validPeers) {
-							icon7::Peer::Send(peer, br);
+							peer.Send(br);
 							sent++;
 						}
 					} else {
 						for (auto peer : validPeers) {
-							rpc2.Send(peer, icon7::FLAG_RELIABLE, "sum", 3, 23,
+							icon7::RPCEnvironment::Send(peer, icon7::FLAG_RELIABLE, "sum", 3, 23,
 									  additionalPayload.data());
 							sent++;
 						}

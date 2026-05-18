@@ -69,7 +69,7 @@ void Test(icon7::uS::Loop *loop, const uint8_t *data, size_t size,
 	if (peer) {
 		icon7::ByteBufferWritable buffer(size + 256);
 		buffer.append(data + 1, size - 1);
-		icon7::Peer::Send(peer, std::move(buffer));
+		peer.Send(std::move(buffer));
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(3));
 

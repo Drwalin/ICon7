@@ -15,6 +15,7 @@
 #include "Stats.hpp"
 #include "CommandExecutionQueue.hpp"
 #include "Forward.hpp"
+#include "LoopAutoIndex.hpp"
 
 #include "PeerManager.hpp"
 
@@ -94,6 +95,7 @@ protected:
 public:
 	LoopStats stats;
 	const std::string objectName;
+	const LoopAutoIndex loopIndex;
 	
 private:
 	std::shared_mutex sharedMutex;

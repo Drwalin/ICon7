@@ -6,10 +6,6 @@
 #ifndef ICON7_FORWARD_DECLARATIONS_HPP
 #define ICON7_FORWARD_DECLARATIONS_HPP
 
-#include <cstdint>
-
-#include <memory>
-
 namespace moodycamel
 {
 template <typename T, typename Traits> class ConcurrentQueue;
@@ -24,6 +20,7 @@ class ByteBufferReadable;
 class ByteBufferWritable;
 class CommandExecutionQueue;
 struct CoroutineSchedulable;
+class MultiBatchWriter;
 class Loop;
 class Host;
 class Peer;
@@ -88,48 +85,6 @@ class Peer;
 } // namespace uS
 } // namespace icon7
 
-namespace icon7
-{
-struct PeerHandle {
-	uint32_t id = 0;
-	uint32_t version = 0;
-	Loop *loop = nullptr;
-	inline bool operator==(const PeerHandle &r) const
-	{
-		return id == r.id && version == r.version && loop == r.loop;
-	}
-	inline bool operator!=(const PeerHandle &r) const
-	{
-		return id != r.id || version != r.version || loop != r.loop;
-	}
-	inline operator bool() const { return version && loop; }
-
-	// Should be invoked very rarely
-	PeerData *GetLocalPeerData();
-	std::shared_ptr<Peer> GetSharedPeer();
-	Loop *GetLoop();
-	Host *GetHost();
-};
-} // namespace icon7
-
-namespace std
-{
-template<typename T>
-struct hash;
-}
-
-template<>
-struct std::hash<icon7::PeerHandle>
-{
-    std::size_t operator()(icon7::PeerHandle peer) const noexcept
-    {
-		uint64_t h = 0xcbf29ce484222325;
-		constexpr uint64_t p = 0x100000001b3;
-		h = (h ^ peer.id) * p;
-		h = (h ^ peer.version) * p;
-		h = (h ^ uintptr_t(peer.loop)) * p;
-		return h;
-    }
-};
+#include "PeerHandle.hpp" // IWYU pragma: export
 
 #endif

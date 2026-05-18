@@ -35,21 +35,21 @@ PeerHandle PeerManager::Alloc(std::shared_ptr<PeerData> peerData)
 	PeerHandle handle;
 	handle.loop = loop;
 	if (freeIds.size() > 0) {
-		handle.id = freeIds.back();
+		handle.id.id = freeIds.back();
 		freeIds.pop_back();
-		handle.version = versions[handle.id];
-		assert(peers[handle.id] == nullptr);
-		peers[handle.id] = peerData;
+		handle.id.version = versions[handle.id.id];
+		assert(peers[handle.id.id] == nullptr);
+		peers[handle.id.id] = peerData;
 	} else {
-		handle.id = peers.size();
+		handle.id.id = peers.size();
 		peers.push_back(peerData);
-		handle.version = 1;
+		handle.id.version = 1;
 		versions.push_back(1);
 		perHostOffset.push_back(-1);
 	}
 	peerData->peerHandle = handle;
 	peerData->sharedPeer->peerHandle = handle;
-	assert(handle.version != 0);
+	assert(handle.id.version != 0);
 	return handle;
 }
 
@@ -59,14 +59,14 @@ PeerHandle PeerManager::Alloc(std::shared_ptr<PeerData> peerData)
 		return nullptr;
 	}
 	std::lock_guard lock(mutex);
-	freeIds.push_back(handle.id);
-	std::shared_ptr<PeerData> const data = peers[handle.id];
-	peers[handle.id] = nullptr;
-	versions[handle.id]++;
-	if (versions[handle.id] == 0) {
-		versions[handle.id]++;
+	freeIds.push_back(handle.id.id);
+	std::shared_ptr<PeerData> const data = peers[handle.id.id];
+	peers[handle.id.id] = nullptr;
+	versions[handle.id.id]++;
+	if (versions[handle.id.id] == 0) {
+		versions[handle.id.id]++;
 	}
-	peersToFlush.RemovePeerToFlush(handle.id);
+	peersToFlush.RemovePeerToFlush(handle.id.id);
 	return data;
 }
 
@@ -74,25 +74,25 @@ PeerHandle PeerManager::GetCurrentVersionLocal(PeerHandle handle)
 {
 	assert(peers.size() == versions.size());
 	assert(handle.loop == loop);
-	if (handle.id >= versions.size()) {
+	if (handle.id.id >= versions.size()) {
 		return {};
 	}
-	if (peers[handle.id] == nullptr) {
+	if (peers[handle.id.id] == nullptr) {
 		return {};
 	}
-	return {.id = handle.id, .version = versions[handle.id], .loop = loop};
+	return {.id = {.id = handle.id.id, .version = versions[handle.id.id]}, .loop = loop};
 }
 bool PeerManager::ExistsLocal(PeerHandle handle)
 {
 	assert(peers.size() == versions.size());
 	assert(handle.loop == loop);
-	if (handle.id >= versions.size()) {
+	if (handle.id.id >= versions.size()) {
 		return false;
 	}
-	if (peers[handle.id] == nullptr) {
+	if (peers[handle.id.id] == nullptr) {
 		return false;
 	}
-	return handle.version == versions[handle.id];
+	return handle.id.version == versions[handle.id.id];
 }
 
 Host *PeerManager::GetLocalHost(PeerHandle handle)
@@ -105,7 +105,7 @@ Host *PeerManager::GetLocalHost(PeerHandle handle)
 PeerData *PeerManager::GetLocalPeerData(PeerHandle handle)
 {
 	if (ExistsLocal(handle)) {
-		return peers[handle.id].get();
+		return peers[handle.id.id].get();
 	}
 	return nullptr;
 }
@@ -153,7 +153,7 @@ PeerReferences::~PeerReferences() {}
 PeerHandle PeerReferences::Alloc(std::shared_ptr<PeerData> peerData)
 {
 	PeerHandle handle = peerManager->Alloc(peerData);
-	peerManager->perHostOffset[handle.id] = peers.size();
+	peerManager->perHostOffset[handle.id.id] = peers.size();
 	peers.push_back(peerData);
 	return handle;
 }
@@ -164,12 +164,12 @@ PeerHandle PeerReferences::Alloc(std::shared_ptr<PeerData> peerData)
 		return nullptr;
 	}
 	assert(data->host == host);
-	const int32_t off = peerManager->perHostOffset[handle.id];
-	peerManager->perHostOffset[handle.id] = -1;
+	const int32_t off = peerManager->perHostOffset[handle.id.id];
+	peerManager->perHostOffset[handle.id.id] = -1;
 	if (off + 1 != peers.size()) {
 		std::swap(peers[off], peers.back());
 		std::shared_ptr<PeerData> last = peers.back();
-		peerManager->perHostOffset[peers[off]->peerHandle.id] = off;
+		peerManager->perHostOffset[peers[off]->peerHandle.id.id] = off;
 		peers.back() = nullptr;
 	}
 	peers.resize(peers.size() - 1);

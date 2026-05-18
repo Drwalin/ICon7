@@ -208,6 +208,16 @@ public:
 	Host *host = nullptr;
 };
 
+class ExecuteOnLoop : public Command
+{
+public:
+	virtual ~ExecuteOnLoop() {}
+	ExecuteOnLoop() {}
+	ExecuteOnLoop(Loop *loop) : loop(loop) {}
+
+	Loop *loop = nullptr;
+};
+
 class ExecuteBooleanOnHost : public ExecuteOnHost
 {
 public:

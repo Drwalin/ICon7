@@ -15,6 +15,7 @@
 #include "../include/icon7/PeerUStcp.hpp"
 #include "../include/icon7/HostUStcp.hpp"
 #include "../include/icon7/LoopUS.hpp"
+#include "../include/icon7/MultiBatchWriter.hpp"
 
 #if defined(__unix__) && ICON7_USE_RPMALLOC
 #include <sstream>
@@ -283,6 +284,7 @@ int64_t bufferedInFlightPacketsCount = 0;
 	if (bufferedInFlightPacketsCount > maxInFlightPackets) { \
 		if (sent.load() - received.load() >= maxInFlightPackets) { \
 			commandsBuffer.FlushBuffer(); \
+			batchWriter.Flush(); \
 			icon7::time::sleep_for(icon7::time::milliseconds(1)); \
 		} \
 		bufferedInFlightPacketsCount = sent.load() - received.load(); \
@@ -489,11 +491,11 @@ int main(int argc, char **argv)
 								LOG_FATAL("Valid peer got disconnected: {%u,%u}"
 										  "    "
 										  "peer state: %u    ",
-										  handle.id, handle.version,
+										  handle.id.id, handle.id.version,
 										  peer->sharedPeer->GetPeerStateFlags());
 							} else {
 								LOG_FATAL("Valid peer got disconnected: {%u,%u}"
-										  "    but does not have a valid PeerData before disconnection concludes", handle.id, handle.version);
+										  "    but does not have a valid PeerData before disconnection concludes", handle.id.id, handle.id.version);
 							}
 						});
 			}
@@ -511,6 +513,7 @@ int main(int argc, char **argv)
 			{
 				icon7::CommandsBufferHandler commandsBuffer{
 					hostb->GetCommandExecutionQueue()};
+				icon7::MultiBatchWriter batchWriter;
 
 				std::vector<icon7::ByteBufferReadable> buffersToSend;
 				for (int k = 0; k < totalSends; ++k) {
@@ -560,14 +563,14 @@ int main(int argc, char **argv)
 									"mul", 5, 13, additionalPayload);
 						} else if (buffersToSend[l].data() == nullptr) {
 							icon7::RPCEnvironment::Send(
-									useBatchedSends ? &commandsBuffer : nullptr,
+									useBatchedSends ? &batchWriter : nullptr,
 									peer,
 									icon7::FLAG_RELIABLE,"sum", 3,
 									23, additionalPayload);
 						} else {
-							icon7::Peer::Send(
-								useBatchedSends ? &commandsBuffer : nullptr,
-									peer, buffersToSend[l]);
+							peer.Send(
+									useBatchedSends ? &batchWriter : nullptr,
+									buffersToSend[l]);
 						}
 						sent++;
 					};
@@ -598,6 +601,7 @@ int main(int argc, char **argv)
 						}
 					}
 					commandsBuffer.FlushBuffer();
+					batchWriter.Flush();
 				}
 			}
 

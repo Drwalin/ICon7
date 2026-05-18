@@ -70,7 +70,7 @@ icon7::CoroutineSchedulable Test(icon7::uS::Loop *loop, const uint8_t *data,
 
 	icon7::ByteBufferWritable buffer(size + 256);
 	buffer.append(data + 1, size - 1);
-	icon7::Peer::Send(peer, std::move(buffer));
+	peer.Send(std::move(buffer));
 
 	for (int i = 0; i < 15; ++i) {
 		co_await loop->Schedule();

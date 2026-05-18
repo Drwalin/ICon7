@@ -109,6 +109,22 @@ void Peer::Send(CommandsBufferHandler *commandsBuffer, PeerHandle peer, ByteBuff
 	}
 }
 
+void Peer::Send(MultiBatchWriter *batchWriter, PeerHandle peer, ByteBufferReadable &frame)
+{
+	ByteBufferReadable f = frame;
+	Send(batchWriter, peer, std::move(f));
+}
+
+void Peer::Send(MultiBatchWriter *batchWriter, PeerHandle peer, ByteBufferReadable &&frame)
+{
+	assert(frame.data());
+	if (batchWriter) {
+		batchWriter->Send(peer, std::move(frame));
+	} else {
+		Send(peer, std::move(frame));
+	}
+}
+
 void PeerData::Send(ByteBufferReadable &frame)
 {
 	assert(frame.data());

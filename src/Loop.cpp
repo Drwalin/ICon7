@@ -15,7 +15,7 @@
 
 namespace icon7
 {
-Loop::Loop(std::string objectName) : peerManager(this), objectName(objectName)
+Loop::Loop(std::string objectName) : peerManager(this), objectName(objectName), loopIndex(this)
 {
 	userData = 0;
 	userPointer = nullptr;
@@ -198,7 +198,7 @@ void Loop::_InternalInsertPeerToFlush(PeerHandle peer)
 	auto p = peer.GetLocalPeerData();
 	if (p->_InternalHasQueuedSends() == false &&
 		p->_InternalHasBufferedSends() == false) {
-		peerManager.peersToFlush.InsertPeerToFlush(peer.id);
+		peerManager.peersToFlush.InsertPeerToFlush(peer.id.id);
 	}
 }
 

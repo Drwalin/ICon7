@@ -21,6 +21,7 @@
 #include "Host.hpp"
 #include "Loop.hpp"
 #include "CommandsBufferHandler.hpp"
+#include "MultiBatchWriter.hpp"
 #include "OnReturnCallback.hpp"
 #include "MessageConverter.hpp"
 
@@ -64,7 +65,7 @@ public:
 		PeerData *peer = this->peer.GetLocalPeerData();
 		if (peer == nullptr) {
 			LOG_WARN("Peer: {%u,%u} does not exist to send.", this->peer.id,
-					 this->peer.version);
+					 this->peer.id.version);
 			return;
 		}
 		const uint32_t rcbId = peer->_InternalGetNextValidReturnCallbackId();
@@ -166,6 +167,19 @@ public:
 				->EnqueueCommand<
 					icon7::commands::internal::ExecutePeerSendFrame>(peer)
 				->frame = std::move(buffer);
+		}
+	}
+
+	template <typename... Targs>
+	static void Send(MultiBatchWriter *commandsBuffer, PeerHandle peer,
+					 Flags flags, const RpcName &name, const Targs &...args)
+	{
+		ByteBufferWritable buffer;
+		SerializeSend(buffer, flags, name, args...);
+		if (commandsBuffer == nullptr) {
+			Peer::Send(peer, std::move(buffer));
+		} else {
+			commandsBuffer->Send(peer, std::move(buffer));
 		}
 	}
 
