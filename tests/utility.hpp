@@ -22,6 +22,8 @@ template <typename T> struct _DataStats {
 	T p95;
 	T p99;
 	T p999;
+	T p9999;
+	T p99999;
 	T p100;
 };
 using DataStats = _DataStats<double>;
@@ -59,6 +61,8 @@ template <typename T> _DataStats<T> CalcDataStats(T *ar, size_t count)
 	stats.p95 = ar[(last * 95) / 100];
 	stats.p99 = ar[(last * 99) / 100];
 	stats.p999 = ar[(last * 999) / 1000];
+	stats.p9999 = ar[(last * 9999) / 10000];
+	stats.p99999 = ar[(last * 99999) / 100000];
 	stats.p100 = ar[last];
 
 	return stats;

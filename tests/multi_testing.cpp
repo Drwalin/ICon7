@@ -41,6 +41,11 @@
 
 std::atomic<int64_t> sent = 0, received = 0, returned = 0;
 
+int Init(std::string str)
+{
+	return 0;
+}
+
 int Sum(int a, int b, std::string str)
 {
 	received++;
@@ -358,6 +363,12 @@ int main(int argc, char **argv)
 	}
 	additionalPayload.back() = 0;
 
+	auto onConnect = [](icon7::PeerHandle peer){
+			const static std::string str(16384, 'X');
+			icon7::RPCEnvironment::Send(peer, icon7::FLAG_RELIABLE,
+					"Init", str);
+			};
+
 	for (int i = 0; i < testsCount; ++i) {
 		uint64_t totalReceived = 0, totalSent = 0, totalReturned = 0;
 		LOG_INFO("Iteration: %i started", i);
@@ -368,6 +379,7 @@ int main(int argc, char **argv)
 		icon7::RPCEnvironment rpc;
 		rpc.RegisterMessage("sum", Sum);
 		rpc.RegisterMessage("mul", Mul);
+		rpc.RegisterMessage("Init", Init);
 
 		std::shared_ptr<icon7::uS::Loop> loopa =
 			std::make_shared<icon7::uS::Loop>("receiver");
@@ -379,6 +391,7 @@ int main(int argc, char **argv)
 			"ECDHE-ECDSA-AES128-GCM-SHA256:"
 			"ECDHE-ECDSA-CHACHA20-POLY1305:"
 			"DHE-RSA-AES256-GCM-SHA384:");
+		hosta->SetOnConnect(onConnect);
 		loopa->RunAsync();
 		auto listenFuture = hosta->ListenOnPort(listenIp, port, icon7::IPv4);
 
@@ -388,6 +401,7 @@ int main(int argc, char **argv)
 		std::shared_ptr<icon7::uS::tcp::Host> hostb =
 			loopb->CreateHost(&rpc, "host_client", useSSL, nullptr, nullptr,
 							  nullptr, nullptr, nullptr, nullptr);
+		hostb->SetOnConnect(onConnect);
 		loopb->RunAsync();
 
 		listenFuture.wait_for_milliseconds(150);
@@ -504,6 +518,7 @@ int main(int argc, char **argv)
 					 pq, notPassedTests, validPeers.size(), peers.size());
 
 			peers.clear();
+			icon7::time::Sleep(icon7::time::milliseconds(100));
 
 			toReturnCount = validPeers.size() * totalSends;
 
@@ -630,12 +645,11 @@ int main(int argc, char **argv)
 						vs[i] *= 1000.0;
 					}
 				}
-				LOG_INFO(
-					"Latency [ms] | avg: %.2f  std: %.2f    p0: %.2f   p50: "
-					"%.2f   p90: %.2f   p95: %.2f   p99: %.2f   p99.9: %.2f   "
-					"p100: %.2f",
+				LOG_INFO("             :     avg     std      p0     p50     p90     p95     p99    p999   p99.99   p99.999     p100");
+				LOG_INFO("Latency [ms] : %7.2f"" %7.2f"" %7.2f"" %7.2f"" %7.2f"" %7.2f"" %7.2f"" %7.2f"" %8.2f"" %9.2f"" %8.2f",
 					stats.mean, stats.stddev, stats.p0, stats.p50, stats.p90,
-					stats.p95, stats.p99, stats.p999, stats.p100);
+					stats.p95, stats.p99, stats.p999, stats.p9999, stats.p99999,
+					stats.p100);
 				LOG_INFO("received/sent = %li/%li ; "
 						 "returned/called = %li/%li",
 						 received.load(), sent.load(), returned.load(),
