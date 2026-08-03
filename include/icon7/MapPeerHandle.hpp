@@ -196,9 +196,9 @@ struct MapPeerHandle
 		MapPeerHandleInLoop<T> *ptr = maps.Get(handle.loop);
 		if (ptr == nullptr) {
 			[[unlikely]];
-			return;
+			return nullptr;
 		}
-		ptr->Get(handle);
+		return ptr->Get(handle);
 	}
 
 	const T *Get(PeerHandle handle) const
@@ -206,9 +206,9 @@ struct MapPeerHandle
 		MapPeerHandleInLoop<T> *ptr = maps.Get(handle.loop);
 		if (ptr == nullptr) {
 			[[unlikely]];
-			return;
+			return nullptr;
 		}
-		ptr->Get(handle);
+		return ptr->Get(handle);
 	}
 
 	T &operator[](PeerHandle handle)
@@ -219,7 +219,7 @@ struct MapPeerHandle
 	uint32_t Size() const
 	{
 		uint32_t size = 0;
-		for (MapPeerHandleInLoop<T> &m : maps) {
+		for (const MapPeerHandleInLoop<T> &m : maps.data) {
 			size += maps.Size();
 		}
 		return size;

@@ -369,6 +369,20 @@ int main(int argc, char **argv)
 					"Init", str);
 			};
 
+	auto onDisconnect = [](icon7::PeerHandle handle){
+			auto peer = handle.GetLocalPeerData();
+			if (peer) {
+			LOG_FATAL("Valid peer got disconnected: {%u,%u}"
+					"    "
+					"peer state: %u    ",
+					handle.id.id, handle.id.version,
+					peer->sharedPeer->GetPeerStateFlags());
+			} else {
+			LOG_FATAL("Valid peer got disconnected: {%u,%u}"
+					"    but does not have a valid PeerData before disconnection concludes", handle.id.id, handle.id.version);
+			}
+		};
+
 	for (int i = 0; i < testsCount; ++i) {
 		uint64_t totalReceived = 0, totalSent = 0, totalReturned = 0;
 		LOG_INFO("Iteration: %i started", i);
@@ -444,20 +458,22 @@ int main(int argc, char **argv)
 				icon7::log::PrintLineSync("");
 			}
 
+			std::vector<std::shared_ptr<icon7::Peer>> validPeers;
+			{
+			int II = 0, JJ = 0;
 			std::vector<concurrent::future<icon7::PeerHandle>> peers;
 			for (int i = 0; i < connectionsCount; ++i) {
-				peers.push_back(hostb->ConnectPromise(listenIp, port));
-			}
+				while (peers.size() < 10 && peers.size() + validPeers.size() < connectionsCount) {
+					peers.push_back(hostb->ConnectPromise(listenIp, port));
+				}
 
-			int II = 0, JJ = 0;
-			for (auto &f : peers) {
-				++II;
-				f.wait();
-			}
+				if (peers.empty()) {
+					break;
+				}
 
-			std::vector<std::shared_ptr<icon7::Peer>> validPeers;
-			II = 0;
-			for (auto &f : peers) {
+				auto f = std::move(peers.front());
+				peers.erase(peers.begin());
+
 				++II;
 				f.wait();
 				icon7::PeerHandle peerHandle = f.get();
@@ -465,7 +481,7 @@ int main(int argc, char **argv)
 				if (!peerHandle) {
 					LOG_WARN("Failed to etablish connection: %i of tested %i "
 							 "of total %lu, due to nullptr value of future",
-							 JJ, II, peers.size());
+							 JJ, II, connectionsCount);
 					++notPassedTests;
 					continue;
 				}
@@ -481,7 +497,11 @@ int main(int argc, char **argv)
 						}
 						icon7::time::Sleep(icon7::time::milliseconds(1));
 					} else {
-						break;
+						if (peer->stats.framesReceived != 0 && peer->stats.framesSent != 0) {
+							break;
+						} else {
+							icon7::time::Sleep(icon7::time::milliseconds(1));
+						}
 					}
 				}
 
@@ -489,8 +509,9 @@ int main(int argc, char **argv)
 					++JJ;
 					LOG_WARN("Failed to etablish connection: %i of tested %i "
 							 "of total %lu",
-							 JJ, II, peers.size());
+							 JJ, II, connectionsCount);
 					++notPassedTests;
+					peer->Disconnect();
 					continue;
 				}
 
@@ -499,25 +520,14 @@ int main(int argc, char **argv)
 				}
 
 				validPeers.emplace_back(peer);
-				peer->SetOnDisconnect([](icon7::PeerHandle handle){
-							auto peer = handle.GetLocalPeerData();
-							if (peer) {
-								LOG_FATAL("Valid peer got disconnected: {%u,%u}"
-										  "    "
-										  "peer state: %u    ",
-										  handle.id.id, handle.id.version,
-										  peer->sharedPeer->GetPeerStateFlags());
-							} else {
-								LOG_FATAL("Valid peer got disconnected: {%u,%u}"
-										  "    but does not have a valid PeerData before disconnection concludes", handle.id.id, handle.id.version);
-							}
-						});
+				peer->SetOnDisconnect(onDisconnect);
+			}
+			LOG_INFO("Connecting took %lu iterations for %lu connections.", II, validPeers.size());
 			}
 
 			LOG_INFO("Hosts pair %i | failed %i | connected peers: %lu / %lu",
-					 pq, notPassedTests, validPeers.size(), peers.size());
+					 pq, notPassedTests, validPeers.size(), connectionsCount);
 
-			peers.clear();
 			icon7::time::Sleep(icon7::time::milliseconds(100));
 
 			toReturnCount = validPeers.size() * totalSends;

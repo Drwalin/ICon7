@@ -23,9 +23,14 @@ struct MapLoop
 		if (data.size() <= li.id) {
 			[[unlikely]];
 			data.resize(li.id+1);
-			data[li.id].loop = std::move(value);
+			loops.resize(data.size(), nullptr);
 		}
-		return data[li.id].Set(std::move(loop));
+		if (loops[li.id] == nullptr) {
+			loops[li.id] = loop;
+		}
+		assert(loops[li.id] == loop);
+		data[li.id] = std::move(value);
+		return data[li.id];
 	}
 
 	T &Set(Loop *loop, const T &value)
@@ -35,9 +40,14 @@ struct MapLoop
 		if (data.size() <= li.id) {
 			[[unlikely]];
 			data.resize(li.id+1);
-			data[li.id].loop = loop;
+			loops.resize(data.size(), nullptr);
 		}
-		return data[li.id] = value;
+		if (loops[li.id] == nullptr) {
+			loops[li.id] = loop;
+		}
+		assert(loops[li.id] == loop);
+		data[li.id] = value;
+		return data[li.id];
 	}
 
 	T &Access(Loop *loop)
@@ -47,8 +57,12 @@ struct MapLoop
 		if (data.size() <= li.id) {
 			[[unlikely]];
 			data.resize(li.id+1);
-			data[li.id].loop = loop;
+			loops.resize(data.size(), nullptr);
 		}
+		if (loops[li.id] == nullptr) {
+			loops[li.id] = loop;
+		}
+		assert(loops[li.id] == loop);
 		return data[li.id];
 	}
 
@@ -60,7 +74,11 @@ struct MapLoop
 			[[unlikely]];
 			return nullptr;
 		}
-		return data[li.id].Get(loop);
+		if (loops[li.id] == nullptr) {
+			return nullptr;
+		}
+		assert(loops[li.id] == loop);
+		return &(data[li.id]);
 	}
 
 	const T *Get(Loop *loop) const
@@ -71,7 +89,25 @@ struct MapLoop
 			[[unlikely]];
 			return nullptr;
 		}
-		return data[li.id].Get(loop);
+		if (loops[li.id] == nullptr) {
+			return nullptr;
+		}
+		assert(loops[li.id] == loop);
+		return &(data[li.id]);
+	}
+
+	void Remove(Loop *loop)
+	{
+		assert(loop);
+		LoopIndex li = loop->loopIndex.index;
+		if (data.size() <= li.id) {
+			[[unlikely]];
+		}
+		if (loops[li.id] != nullptr) {
+			assert(loops[li.id] == loop);
+			loops[li.id] = loop;
+			data[li.id] = {};
+		}
 	}
 
 	T &operator[](Loop *loop)
@@ -86,6 +122,7 @@ struct MapLoop
 
 public:
 	std::vector<T> data;
+	std::vector<Loop *> loops;
 };
 
 }
