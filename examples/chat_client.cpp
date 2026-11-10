@@ -69,7 +69,7 @@ int main(int argc, char **argv)
 		std::getline(std::cin, str);
 		if (str.substr(0, 4) == "quit" && str.size() <= 6) {
 			icon7::Peer::Disconnect(peer);
-			icon7::time::Sleep(icon7::time::milliseconds(50));
+			icon7::time::sleep(icon7::time::milliseconds(50));
 			loop->QueueStopRunning();
 			loop->WaitStopRunning();
 			break;

@@ -11,12 +11,14 @@
 
 #include "../concurrentqueue/concurrentqueue.h"
 
+#include "../drwalin_util/include/drwalin_util/allocator.hpp"
+#include "../drwalin_util/include/drwalin_util/log.hpp"
+
 #include "../include/icon7/Time.hpp"
 #include "../include/icon7/ConcurrentQueueTraits.hpp"
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/CommandsBufferHandler.hpp"
 #include "../include/icon7/CoroutineHelper.hpp"
-#include "../include/icon7/Debug.hpp"
 
 #include "../include/icon7/CommandExecutionQueue.hpp"
 
@@ -24,13 +26,13 @@ namespace icon7
 {
 void *CoroutineSchedulable::promise_type::operator new(std::size_t bytes)
 {
-	return MemoryPool::Allocate(bytes).object;
+	return dutl::alloc::allocate(bytes).object;
 }
 
 void CoroutineSchedulable::promise_type::operator delete(void *ptr,
 														 std::size_t bytes)
 {
-	MemoryPool::Release(ptr, bytes);
+	dutl::alloc::release(ptr, bytes);
 }
 
 void CommandExecutionQueue::CoroutineAwaitable::await_suspend(
@@ -106,7 +108,7 @@ void CommandExecutionQueue::WaitStopAsyncExecution()
 {
 	QueueStopAsyncExecution();
 	while (IsRunningAsync()) {
-		icon7::time::Sleep(icon7::time::microseconds(10));
+		icon7::time::sleep(icon7::time::microseconds(10));
 	}
 }
 
@@ -159,7 +161,7 @@ void CommandExecutionQueue::ExecuteLoop(uint32_t sleepMicrosecondsOnNoActions,
 				sleepTime = 1;
 			if (sleepTime > maxSleepDuration)
 				sleepTime = maxSleepDuration;
-			icon7::time::Sleep(icon7::time::microseconds(sleepTime));
+			icon7::time::sleep(icon7::time::microseconds(sleepTime));
 		} else {
 			accumulativeNopCounter = 0;
 		}

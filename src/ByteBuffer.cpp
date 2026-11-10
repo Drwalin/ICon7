@@ -5,7 +5,8 @@
 
 #include <bit>
 
-#include "../include/icon7/MemoryPool.hpp"
+#include "../drwalin_util/include/drwalin_util/allocator.hpp"
+
 #include "../include/icon7/ByteReader.hpp"
 #include "../include/icon7/ByteWriter.hpp" // IWYU pragma: keep
 
@@ -59,7 +60,7 @@ void PrintBufferMetadata(ByteBufferStorageHeader *buffer)
 void ByteBufferStorageHeader::free(ByteBufferStorageHeader *header)
 {
 	assert(header->refCounter == 0);
-	MemoryPool::Release(header, header->capacity + header->offset);
+	dutl::alloc::release(header, header->capacity + header->offset);
 }
 
 ByteBufferWritable::ByteBufferWritable(const ByteBufferWritable &o)
@@ -81,7 +82,7 @@ ByteBufferWritable::ByteBufferWritable(uint32_t capacity) : ByteBufferWritable()
 	capacity = round_capacity_up(capacity);
 	_size = 0;
 	_flags = 0;
-	auto buf = MemoryPool::Allocate(capacity + _offset);
+	auto buf = dutl::alloc::allocate(capacity + _offset);
 	buffer = ((uint8_t *)buf.object) + _offset;
 	_capacity = buf.capacity - _offset;
 }
@@ -91,7 +92,7 @@ void ByteBufferWritable::free_buffer()
 	if (buffer) {
 		assert(_capacity);
 		assert(_offset);
-		MemoryPool::Release(buffer - _offset, _capacity + _offset);
+		dutl::alloc::release(buffer - _offset, _capacity + _offset);
 		buffer = nullptr;
 		_size = 0;
 		_capacity = 0;

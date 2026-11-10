@@ -8,10 +8,10 @@
 
 #include <memory>
 
-#include "../include/icon7/Debug.hpp"
+#include "../drwalin_util/include/drwalin_util/log.hpp"
+
 #include "../include/icon7/HostUStcpUdp.hpp"
 #include "../include/icon7/Random.hpp"
-
 #include "../include/icon7/PeerUStcpUdp.hpp"
 
 namespace icon7

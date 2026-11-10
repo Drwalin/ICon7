@@ -11,7 +11,7 @@ namespace icon7
 CommandsBufferHandler::CommandsBufferHandler(CommandExecutionQueue *queue)
 {
 	this->queue = queue;
-	forceEnqueueTimepoint = time::GetTemporaryTimestamp() + time::milliseconds(200);
+	forceEnqueueTimepoint = time::get_temporary_timestamp() + time::milliseconds(200);
 }
 
 CommandsBufferHandler::~CommandsBufferHandler()

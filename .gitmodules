@@ -4,15 +4,12 @@
 [submodule "uSockets"]
 	path = uSockets
 	url = https://github.com/Drwalin/uSockets.git
-[submodule "concurrent"]
-	path = concurrent
-	url = https://github.com/Drwalin/concurrent.git
 [submodule "concurrentqueue"]
 	path = concurrentqueue
 	url = https://github.com/cameron314/concurrentqueue.git
-[submodule "rpmalloc"]
-	path = rpmalloc
-	url = https://github.com/mjansson/rpmalloc.git
 [submodule "libuv"]
 	path = libuv
 	url = https://github.com/libuv/libuv.git
+[submodule "drwalin_util"]
+	path = drwalin_util
+	url = https://github.com/Drwalin/drwalin_util

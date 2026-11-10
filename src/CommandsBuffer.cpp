@@ -3,8 +3,8 @@
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
-#include "../include/icon7/Debug.hpp"
-#include "../include/icon7/MemoryPool.hpp"
+#include "../drwalin_util/include/drwalin_util/allocator.hpp"
+#include "../drwalin_util/include/drwalin_util/log.hpp"
 
 #include "../include/icon7/CommandsBuffer.hpp"
 
@@ -34,7 +34,7 @@ void CommandsBuffer::Init(uint32_t size)
 		LOG_FATAL("CommandsBuffer needs to have size of multiple of 64");
 	}
 	totalBytes = size;
-	AllocatedObject<void> obj = MemoryPool::Allocate(totalBytes);
+	dutl::allocated_object<void> obj = dutl::alloc::allocate(totalBytes);
 	commandsBufferData = (uint8_t *)obj.object;
 	if (commandsBufferData == nullptr) {
 		totalBytes = 0;
@@ -82,7 +82,7 @@ void CommandsBuffer::Reset()
 {
 	if (commandsBufferData) {
 		CallDestructors();
-		MemoryPool::Release(commandsBufferData, totalBytes);
+		dutl::alloc::release(commandsBufferData, totalBytes);
 		commandsBufferData = nullptr;
 		totalBytes = 0;
 		countCommands = 0;

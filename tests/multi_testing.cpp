@@ -2,12 +2,10 @@
 
 #include <thread>
 
-#ifndef ICON7_USE_RPMALLOC
-#define ICON7_USE_RPMALLOC 1
-#endif
+#include "../drwalin_util/include/drwalin_util/log.hpp"
+#include "../drwalin_util/include/drwalin_util/allocator.hpp"
 
 #include "../include/icon7/Command.hpp"
-#include "../include/icon7/Debug.hpp"
 #include "../include/icon7/Peer.hpp"
 #include "../include/icon7/Flags.hpp"
 #include "../include/icon7/RPCEnvironment.hpp"
@@ -17,11 +15,10 @@
 #include "../include/icon7/LoopUS.hpp"
 #include "../include/icon7/MultiBatchWriter.hpp"
 
-#if defined(__unix__) && ICON7_USE_RPMALLOC
+#if defined(__unix__) && DRWUTL_USE_RPMALLOC
 #include <sstream>
 
 #include "../include/icon7/Time.hpp"
-#include "../include/icon7/MemoryPool.hpp"
 
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -58,7 +55,7 @@ int Mul(int a, int b, std::string str)
 	return a * b + strlen(str.c_str());
 }
 
-#if defined(__unix__) && ICON7_USE_RPMALLOC
+#if defined(__unix__) && DRWUTL_USE_RPMALLOC
 std::string ReadFile(std::string fileName)
 {
 	std::string ret;
@@ -200,7 +197,7 @@ ProcPidStat proc_pid_stat(int64_t pid)
 void AsyncThreadMemoryAmountMetrics(std::string fileName)
 {
 #if defined(__unix__)
-#if ICON7_USE_RPMALLOC
+#if DRWUTL_USE_RPMALLOC
 	std::thread([=]() {
 		FILE *file = fopen(fileName.c_str(), "w");
 		assert(file != nullptr);
@@ -218,36 +215,36 @@ void AsyncThreadMemoryAmountMetrics(std::string fileName)
 					  "\n");
 		fflush(file);
 		int64_t VmPeak = 0, VmHWM = 0;
-		const icon7::time::Point start = icon7::time::GetTemporaryTimestamp();
+		const icon7::time::Point start = icon7::time::get_temporary_timestamp();
 		const icon7::time::Diff period = icon7::time::milliseconds(250);
 		const int64_t procId = syscall(SYS_gettid);
 		const int64_t pageSize = getpagesize();
 		while (true) {
-			const icon7::time::Point now = icon7::time::GetTemporaryTimestamp();
+			const icon7::time::Point now = icon7::time::get_temporary_timestamp();
 			const icon7::time::Diff delta = now - start;
 			const double deltaSeconds =
-				icon7::time::NanosecondsToSeconds(delta);
+				icon7::time::nanoseconds_to_seconds(delta);
 
-#if ICON7_USE_RPMALLOC
+#if DRWUTL_USE_RPMALLOC
 			const int64_t deallocations =
-				icon7::MemoryPool::Stats().smallDeallocations +
-				icon7::MemoryPool::Stats().mediumDeallocations +
-				icon7::MemoryPool::Stats().largeDeallocations;
+				dutl::alloc::stats().smallDeallocations +
+				dutl::alloc::stats().mediumDeallocations +
+				dutl::alloc::stats().largeDeallocations;
 #else
 			const int64_t deallocations =
-				icon7::MemoryPool::Stats().deallocations;
+				dutl::alloc::stats().deallocations;
 #endif
 
 			const int64_t allocations =
-				icon7::MemoryPool::Stats().smallAllocations +
-				icon7::MemoryPool::Stats().mediumAllocations +
-				icon7::MemoryPool::Stats().largeAllocations;
+				dutl::alloc::stats().smallAllocations +
+				dutl::alloc::stats().mediumAllocations +
+				dutl::alloc::stats().largeAllocations;
 
 			const int64_t totalAllocated =
-				icon7::MemoryPool::Stats().allocatedBytes;
+				dutl::alloc::stats().allocatedBytes;
 			const int64_t currentlyInUse =
-				(totalAllocated - icon7::MemoryPool::Stats().deallocatedBytes);
-			const int64_t inUsePeak = icon7::MemoryPool::Stats().maxInUseAtOnce;
+				(totalAllocated - dutl::alloc::stats().deallocatedBytes);
+			const int64_t inUsePeak = dutl::alloc::stats().maxInUseAtOnce;
 
 			ProcPidStatm statm = proc_pid_statm(procId);
 			const int64_t VmSize = statm.VmSize;
@@ -270,9 +267,9 @@ void AsyncThreadMemoryAmountMetrics(std::string fileName)
 			fflush(file);
 
 			if (delta < period * 1000) {
-				icon7::time::Sleep(delta / 1000);
+				icon7::time::sleep(delta / 1000);
 			} else {
-				icon7::time::Sleep(period);
+				icon7::time::sleep(period);
 			}
 		}
 		fclose(file);
@@ -447,7 +444,7 @@ int main(int argc, char **argv)
 			icon7::CommandHandle<CommandPrintThreadId>::Create("Sender"));
 
 		const auto beginingBeforeConnectingInIteration =
-			icon7::time::GetTemporaryTimestamp();
+			icon7::time::get_temporary_timestamp();
 
 		for (int pq = 0; pq < testsPerHostsPairCount; ++pq) {
 			sent = received = returned = 0;
@@ -455,13 +452,13 @@ int main(int argc, char **argv)
 				v = 0.0;
 			}
 			if (printMoreStats) {
-				icon7::log::PrintLineSync("");
+				dutl::log::print_line_sync("");
 			}
 
 			std::vector<std::shared_ptr<icon7::Peer>> validPeers;
 			{
 			int II = 0, JJ = 0;
-			std::vector<concurrent::future<icon7::PeerHandle>> peers;
+			std::vector<dutl::future<icon7::PeerHandle>> peers;
 			for (int i = 0; i < connectionsCount; ++i) {
 				while (peers.size() < 10 && peers.size() + validPeers.size() < connectionsCount) {
 					peers.push_back(hostb->ConnectPromise(listenIp, port));
@@ -495,12 +492,12 @@ int main(int argc, char **argv)
 						if (j == 999) {
 							LOG_WARN("Failed to etablish connection");
 						}
-						icon7::time::Sleep(icon7::time::milliseconds(1));
+						icon7::time::sleep(icon7::time::milliseconds(1));
 					} else {
 						if (peer->stats.framesReceived != 0 && peer->stats.framesSent != 0) {
 							break;
 						} else {
-							icon7::time::Sleep(icon7::time::milliseconds(1));
+							icon7::time::sleep(icon7::time::milliseconds(1));
 						}
 					}
 				}
@@ -528,12 +525,12 @@ int main(int argc, char **argv)
 			LOG_INFO("Hosts pair %i | failed %i | connected peers: %lu / %lu",
 					 pq, notPassedTests, validPeers.size(), connectionsCount);
 
-			icon7::time::Sleep(icon7::time::milliseconds(100));
+			icon7::time::sleep(icon7::time::milliseconds(100));
 
 			toReturnCount = validPeers.size() * totalSends;
 
 			uint32_t sendFrameSize = 0;
-			const auto _S = icon7::time::GetTemporaryTimestamp();
+			const auto _S = icon7::time::get_temporary_timestamp();
 			std::atomic<double> sumTim = 0;
 			{
 				icon7::CommandsBufferHandler commandsBuffer{
@@ -559,20 +556,20 @@ int main(int argc, char **argv)
 					}
 
 					if (k > 0) {
-						icon7::time::Sleep(delayBetweeEachTotalSend);
+						icon7::time::sleep(delayBetweeEachTotalSend);
 					}
 					auto executeSend = [&](icon7::PeerHandle peer, int l) {
 						THROTTLE_SEND();
 						assert(l < buffersToSend.size());
 						if (l == 0) {
-							auto curTim = icon7::time::GetTemporaryTimestamp();
+							auto curTim = icon7::time::get_temporary_timestamp();
 							auto onReturned = [curTim, &sumTim, &arrayOfLatency](
 												  icon7::PeerHandle peer,
 												  icon7::Flags flags,
 												  uint32_t result) -> void {
-								auto n = icon7::time::GetTemporaryTimestamp();
+								auto n = icon7::time::get_temporary_timestamp();
 								auto dt =
-									icon7::time::NanosecondsToSeconds(n - curTim);
+									icon7::time::nanoseconds_to_seconds(n - curTim);
 								sumTim += dt;
 								uint32_t i = returned++;
 								arrayOfLatency[i] = dt;
@@ -630,14 +627,14 @@ int main(int argc, char **argv)
 				}
 			}
 
-			const auto _E = icon7::time::GetTemporaryTimestamp();
-			double _sec = icon7::time::NanosecondsToSeconds(_E - _S);
+			const auto _E = icon7::time::get_temporary_timestamp();
+			double _sec = icon7::time::nanoseconds_to_seconds(_E - _S);
 			double kops = (received.load() + returned.load()) / _sec / 1000.0;
 			double mibps = kops * sendFrameSize * 1000.0 / 1024.0 / 1024.0;
 			LOG_INFO("Instantenous throughput: %f Kops (%f MiBps)", kops,
 					 mibps);
 
-			_sec = icon7::time::NanosecondsToSeconds(
+			_sec = icon7::time::nanoseconds_to_seconds(
 				_E - beginingBeforeConnectingInIteration);
 			kops = (totalReceived + totalReturned + received.load() +
 					returned.load()) /
@@ -669,7 +666,7 @@ int main(int argc, char **argv)
 
 			uint32_t oldReceived = received.load(),
 					 oldReturned = returned.load();
-			auto startWaitTimepoint = icon7::time::GetTemporaryTimestamp();
+			auto startWaitTimepoint = icon7::time::get_temporary_timestamp();
 			for (int64_t i = 0; i < maxWaitAfterPayloadDone; ++i) {
 				if (received >= sent && returned >= toReturnCount) {
 					break;
@@ -678,15 +675,15 @@ int main(int argc, char **argv)
 					oldReturned != returned.load()) {
 					oldReceived = received.load();
 					oldReturned = returned.load();
-					startWaitTimepoint = icon7::time::GetTemporaryTimestamp();
+					startWaitTimepoint = icon7::time::get_temporary_timestamp();
 				} else {
-					const auto now = icon7::time::GetTemporaryTimestamp();
+					const auto now = icon7::time::get_temporary_timestamp();
 					if ((now - startWaitTimepoint) > icon7::time::seconds(5)) {
 						notPassedTests++;
 						break;
 					}
 				}
-				icon7::time::Sleep(icon7::time::microseconds(950));
+				icon7::time::sleep(icon7::time::microseconds(950));
 			}
 
 			if (printMoreStats) {
@@ -698,13 +695,13 @@ int main(int argc, char **argv)
 
 			for (auto &p : validPeers) {
 				p->SetOnDisconnect(nullptr);
-				icon7::time::Sleep(icon7::time::microseconds(10));
+				icon7::time::sleep(icon7::time::microseconds(10));
 			}
 			loopb->WakeUp();
-			icon7::time::Sleep(icon7::time::milliseconds(2));
+			icon7::time::sleep(icon7::time::milliseconds(2));
 			for (auto &p : validPeers) {
 				p->Disconnect();
-				icon7::time::Sleep(icon7::time::microseconds(10));
+				icon7::time::sleep(icon7::time::microseconds(10));
 			}
 
 			validPeers.clear();

@@ -6,8 +6,9 @@
 #ifndef ICON7_COMMANDS_BUFFER_HANDLER_HPP
 #define ICON7_COMMANDS_BUFFER_HANDLER_HPP
 
+#include "../../drwalin_util/include/drwalin_util/log.hpp"
+
 #include "Time.hpp"
-#include "Debug.hpp"
 #include "CommandsBuffer.hpp"
 
 namespace icon7
@@ -29,12 +30,12 @@ public:
 			currentCommandsBuffer.CanAllocate(sizeof(T), alignof(T)) == false) {
 			AllocateBuffer();
 		}
-		if (forceEnqueueTimepoint < time::GetTemporaryTimestamp()) {
+		if (forceEnqueueTimepoint < time::get_temporary_timestamp()) {
 			AllocateBuffer();
 		}
 		if (currentCommandsBuffer.countCommands == 0) {
 			forceEnqueueTimepoint =
-				time::GetTemporaryTimestamp() + time::milliseconds(200);
+				time::get_temporary_timestamp() + time::milliseconds(200);
 		}
 		T *ptr = currentCommandsBuffer.EnqueueCommand<T>(std::move(args)...);
 		if (ptr == nullptr) {

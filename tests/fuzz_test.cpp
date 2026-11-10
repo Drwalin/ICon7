@@ -1,7 +1,8 @@
 #include <cstdio>
 
+#include "../drwalin_util/include/drwalin_util/log.hpp"
+
 #include "../include/icon7/Time.hpp"
-#include "../include/icon7/Debug.hpp"
 #include "../include/icon7/Peer.hpp"
 #include "../include/icon7/Flags.hpp"
 #include "../include/icon7/RPCEnvironment.hpp"

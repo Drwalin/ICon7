@@ -7,9 +7,9 @@
 
 #include <algorithm>
 
-#include "../include/icon7/FramingProtocol.hpp"
-#include "../include/icon7/Debug.hpp"
+#include "../drwalin_util/include/drwalin_util/log.hpp"
 
+#include "../include/icon7/FramingProtocol.hpp"
 #include "../include/icon7/FrameDecoder.hpp"
 
 namespace icon7

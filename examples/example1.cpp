@@ -83,7 +83,7 @@ int main()
 
 			rpc->Send(peer, icon7::FLAG_RELIABLE, {1}, 3, 23);
 
-			icon7::time::Sleep(icon7::time::milliseconds(5));
+			icon7::time::sleep(icon7::time::milliseconds(5));
 
 			rpc->Call(peer, icon7::FLAG_RELIABLE,
 					  icon7::OnReturnCallback::Make<uint32_t>(
@@ -102,9 +102,9 @@ int main()
 		&rpc, hostb, port);
 
 	for (int i = 0; i < 3000 && returned.load() < 3; ++i) {
-		icon7::time::Sleep(icon7::time::milliseconds(1));
+		icon7::time::sleep(icon7::time::milliseconds(1));
 	}
-	icon7::time::Sleep(icon7::time::milliseconds(1));
+	icon7::time::sleep(icon7::time::milliseconds(1));
 
 	hosta = nullptr;
 	hostb = nullptr;

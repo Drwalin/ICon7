@@ -6,10 +6,11 @@
 #include <cassert>
 #include <cstdlib>
 
+#include "../drwalin_util/include/drwalin_util/log.hpp"
+
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/Peer.hpp"
 #include "../include/icon7/RPCEnvironment.hpp"
-#include "../include/icon7/Debug.hpp"
 #include "../include/icon7/Loop.hpp"
 #include "../include/icon7/PeerManager.hpp"
 
@@ -65,7 +66,7 @@ void Host::SetOnDisconnect(std::function<void(PeerHandle)> callback)
 	onDisconnect = callback;
 }
 
-concurrent::future<PeerHandle>
+dutl::future<PeerHandle>
 Host::ConnectPromise(std::string address, uint16_t port)
 {
 	class CommandConnectPromise final : public commands::ExecuteOnPeer
@@ -74,7 +75,7 @@ Host::ConnectPromise(std::string address, uint16_t port)
 		CommandConnectPromise() {}
 		virtual ~CommandConnectPromise() {}
 
-		concurrent::promise<PeerHandle> promise;
+		dutl::promise<PeerHandle> promise;
 
 		virtual void Execute() override
 		{
@@ -87,7 +88,7 @@ Host::ConnectPromise(std::string address, uint16_t port)
 	};
 
 	auto onConnected = CommandHandle<CommandConnectPromise>::Create();
-	concurrent::future<PeerHandle> future =
+	dutl::future<PeerHandle> future =
 		onConnected->promise.get_future();
 	Connect(address, port, std::move(onConnected), nullptr);
 	return future;
@@ -141,7 +142,7 @@ void Host::_Internal_on_close_Finish(PeerHandle peer)
 // 	peersRefe.erase(p->shared_from_this());
 }
 
-concurrent::future<bool> Host::ListenOnPort(const std::string &address,
+dutl::future<bool> Host::ListenOnPort(const std::string &address,
 											uint16_t port, IPProto ipProto)
 {
 	class CommandListnePromise final : public commands::ExecuteBooleanOnHost
@@ -150,7 +151,7 @@ concurrent::future<bool> Host::ListenOnPort(const std::string &address,
 		CommandListnePromise() {}
 		virtual ~CommandListnePromise() {}
 
-		concurrent::promise<bool> promise;
+		dutl::promise<bool> promise;
 
 		virtual void Execute() override { promise.set_value(result); }
 	};

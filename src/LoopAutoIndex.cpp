@@ -7,8 +7,9 @@
 #include <vector>
 #include <memory>
 
+#include "../drwalin_util/include/drwalin_util/log.hpp"
+
 #include "../include/icon7/Host.hpp"
-#include "../include/icon7/Debug.hpp"
 #include "../include/icon7/Loop.hpp"
 
 #include "../include/icon7/LoopAutoIndex.hpp"

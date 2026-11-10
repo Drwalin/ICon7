@@ -9,11 +9,11 @@
 #include <string>
 #include <unordered_map>
 
+#include "../../drwalin_util/include/drwalin_util/log.hpp"
 #include "../../bitscpp/include/bitscpp/Endianness.hpp"
 
 #include "ByteWriter.hpp"
 #include "RpcName.hpp"
-#include "Debug.hpp"
 #include "ByteReader.hpp"
 #include "Util.hpp"
 #include "Flags.hpp"

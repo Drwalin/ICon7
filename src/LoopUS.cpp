@@ -3,9 +3,9 @@
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
-#include "../include/icon7/Debug.hpp"
-#include "../include/icon7/HostUStcp.hpp"
+#include "../drwalin_util/include/drwalin_util/log.hpp"
 
+#include "../include/icon7/HostUStcp.hpp"
 #include "../include/icon7/LoopUS.hpp"
 
 namespace icon7

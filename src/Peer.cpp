@@ -3,15 +3,15 @@
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
+#include "../drwalin_util/include/drwalin_util/log.hpp"
+
 #include "../include/icon7/Host.hpp"
 #include "../include/icon7/Loop.hpp"
 #include "../include/icon7/RPCEnvironment.hpp"
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/FramingProtocol.hpp"
-#include "../include/icon7/Debug.hpp"
 #include "../include/icon7/Flags.hpp"
 #include "../include/icon7/Time.hpp"
-
 #include "../include/icon7/Peer.hpp"
 
 namespace icon7
@@ -153,10 +153,10 @@ void Peer::_InternalErrorSendOnDisconnecting()
 	stats.errorsCount += 1;
 	host->stats.errorsCount += 1;
 	host->loop->stats.errorsCount += 1;
-	static time::Point last = time::GetTemporaryTimestamp();
-	if (last + time::seconds(1) < time::GetTemporaryTimestamp() ||
-		last - time::seconds(10) > time::GetTemporaryTimestamp()) {
-		last = time::GetTemporaryTimestamp();
+	static time::Point last = time::get_temporary_timestamp();
+	if (last + time::seconds(1) < time::get_temporary_timestamp() ||
+		last - time::seconds(10) > time::get_temporary_timestamp()) {
+		last = time::get_temporary_timestamp();
 		LOG_WARN("TRY SEND IN DISCONNECTING PEER, dropping packet");
 	}
 }

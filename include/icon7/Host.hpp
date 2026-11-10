@@ -9,7 +9,7 @@
 #include <string>
 #include <functional>
 
-#include "../../concurrent/future.hpp"
+#include "../drwalin_util/include/drwalin_util/future.hpp"
 
 #include "Stats.hpp"
 #include "Flags.hpp"
@@ -37,7 +37,7 @@ public:
 	virtual void _InternalDestroy();
 	void DisconnectAllAsync();
 
-	virtual concurrent::future<bool>
+	virtual dutl::future<bool>
 	ListenOnPort(const std::string &address, uint16_t port, IPProto ipProto);
 	void ListenOnPort(const std::string &address, uint16_t port,
 					  IPProto ipProto,
@@ -47,7 +47,7 @@ public:
 	void SetOnConnect(std::function<void(PeerHandle)> callback);
 	void SetOnDisconnect(std::function<void(PeerHandle)> callback);
 
-	concurrent::future<PeerHandle>
+	dutl::future<PeerHandle>
 	ConnectPromise(std::string address, uint16_t port);
 	void Connect(std::string address, uint16_t port);
 	void Connect(std::string address, uint16_t port,

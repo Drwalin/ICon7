@@ -6,9 +6,9 @@
 #ifdef ICON7_ENBALE_EXPERIMENTAL_UDP
 #include <cstring>
 
-#include "../include/icon7/HostUStcp.hpp"
-#include "../include/icon7/Debug.hpp"
+#include "../drwalin_util/include/drwalin_util/log.hpp"
 
+#include "../include/icon7/HostUStcp.hpp"
 #include "../include/icon7/HostUStcpUdp.hpp"
 #include "../include/icon7/PeerUStcpUdp.hpp"
 

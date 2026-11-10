@@ -3,10 +3,10 @@
 // This file is part of ICon7 project under MIT License
 // You should have received a copy of the MIT License along with this program.
 
-#include "../include/icon7/Debug.hpp"
+#include "../drwalin_util/include/drwalin_util/log.hpp"
+
 #include "../include/icon7/Command.hpp"
 #include "../include/icon7/Peer.hpp"
-
 #include "../include/icon7/MultiBatchWriter.hpp"
 
 namespace icon7

@@ -8,9 +8,10 @@
 
 #include <tuple>
 
+#include "../../drwalin_util/include/drwalin_util/log.hpp"
+
 #include "ByteWriter.hpp"
 #include "RpcName.hpp"
-#include "Debug.hpp"
 #include "ByteReader.hpp"
 #include "PeerFlagsArgumentsReader.hpp"
 #include "Peer.hpp"

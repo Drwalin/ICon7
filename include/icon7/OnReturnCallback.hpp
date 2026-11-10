@@ -146,7 +146,7 @@ public:
 	OnReturnCallback &operator=(OnReturnCallback &) = delete;
 	OnReturnCallback &operator=(const OnReturnCallback &) = delete;
 
-	bool IsExpired(time::Point t = time::GetTemporaryTimestamp()) const;
+	bool IsExpired(time::Point t = time::get_temporary_timestamp()) const;
 	void Execute(PeerData *peer, Flags flags, ByteReader &reader);
 	void ExecuteTimeout();
 
@@ -166,7 +166,7 @@ public:
 		cb->onTimeout = std::move(onTimeout);
 		ret.callback = std::move(cb);
 		ret.executionQueue = executionQueue;
-		ret.timeoutTimePoint = time::GetTemporaryTimestamp() +
+		ret.timeoutTimePoint = time::get_temporary_timestamp() +
 							   time::milliseconds(timeoutMilliseconds);
 		ret.pointerHolder = pointerHolder;
 		return ret;
@@ -186,7 +186,7 @@ public:
 		cb->onTimeout = std::move(onTimeout);
 		ret.callback = std::move(cb);
 		ret.executionQueue = executionQueue;
-		ret.timeoutTimePoint = time::GetTemporaryTimestamp() +
+		ret.timeoutTimePoint = time::get_temporary_timestamp() +
 							   time::milliseconds(timeoutMilliseconds);
 		ret.pointerHolder = pointerHolder;
 		return ret;

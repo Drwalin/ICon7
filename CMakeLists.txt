@@ -13,15 +13,8 @@ set(CMAKE_COLOR_DIAGNOSTICS ON)
 option(ENABLE_LTO "Enable LTO" OFF)
 option(ICON7_BUILD_EXAMPLES "Build icon7 examples" ON)
 option(ICON7_BUILD_TEST "Build icon7 tests" ON)
-option(ICON7_USE_RPMALLOC "Use rpmalloc. Otherwise use object pool" ON)
-option(ICON7_MEMORY_COLLECT_STATS "Enable memory statistics collection" OFF)
-option(ICON7_LOG_LEVEL_SINGLE_CHARACTER "Write single character for ICon7 log level" ON)
-option(ICON7_LOG_USE_FILENAME_WITHOUT_PATH "Write file names without full path to ICon7 log" ON)
-option(ICON7_LOG_USE_PRETTY_FUNCTION "Use pretty function name for ICon7 log" ON)
 option(ICON7_CLANG_FUZZTEST "Compile fuzztesting and use clang" OFF)
 option(USOCKETS_USE_OPENSSL "Use OpenSSL instead of BoringSSL" ON)
-option(ICON7_LOG_ONLY_ON_STDERR "Print logs only on STDERR without a file" OFF)
-set(ICON7_LOG_DATETIME_SUBSECONDS_DIGITS 5 CACHE STRING "Number of sub-second digits in ICon7 log date-time")
 
 if(ICON7_CLANG_FUZZTEST)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -fprofile-instr-generate -fcoverage-mapping")
@@ -29,12 +22,15 @@ if(ICON7_CLANG_FUZZTEST)
 endif()
 
 if(ENABLE_LTO)
-	set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+	include(CheckIPOSupported)
+	check_ipo_supported(RESULT _ipo_ok OUTPUT _ipo_err LANGUAGES CXX)
+	set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 endif()
+
+add_subdirectory(drwalin_util)
 
 add_definitions(-DCMAKE_EXPORT_COMPILE_COMMANDS=ON)
 
-add_subdirectory(concurrent)
 add_subdirectory(bitscpp)
 
 target_precompile_headers(bitscpp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/icon7/ByteBuffer.hpp")
@@ -42,7 +38,6 @@ target_precompile_headers(bitscpp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/ic
 include_directories(include/)
 include_directories(uSockets/src/)
 include_directories(bitscpp/include/)
-include_directories(concurrent/)
 include_directories(${ZLIB_INCLUDE_DIRS})
 if(USOCKETS_USE_OPENSSL)
 	include_directories(${OPENSSL_INCLUDE_DIR})
@@ -92,79 +87,25 @@ add_library(icon7 STATIC
 	${header_files}
 	${source_files}
 )
-target_link_libraries(icon7 uSockets)
-target_link_libraries(icon7 concurrent)
-target_link_libraries(icon7 bitscpp)
+target_link_libraries(icon7 PUBLIC uSockets)
+target_link_libraries(icon7 PUBLIC bitscpp)
+target_link_libraries(icon7 PUBLIC drwalin_util)
 add_common_precompiled_headers(icon7)
-if(ICON7_LOG_ONLY_ON_STDERR)
-	set_source_files_properties(src/Debug.cpp PROPERTIES COMPILE_FLAGS -DICON7_LOG_ONLY_ON_STDERR=1)
-endif()
 
 if(ASAN)
 	add_definitions(-fsanitize=address)
 endif()
-
-if(ICON7_USE_RPMALLOC)
-	target_link_libraries(icon7 rpmalloc)
-	add_library(rpmalloc STATIC
-		rpmalloc/rpmalloc/rpmalloc.c
-	)
-	target_compile_definitions(rpmalloc PUBLIC ENABLE_OVERRIDE=0)
-	include_directories(rpmalloc/rpmalloc/)
-	
-	target_compile_definitions(icon7 PUBLIC ICON7_USE_RPMALLOC=1)
-else()
-	target_compile_definitions(icon7 PUBLIC ICON7_USE_THREAD_CACHED_POOL=0)
-	target_compile_definitions(icon7 PUBLIC ICON7_USE_RPMALLOC=0)
-endif()
-
-if(NOT DEFINED ICON7_IGNORE_COMMON_LOG_PATH)
-target_compile_definitions(icon7 PUBLIC ICON7_LOG_IGNORE_COMMON_PATH="${PROJECT_SOURCE_DIR}")
-endif()
-if(NOT DEFINED ICON7_LOG_DEFAULT_LOG_LEVEL)
-	if(CMAKE_BUILD_TYPE STREQUAL "Release")
-		target_compile_definitions(icon7 PUBLIC ICON7_LOG_DEFAULT_LOG_LEVEL=INFO)
-	elseif(ICON7_CLANG_FUZZTEST)
-		target_compile_definitions(icon7 PUBLIC ICON7_LOG_DEFAULT_LOG_LEVEL=LL_IGNORE)
-	else()
-		target_compile_definitions(icon7 PUBLIC ICON7_LOG_DEFAULT_LOG_LEVEL=LL_IGNORE)
-	endif()
-else()
-	target_compile_definitions(icon7 PUBLIC ICON7_LOG_DEFAULT_LOG_LEVEL=${ICON7_LOG_DEFAULT_LOG_LEVEL})
-endif()
-
-if(ICON7_MEMORY_COLLECT_STATS)
-	target_compile_definitions(icon7 PUBLIC ICON7_MEMORY_COLLECT_STATS=1)
-endif()
-
-if(ICON7_LOG_LEVEL_SINGLE_CHARACTER)
-	target_compile_definitions(icon7 PUBLIC ICON7_LOG_LEVEL_SINGLE_CHARACTER=1)
-endif()
-
-if(ICON7_LOG_USE_FILENAME_WITHOUT_PATH)
-	target_compile_definitions(icon7 PUBLIC
-		ICON7_LOG_USE_FILENAME_WITHOUT_PATH=1)
-endif()
-
-if(ICON7_LOG_USE_PRETTY_FUNCTION)
-	target_compile_definitions(icon7 PUBLIC ICON7_LOG_USE_PRETTY_FUNCTION=1)
-endif()
-
-target_compile_definitions(icon7 PUBLIC
-	ICON7_LOG_DATETIME_SUBSECONDS_DIGITS=${ICON7_LOG_DATETIME_SUBSECONDS_DIGITS})
 
 if(ICON7_BUILD_TEST)
 	add_executable(multi_test
 		tests/multi_testing
 	)
 	target_link_libraries(multi_test icon7)
-	target_compile_definitions(multi_test PUBLIC ICON7_LOG_DEFAULT_LOG_LEVEL=LL_IGNORE)
 
 	add_executable(test_flat_hash_map
 		tests/test_flat_hash_map.cpp
 	)
 	target_link_libraries(test_flat_hash_map icon7)
-	target_compile_definitions(test_flat_hash_map PUBLIC ICON7_LOG_DEFAULT_LOG_LEVEL=LL_IGNORE)
 endif()
 
 if(ICON7_BUILD_EXAMPLES)

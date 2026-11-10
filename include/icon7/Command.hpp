@@ -9,9 +9,10 @@
 #include <coroutine>
 #include <type_traits>
 
-#include "Debug.hpp"
+#include "../../drwalin_util/include/drwalin_util/allocator.hpp"
+#include "../../drwalin_util/include/drwalin_util/log.hpp"
+
 #include "Flags.hpp"
-#include "MemoryPool.hpp"
 #include "ByteReader.hpp"
 
 namespace icon7
@@ -109,7 +110,7 @@ public:
 		if (__int != 0) {
 			switch (type) {
 			case REGULAR_COMMAND:
-				MemoryPool::ReleaseTyped(com, com->_commandSize);
+				dutl::alloc::release_typed(com, com->_commandSize);
 				break;
 			case COROUTINE_HANDLE:
 				std::coroutine_handle<>::from_address(coro).destroy();
@@ -123,7 +124,7 @@ public:
 	inline static CommandHandle<T> Create(Args &&...args)
 	{
 		CommandHandle<T> com;
-		Command *_com = MemoryPool::AllocateTyped<T>(std::move(args)...);
+		Command *_com = dutl::alloc::allocate_typed<T>(std::move(args)...);
 		com.handle = (uintptr_t)_com;
 		if ((((uintptr_t)com.handle) & COMMAND_BITS_MASK) != 0) {
 			LOG_FATAL("Allocator does not return 8-byte align memory");
@@ -154,7 +155,7 @@ public:
 			switch (type) {
 			case REGULAR_COMMAND:
 				com->Execute();
-				MemoryPool::ReleaseTyped(com, com->_commandSize);
+				dutl::alloc::release_typed(com, com->_commandSize);
 				break;
 			case COROUTINE_HANDLE:
 				std::coroutine_handle<>::from_address(coro)();

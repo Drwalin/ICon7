@@ -117,7 +117,7 @@ void RPCEnvironment::OnReceiveReturn(PeerData *peer, ByteReader &reader,
 void RPCEnvironment::CheckForTimeoutFunctionCalls(Loop *loop,
 												  uint32_t maxChecks)
 {
-	auto now = time::GetTemporaryTimestamp();
+	auto now = time::get_temporary_timestamp();
 	for (uint32_t i = 0; i < maxChecks; ++i) {
 		PeerHandle peer = loop->_InternalGetRandomPeer();
 		if (peer) {

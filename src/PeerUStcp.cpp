@@ -5,12 +5,12 @@
 
 #include <algorithm>
 
+#include "../drwalin_util/include/drwalin_util/log.hpp"
+
 #include "../include/icon7/LoopUS.hpp"
 #include "../include/icon7/HostUStcp.hpp"
 #include "../include/icon7/Command.hpp"
-#include "../include/icon7/Debug.hpp"
 #include "../include/icon7/SendFrameStruct.hpp"
-
 #include "../include/icon7/PeerUStcp.hpp"
 
 namespace icon7
