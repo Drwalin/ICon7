@@ -69,11 +69,12 @@ public:
 			ByteWriter writer(100);
 			writer.op_untyped_uint32(returnId);
 			writer.op(ret);
+			ByteBufferWritable buf = writer.ReleaseWritableBuffer();
 			if (FramingProtocol::WriteHeaderIntoBuffer(
-					writer._data, ((flags | Flags(6)) ^ Flags(6)) |
+					buf, ((flags | Flags(6)) ^ Flags(6)) |
 									  FLAGS_CALL_RETURN_FEEDBACK)) {
 				peer.GetLocalPeerData()->Send(
-					ByteBufferReadable(std::move(writer._data)));
+					ByteBufferReadable(std::move(buf)));
 			} else {
 				LOG_FATAL("Trying to write header into invalid ByteBuffer.");
 			}
@@ -97,11 +98,12 @@ public:
 		if (returnId && ((flags & 6) == FLAGS_CALL)) {
 			ByteWriter writer(100);
 			writer.op_untyped_uint32(returnId);
+			ByteBufferWritable buf = writer.ReleaseWritableBuffer();
 			if (FramingProtocol::WriteHeaderIntoBuffer(
-					writer._data, ((flags | Flags(6)) ^ Flags(6)) |
+					buf, ((flags | Flags(6)) ^ Flags(6)) |
 									  FLAGS_CALL_RETURN_FEEDBACK)) {
 				peer.GetLocalPeerData()->Send(
-					ByteBufferReadable(std::move(writer._data)));
+					ByteBufferReadable(std::move(buf)));
 			} else {
 				LOG_FATAL("Trying to write header into invalid ByteBuffer.");
 			}

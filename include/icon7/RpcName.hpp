@@ -40,8 +40,8 @@ struct RpcName {
 
 	std::string ToString() const;
 
-	void serialize(bitscpp::v2::ByteReader &reader);
-	void serialize(ByteWriterBase &writer) const;
+	void serialize(bitscpp::ByteReader &reader);
+	void serialize(bitscpp::ByteWriter &writer) const;
 
 	std::string str = "";
 	uint32_t uint = 0;

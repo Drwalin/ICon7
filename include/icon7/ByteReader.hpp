@@ -14,22 +14,22 @@
 
 namespace icon7
 {
-class ByteReader : public ByteReaderBase
+class ByteReader : public bitscpp::ByteReader
 {
 public:
 	ByteBufferReadable _data;
 
 public:
-	inline ByteReader() : bitscpp::v2::ByteReader(nullptr, 0, 0) {}
+	inline ByteReader() : bitscpp::ByteReader(nullptr, 0, 0) {}
 
 	inline ByteReader(ByteBufferReadable &data, uint32_t offset)
-		: bitscpp::v2::ByteReader(data.data(), offset, data.size()),
+		: bitscpp::ByteReader(data.data(), offset, data.size()),
 		  _data(data)
 	{
 	}
 
 	inline ByteReader(ByteBufferReadable &&data, uint32_t offset)
-		: bitscpp::v2::ByteReader(data.data(), offset, data.size()),
+		: bitscpp::ByteReader(data.data(), offset, data.size()),
 		  _data(std::move(data))
 	{
 	}
@@ -37,7 +37,7 @@ public:
 	inline ~ByteReader() {}
 
 	inline ByteReader(ByteReader &&o)
-		: bitscpp::v2::ByteReader(o._buffer, o.get_offset(), o.total_size),
+		: bitscpp::ByteReader(o._buffer, o.get_offset(), o.total_size),
 		  _data(std::move(o._data))
 	{
 		errors = o.errors;

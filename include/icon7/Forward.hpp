@@ -6,6 +6,8 @@
 #ifndef ICON7_FORWARD_DECLARATIONS_HPP
 #define ICON7_FORWARD_DECLARATIONS_HPP
 
+#include "../../bitscpp/include/bitscpp/BitscppForward.hpp" // IWYU pragma: export
+
 namespace moodycamel
 {
 template <typename T, typename Traits> class ConcurrentQueue;
@@ -55,21 +57,10 @@ class ExecuteDisconnect;
 class ExecuteReturnCallbackBase;
 } // namespace icon7
 
-namespace bitscpp
-{
-namespace v2
-{
-template <typename BT> class ByteWriter;
-class ByteReader;
-} // namespace v2
-} // namespace bitscpp
-
 namespace icon7
 {
 class ByteWriter;
-using ByteWriterBase = bitscpp::v2::ByteWriter<icon7::ByteBufferWritable>;
 class ByteReader;
-using ByteReaderBase = bitscpp::v2::ByteReader;
 } // namespace icon7
 
 namespace icon7

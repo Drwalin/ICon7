@@ -12,7 +12,7 @@
 
 #include <atomic>
 
-#include "../../bitscpp/include/bitscpp/ByteReader_v2.hpp" // IWYU pragma: export
+#include "../../bitscpp/include/bitscpp/ByteReader.hpp" // IWYU pragma: export
 
 #include "Flags.hpp"
 

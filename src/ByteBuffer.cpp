@@ -132,13 +132,3 @@ uint32_t ByteBufferWritable::round_capacity_up(uint32_t capacity)
 	return maxCap - INITIAL_DATA_OFFSET;
 }
 } // namespace icon7
-
-#include "../bitscpp/src/ByteWriter_v2.inl.hpp"
-
-namespace bitscpp
-{
-namespace v2
-{
-template class ByteWriter<icon7::ByteBufferWritable>;
-} // namespace v2
-} // namespace bitscpp

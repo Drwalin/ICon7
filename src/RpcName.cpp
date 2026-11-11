@@ -55,7 +55,7 @@ void RpcName::serialize(bitscpp::v2::ByteReader &reader)
 	}
 }
 
-void RpcName::serialize(ByteWriterBase &writer) const
+void RpcName::serialize(bitscpp::ByteWriter &writer) const
 {
 	if (str != "") {
 		assert(uint == 0);

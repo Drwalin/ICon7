@@ -184,7 +184,7 @@ public:
 	}
 
 	static void
-	InitializeSerializeSend(ByteWriterBase &writer,
+	InitializeSerializeSend(bitscpp::ByteWriter &writer,
 							const RpcName &name)
 	{
 		assert(name);
@@ -192,11 +192,12 @@ public:
 	}
 
 	static void
-	FinalizeSerializeSend(ByteWriterBase &writer,
+	FinalizeSerializeSend(bitscpp::ByteWriter &writer,
 						  Flags &flags)
 	{
+		ByteBufferWritable *buffer = (ByteBufferWritable *)writer.release_buffer();
 		flags |= FLAGS_CALL_NO_FEEDBACK;
-		if (FramingProtocol::WriteHeaderIntoBuffer(*writer._buffer, flags) ==
+		if (FramingProtocol::WriteHeaderIntoBuffer(*buffer, flags) ==
 			false) {
 			LOG_FATAL("Trying to write header into invalid ByteBuffer.");
 		}
@@ -206,7 +207,7 @@ public:
 	static void SerializeSend(ByteBufferWritable &buffer, Flags flags,
 							  const RpcName &name, const Targs &...args)
 	{
-		ByteWriterBase writer(&buffer);
+		bitscpp::ByteWriter writer({&buffer, byte_buffer_writable_generic_wrapper_pimpl});
 		InitializeSerializeSend(writer, name);
 		(writer.op(args), ...);
 		FinalizeSerializeSend(writer, flags);
@@ -230,10 +231,11 @@ public:
 		writer.op_untyped_uint32(0);
 		InitializeSerializeSend(writer, name);
 		(writer.op(args), ...);
+		ByteBufferWritable buf = writer.ReleaseWritableBuffer();
 
 		commandsBuffer->EnqueueCommand<commands::internal::CommandCallSend>(
 			peer, std::move(callback), flags,
-			std::move(writer._data));
+			std::move(buf));
 	}
 
 	template <typename... Targs>
@@ -244,10 +246,11 @@ public:
 		writer.op_untyped_uint32(0);
 		InitializeSerializeSend(writer, name);
 		(writer.op(args), ...);
+		ByteBufferWritable buf = writer.ReleaseWritableBuffer();
 
 		auto cb = CommandHandle<commands::internal::CommandCallSend>::Create(
 			peer, std::move(callback), flags,
-			std::move(writer._data));
+			std::move(buf));
 		peer.GetLoop()->EnqueueCommand(std::move(cb));
 	}
 

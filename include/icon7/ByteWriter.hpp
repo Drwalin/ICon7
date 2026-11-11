@@ -9,63 +9,31 @@
 #include "ByteBuffer.hpp"
 #include "Forward.hpp" // IWYU pragma: export
 
-#include "../../bitscpp/include/bitscpp/ByteWriter_v2.hpp" // IWYU pragma: export
-
-namespace bitscpp
-{
-namespace v2
-{
-extern template class ByteWriter<icon7::ByteBufferWritable>;
-} // namespace v2
-} // namespace bitscpp
+#include "../../bitscpp/include/bitscpp/ByteWriter.hpp" // IWYU pragma: export
 
 namespace icon7
 {
-class ByteWriter : public ByteWriterBase
+extern bitscpp::GenericBufferWriterPimpl
+	byte_buffer_writable_generic_wrapper_pimpl;
+
+class ByteWriter : public bitscpp::ByteWriter
 {
-public:
+private:
 	ByteBufferWritable _data;
-	using Base = ByteWriterBase;
 
 public:
-	~ByteWriter() {}
+	~ByteWriter();
+	ByteWriter();
+	// 	ByteWriter(ByteBufferWritable &&buf);
+	ByteWriter(ByteWriter &&o);
+	ByteWriter(uint32_t initialCapacity);
 
-	ByteWriter() {
-		Init(&_data);
-	}
+	ByteWriter &operator=(ByteWriter &&o);
 
-	ByteWriter(ByteBufferWritable &&buf) : _data(std::move(buf))
-	{
-		Init(&_data);
-	}
+	ByteBufferReadable FinalizeAndReset();
+	ByteBufferWritable ReleaseWritableBuffer();
 
-	ByteWriter(ByteWriter &&o) : _data(std::move(o._data))
-	{
-		Init(&_data);
-	}
-
-	inline ByteBufferWritable &Buffer() { return _data; }
-
-	ByteWriter(uint32_t initialCapacity) : _data(initialCapacity)
-	{
-		Init(&_data);
-	}
-
-	void Reinit(uint32_t capacity)
-	{
-		_data.clear();
-		_data.reserve(capacity);
-		Init(&_data);
-	}
-
-	inline ByteWriter &operator=(ByteWriter &&o)
-	{
-		this->~ByteWriter();
-		new (this) ByteWriter(std::move(o));
-		return *this;
-	}
-
-	inline uint8_t const *data() { return _data.data(); }
+	// 	uint8_t const *data();
 
 	ByteWriter(ByteWriter &) = delete;
 	ByteWriter(const ByteWriter &) = delete;
