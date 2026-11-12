@@ -8,44 +8,58 @@
 
 namespace icon7
 {
-bitscpp::GenericBufferWriterPimpl
-	byte_buffer_writable_generic_wrapper_pimpl = {
-		.expand =
-			+[](bitscpp::GenericBufferWriter *buffer, uint8_t minimum,
-				std::size_t hint) {
-				using TB = ByteBufferWritable;
-				TB *buf = (TB *)(buffer->buffer);
-				ASSERT_EXIT(buf != nullptr);
-				ptrdiff_t offset = 0;
-				if (buffer->head) {
-					offset = buffer->head - buf->data();
-				}
-				size_t new_size = minimum + hint + buf->size() + 16;
-				if (new_size < buf->capacity()) {
-					new_size = buf->capacity();
-				}
-				new_size = (new_size * 3) / 2;
-				buf->resize(new_size);
-				buffer->head = buf->data() + offset;
-				buffer->end = buf->data() + buf->size();
-			},
-		.destructor =
-			+[](bitscpp::GenericBufferWriter *buffer) {
-				ASSERT_DEBUG(buffer->buffer == nullptr);
-			},
-		.apply_head_end_to_underlying =
-			+[](bitscpp::GenericBufferWriter *buffer) {
-				using TB = ByteBufferWritable;
-				TB *buf = (TB *)(buffer->buffer);
-				ASSERT_EXIT(buf != nullptr);
-				ptrdiff_t offset = 0;
-				if (buffer->head) {
-					offset = buffer->head - buf->data();
-				}
-				buf->resize(offset);
-				buffer->head = buf->data() + offset;
-				buffer->end = buf->data() + buf->size();
-			}};
+bitscpp::GenericBufferWriterPimpl byte_buffer_writable_generic_wrapper_pimpl = {
+	.expand =
+		+[](bitscpp::GenericBufferWriter *buffer, uint8_t minimum,
+			std::size_t hint) {
+			using TB = ByteBufferWritable;
+			TB *buf = (TB *)(buffer->buffer);
+			ASSERT_EXIT(buf != nullptr);
+			ptrdiff_t offset = 0;
+			if (buffer->head) {
+				offset = buffer->head - buf->data();
+			}
+			size_t new_size = minimum + hint + buf->size() + 16;
+			if (new_size < buf->capacity()) {
+				new_size = buf->capacity();
+			}
+			ASSERT_DEBUG(
+				(buf->data() == nullptr && buffer->head == nullptr &&
+				 buffer->end == nullptr) ||
+				(buf->data() != nullptr &&
+				 ((buffer->head == buffer->end) ||
+				  (buffer->head < buffer->end && buffer->head != nullptr))));
+			new_size = (new_size * 3) / 2;
+			buf->resize(new_size);
+			buffer->head = buf->data() + offset;
+			buffer->end = buf->data() + buf->size();
+		},
+
+	.destructor =
+		+[](bitscpp::GenericBufferWriter *buffer) {
+			ASSERT_DEBUG(buffer->head == nullptr);
+			ASSERT_DEBUG(buffer->end == nullptr);
+		},
+
+	.apply_head_end_to_underlying =
+		+[](bitscpp::GenericBufferWriter *buffer) {
+			using TB = ByteBufferWritable;
+			TB *buf = (TB *)(buffer->buffer);
+			ASSERT_EXIT(buf != nullptr);
+			ptrdiff_t offset = 0;
+			if (buffer->head) {
+				offset = buffer->head - buf->data();
+			}
+			ASSERT_DEBUG(
+				(buf->data() == nullptr && buffer->head == nullptr &&
+				 buffer->end == nullptr) ||
+				(buf->data() != nullptr &&
+				 ((buffer->head == buffer->end) ||
+				  (buffer->head < buffer->end && buffer->head != nullptr))));
+			buf->resize(offset);
+			buffer->head = buf->data() + offset;
+			buffer->end = buf->data() + buf->size();
+		}};
 
 ByteWriter::~ByteWriter() {}
 
@@ -55,9 +69,9 @@ ByteWriter::ByteWriter()
 {
 }
 
-ByteWriter::ByteWriter(ByteWriter &&o) : 
-	bitscpp::ByteWriter(std::move((bitscpp::ByteWriter&&)o)),
-	_data(std::move(o._data))
+ByteWriter::ByteWriter(ByteWriter &&o)
+	: bitscpp::ByteWriter(std::move((bitscpp::ByteWriter &&)o)),
+	  _data(std::move(o._data))
 {
 	_buffer.buffer = &_data;
 }
@@ -79,8 +93,11 @@ ByteBufferReadable ByteWriter::FinalizeAndReset()
 ByteBufferWritable ByteWriter::ReleaseWritableBuffer()
 {
 	ASSERT_EXIT(_buffer.buffer == &_data);
+	void *_ret = release_buffer();
+	ASSERT_EXIT(_ret == &_data);
+	ByteBufferWritable *ret = (ByteBufferWritable *)_ret;
 	_buffer.buffer = &_data;
-	return std::move(_data);
+	return std::move(*ret);
 }
 
 ByteWriter &ByteWriter::operator=(ByteWriter &&o)
